@@ -1,0 +1,7 @@
+{
+  "name": "invoice-cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test test/*.test.js test/*.test.ts", "invoice": "node src/main.ts" }
+}
