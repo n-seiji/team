@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>請求書 INV-0001</title>
+<style>
+@page { size: A4; margin: 15mm; }
+body { font-family: "Hiragino Sans", "Noto Sans JP", sans-serif; color: #111; max-width: 180mm; margin: 0 auto; padding: 1rem; line-height: 1.5; }
+h1 { font-size: 1.6rem; letter-spacing: .3em; text-align: center; }
+.meta { display: flex; justify-content: space-between; margin: 1rem 0; }
+table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+th, td { border-bottom: 1px solid #999; padding: .35rem .5rem; text-align: left; }
+.n { text-align: right; font-variant-numeric: tabular-nums; } .c { text-align: center; width: 5rem; }
+.sum { width: 60%; margin-left: auto; } .total th, .total td { font-size: 1.2rem; font-weight: bold; border-bottom: 2px solid #111; }
+@media print { body { padding: 0; } tr { break-inside: avoid; } }
+</style></head><body>
+<h1>請求書</h1>
+<div class="meta"><div><strong style="font-size:1.2rem">山田商店 御中</strong></div>
+<div>請求番号: INV-0001<br>発行日: 2026-10-09<br>対象月: 2026-09</div></div>
+<table><thead><tr><th>明細</th><th class="n">金額</th><th class="c">源泉対象</th></tr></thead><tbody>
+<tr><td>顧問報酬</td><td class="n">¥100,000</td><td class="c">○</td></tr>
+<tr><td>実費(交通費)</td><td class="n">¥10,000</td><td class="c"></td></tr>
+</tbody></table>
+<table class="sum">
+<tr><th>小計</th><td class="n">¥110,000</td></tr>
+<tr><th>消費税 (10%)</th><td class="n">¥11,000</td></tr>
+<tr><th>源泉徴収税額 (円未満切り捨て)</th><td class="n">-¥10,210</td></tr>
+<tr class="total"><th>ご請求額</th><td class="n">¥110,790</td></tr>
+</table>
+<p>発行者: 山田会計事務所<br>適格請求書発行事業者登録番号: T1234567890123</p>
+</body></html>

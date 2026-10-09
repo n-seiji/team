@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   openStore, initStore, addClient, previewInvoice, createInvoice, listInvoices, calcAmounts, getInvoice, localDate,
+  getTemplate, setTemplate, invoicesToCsv,
 } from '../src/core.js';
 
 function fresh() {
@@ -140,4 +141,79 @@ test('エラーは code で判別できる', async () => {
 test('発行日はローカル日付(午前0時台でも前日にならない)', () => {
   assert.equal(localDate(new Date(2026, 0, 1, 0, 5)), '2026-01-01');
   assert.equal(localDate(new Date(2026, 11, 31, 23, 59)), '2026-12-31');
+});
+
+test('定番明細: 未保存は[]、保存して読める、置き換え、コピーを返す', () => {
+  const store = fresh();
+  addClient(store, { name: 'A商事' });
+  assert.deepEqual(getTemplate(store, 'A商事'), []);
+  setTemplate(store, 'A商事', [{ name: '顧問料', amount: 50000, withholding: true }]);
+  const t = getTemplate(store, 'c1');
+  assert.deepEqual(t, [{ name: '顧問料', amount: 50000, withholding: true }]);
+  t[0].amount = 1; // 呼び出し側の書き換えは保存内容に影響しない
+  assert.equal(getTemplate(store, 'A商事')[0].amount, 50000);
+  setTemplate(store, 'A商事', [{ name: '保守', amount: 3000 }]);
+  assert.deepEqual(getTemplate(store, 'A商事'), [{ name: '保守', amount: 3000, withholding: false }]);
+});
+
+test('定番明細: 不正入力と未登録はコード付きで失敗し、保存内容は変わらない', () => {
+  const store = fresh();
+  addClient(store, { name: 'A商事' });
+  setTemplate(store, 'A商事', items);
+  assert.throws(() => setTemplate(store, 'A商事', [{ name: 'x', amount: 1.5 }]), { code: 'INVALID_INPUT' });
+  assert.throws(() => setTemplate(store, 'A商事', [{ name: '', amount: 100 }]), { code: 'INVALID_INPUT' });
+  assert.throws(() => setTemplate(store, 'A商事', 'x'), { code: 'INVALID_INPUT' });
+  assert.throws(() => getTemplate(store, '無名'), { code: 'CLIENT_NOT_FOUND' });
+  assert.throws(() => setTemplate(store, '無名', items), { code: 'CLIENT_NOT_FOUND' });
+  assert.equal(getTemplate(store, 'A商事')[0].amount, 50000);
+});
+
+test('定番明細: 定番を変えても発行済み請求書は変わらない（スナップショット）', () => {
+  const store = fresh();
+  addClient(store, { name: 'A商事' });
+  setTemplate(store, 'A商事', items);
+  const inv = createInvoice(store, { clientId: 'A商事', month: '2026-09', items: getTemplate(store, 'A商事') });
+  setTemplate(store, 'A商事', [{ name: '別件', amount: 999 }]);
+  assert.deepEqual(getInvoice(store, inv.number).items, [{ name: '顧問料', amount: 50000, withholding: false }]);
+  assert.equal(getInvoice(store, inv.number).total, 55000);
+});
+
+test('定番明細: 定番の保存は採番に影響しない', () => {
+  const store = fresh();
+  addClient(store, { name: 'A商事' });
+  setTemplate(store, 'A商事', items);
+  assert.equal(createInvoice(store, { clientId: 'A商事', month: '2026-09', items }).number, 'INV-0001');
+});
+
+test('CSV: BOM・CRLF・見出し・8列、金額は整数のまま', () => {
+  const store = fresh();
+  addClient(store, { name: 'A商事', withholding: true });
+  createInvoice(store, { clientId: 'A商事', month: '2026-09', items: [
+    { name: '報酬', amount: 100000, withholding: true }, { name: '実費', amount: 10000 }] }, { date: new Date(2026, 8, 30) });
+  const csv = invoicesToCsv(store);
+  assert.equal(csv.charCodeAt(0), 0xfeff);
+  const lines = csv.slice(1).split('\r\n');
+  assert.equal(lines[0], '番号,日付,クライアント,対象月,小計,消費税,源泉,請求額');
+  assert.equal(lines[1], 'INV-0001,2026-09-30,A商事,2026-09,110000,11000,10210,110790');
+  assert.equal(lines[2], ''); // 末尾もCRLF
+});
+
+test('CSV: 0件でも見出しだけ出る', () => {
+  const csv = invoicesToCsv(fresh());
+  assert.equal(csv, '\ufeff番号,日付,クライアント,対象月,小計,消費税,源泉,請求額\r\n');
+});
+
+test('CSV: カンマ・引用符・改行は囲む。先頭が =+-@ の値には \' を付ける', () => {
+  const store = fresh();
+  for (const n of ['=SUM(A1)', '+81 商事', '-x', '@foo', 'a,b "c"', '改\n行']) {
+    addClient(store, { name: n });
+    createInvoice(store, { clientId: n, month: '2026-09', items });
+  }
+  const csv = invoicesToCsv(store);
+  assert.ok(csv.includes(",'=SUM(A1),"));
+  assert.ok(csv.includes(",'+81 商事,"));
+  assert.ok(csv.includes(",'-x,"));
+  assert.ok(csv.includes(",'@foo,"));
+  assert.ok(csv.includes(',"a,b ""c""",'));
+  assert.ok(csv.includes(',"改\n行",'));
 });

@@ -155,7 +155,7 @@ export class World {
         t.status = a.type === "TASK_DONE" ? "done" : "doing";
         t.owner ??= m.id;
         if (a.type === "TASK_DONE") t.summary = a.text;
-        this.log(m.id, "task_done", `${t.id} → ${t.status}${a.text ? ": " + a.text : ""}`);
+        this.log(m.id, "task_update", `${t.id} → ${t.status}${a.text ? ": " + a.text : ""}`);
         break;
       }
       case "DECISION":

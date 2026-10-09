@@ -51,7 +51,7 @@ export function addClient(store, { name, honorific = '御中', withholding = fal
   if (!name) throw fail('INVALID_INPUT', 'クライアント名が必要です');
   const data = load(store);
   if (data.clients.some((c) => c.name === name)) throw fail('CLIENT_EXISTS', `${name} は登録済みです`);
-  const client = { id: `c${data.clients.length + 1}`, name, honorific, withholding: !!withholding };
+  const client = { id: `c${data.clients.length + 1}`, name, honorific, withholding: !!withholding, template: [] };
   data.clients.push(client);
   save(store, data);
   return client;
@@ -78,16 +78,26 @@ export function calcAmounts(items, withholding) {
   return { subtotal, tax, withholdingBase: withholding ? base : 0, withholdingTax, total: subtotal + tax - withholdingTax };
 }
 
-function normalize(data, { clientId, month, items }) {
-  const client = data.clients.find((c) => c.id === clientId || c.name === clientId);
-  if (!client) throw fail('CLIENT_NOT_FOUND', `クライアント「${clientId}」は未登録です`);
-  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month ?? '')) throw fail('INVALID_INPUT', '対象月は YYYY-MM 形式です');
+function requireClient(data, key) {
+  const client = data.clients.find((c) => c.id === key || c.name === key);
+  if (!client) throw fail('CLIENT_NOT_FOUND', `クライアント「${key}」は未登録です`);
+  return client;
+}
+
+// 明細の検証と正規化。請求書と定番明細で同じ規則を使う。
+function normalizeItems(items) {
   if (!Array.isArray(items) || items.length === 0) throw fail('INVALID_INPUT', '明細が必要です');
-  const norm = items.map((i) => {
+  return items.map((i) => {
     if (!i.name) throw fail('INVALID_INPUT', '明細の名称が必要です');
     if (!Number.isInteger(i.amount) || i.amount <= 0) throw fail('INVALID_INPUT', `金額は1以上の整数円です: ${i.name}`);
     return { name: i.name, amount: i.amount, withholding: !!i.withholding };
   });
+}
+
+function normalize(data, { clientId, month, items }) {
+  const client = requireClient(data, clientId);
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month ?? '')) throw fail('INVALID_INPUT', '対象月は YYYY-MM 形式です');
+  const norm = normalizeItems(items);
   return { client, month, items: norm, ...calcAmounts(norm, client.withholding) };
 }
 
@@ -138,4 +148,34 @@ export function listInvoices(store) {
 
 export function getInvoice(store, number) {
   return load(store).invoices.find((i) => i.number === number) ?? null;
+}
+
+// 定番明細。クライアントごとに1セット。常にコピーを返す。未保存は []。
+export function getTemplate(store, clientKey) {
+  const client = requireClient(load(store), clientKey);
+  return (client.template ?? []).map((i) => ({ ...i }));
+}
+
+// 保存済みの定番をまるごと置き換える。発行済み請求書は発行時にコピー済みなので変わらない。
+export function setTemplate(store, clientKey, items) {
+  const data = load(store);
+  const client = requireClient(data, clientKey);
+  client.template = normalizeItems(items);
+  save(store, data);
+  return client.template.map((i) => ({ ...i }));
+}
+
+// CSV。Excel向けに UTF-8 BOM + CRLF。先頭が = + - @ のテキストには ' を付けて式として実行されないようにする。
+function csvCell(v) {
+  let s = String(v);
+  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+  return /[",\r\n]/.test(s) ? `"${s.replaceAll('"', '""')}"` : s;
+}
+
+export function invoicesToCsv(store) {
+  const head = ['番号', '日付', 'クライアント', '対象月', '小計', '消費税', '源泉', '請求額'];
+  const rows = load(store).invoices.map((i) => [
+    i.number, i.date, i.client.name, i.month, i.subtotal, i.tax, i.withholdingTax, i.total,
+  ]);
+  return '\ufeff' + [head, ...rows].map((r) => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
 }

@@ -86,7 +86,7 @@ export type EntryKind =
   | "think"
   | "note"
   | "task"
-  | "task_done"
+  | "task_update"
   | "decision"
   | "verdict"
   | "advance"
