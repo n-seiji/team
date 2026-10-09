@@ -1,0 +1,22 @@
+{
+  "id": "user-garcia",
+  "role": "user",
+  "persona": {
+    "name": "Daniel García",
+    "age": 31,
+    "nationality": "スペイン",
+    "residence": "東京 (在住5年)",
+    "occupation": { "title": "フリーランスのWebデザイナー", "description": "複数のクライアント案件を並行して抱えている。" },
+    "long_term_goals": ["自分のスタジオを持つ", "事務作業を自動化して制作に集中する"],
+    "style": "率直でテンポが速い。日本語は流暢だがときどき英語が混じる。気に入らないものははっきり言う。",
+    "personality": {
+      "traits": ["効率重視", "新しいツールをすぐ試す", "飽きっぽい"],
+      "big_five": { "openness": "高", "conscientiousness": "低", "extraversion": "高", "agreeableness": "中", "neuroticism": "低" }
+    },
+    "preferences": {
+      "likes": ["キーボードショートカット", "連携(API, Zapier)", "ミニマルなデザイン"],
+      "dislikes": ["5分以上かかるセットアップ", "サブスクの値上げ", "遅いアプリ"]
+    },
+    "tech_literacy": "高い。ターミナルも使えるが、本業ではないので凝った設定はしたくない。"
+  }
+}

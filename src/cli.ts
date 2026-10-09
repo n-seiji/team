@@ -1,0 +1,248 @@
+// team — simulate a product team (PM, engineers, user personas) that talks and builds together.
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { Store, loadConfig, loadPersona } from "./store.ts";
+import { World } from "./world.ts";
+import { DEFAULT_PHASES, subagentFor } from "./sop.ts";
+import { buildPrompt, promptAsText } from "./prompt.ts";
+import { formatEntry, formatTask, displayName } from "./render.ts";
+import { createBackend } from "./backends/index.ts";
+import type { BackendConfig } from "./types.ts";
+
+const HELP = `team — PM・エンジニア・ペルソナ(ユーザー)が会話しながら開発するシミュレーター
+
+Usage: team <command> [options]
+
+Session
+  init --brief <text> | --brief-file <f>  [--name <n>] [--config <f>] [--force]
+                       新しいセッションを作成して current にする
+  status [--json]      フェーズ・バックログ・次の発言者を表示
+  log [--tail N] [--md] [--no-thoughts]
+                       会話ログを表示 (--md は transcript.md のパス)
+  sessions             セッション一覧 / use <name> で切り替え
+  say <text>           人間(あなた)としてチーム全員に発言を差し込む
+
+Host mode (Claude Code などの外部オーケストレーターが各エージェントを実行)
+  next [--json] [--inline]
+                       次に行動すべきメンバーと、そのメンバー用プロンプトを出力
+                       (プロンプトは .team/sessions/<s>/turns/*.prompt.md にも保存)
+  record --as <id> [--file <f>] [--force]
+                       メンバーの返答(stdin か --file)を記録して次へ進める
+
+Auto mode (このプロセスが LLM を呼ぶ)
+  run [--backend anthropic|claude-cli|mock] [--model <m>] [--turns N]
+
+Global options
+  --root <dir>         リポジトリルート (default: cwd)
+  --session <name>     current 以外のセッションを対象にする
+`;
+
+type Flags = Record<string, string | boolean>;
+
+function parseArgs(argv: string[]): { cmd: string; pos: string[]; flags: Flags } {
+  const pos: string[] = [];
+  const flags: Flags = {};
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a.startsWith("--")) {
+      const [k, v] = a.slice(2).split("=", 2);
+      if (v !== undefined) flags[k] = v;
+      else if (i + 1 < argv.length && !argv[i + 1].startsWith("--")) flags[k] = argv[++i];
+      else flags[k] = true;
+    } else pos.push(a);
+  }
+  return { cmd: pos.shift() ?? "help", pos, flags };
+}
+
+function str(f: Flags, k: string): string | undefined {
+  return typeof f[k] === "string" ? (f[k] as string) : undefined;
+}
+
+async function readStdin(): Promise<string> {
+  if (process.stdin.isTTY) throw new Error("no reply given: pipe it via stdin or use --file");
+  const chunks: Buffer[] = [];
+  for await (const c of process.stdin) chunks.push(c as Buffer);
+  return Buffer.concat(chunks).toString("utf8");
+}
+
+export async function main(argv: string[], out: (s: string) => void = (s) => process.stdout.write(s + "\n")) {
+  const { cmd, pos, flags } = parseArgs(argv);
+  const root = path.resolve(str(flags, "root") ?? process.cwd());
+  const store = new Store(root);
+  const session = str(flags, "session");
+  const load = () => store.load(session);
+
+  switch (cmd) {
+    case "help":
+    case "--help":
+    case "-h":
+      out(HELP);
+      return;
+
+    case "init": {
+      const cfg = loadConfig(root, str(flags, "config"));
+      const briefFile = str(flags, "brief-file");
+      const brief = (briefFile ? fs.readFileSync(path.resolve(root, briefFile), "utf8") : str(flags, "brief") ?? pos.join(" ")).trim();
+      if (!brief) throw new Error("a product brief is required: --brief \"...\"");
+      const name = str(flags, "name") ?? new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "");
+      if (store.exists(name) && !flags.force) throw new Error(`session "${name}" already exists (use --force to overwrite)`);
+      if (flags.force) fs.rmSync(store.sessionDir(name), { recursive: true, force: true });
+      const w = World.create({
+        name,
+        brief,
+        members: cfg.members.map((f) => loadPersona(root, f)),
+        phases: cfg.phases ?? DEFAULT_PHASES,
+        language: cfg.language,
+        workspace: cfg.workspace,
+        maxIterations: cfg.maxIterations,
+        historyWindow: cfg.historyWindow,
+      });
+      fs.mkdirSync(path.resolve(root, w.state.workspace), { recursive: true });
+      store.save(w);
+      store.setCurrent(name);
+      out(`created session "${name}" with ${w.state.members.length} members → .team/sessions/${name}/`);
+      out(statusText(w));
+      return;
+    }
+
+    case "sessions": {
+      let cur = "";
+      try {
+        cur = store.current();
+      } catch {}
+      for (const n of store.list()) out(`${n === cur ? "*" : " "} ${n}`);
+      return;
+    }
+
+    case "use": {
+      if (!pos[0] || !store.exists(pos[0])) throw new Error(`session not found: ${pos[0] ?? ""}`);
+      store.setCurrent(pos[0]);
+      out(`current session: ${pos[0]}`);
+      return;
+    }
+
+    case "status": {
+      const w = load();
+      if (flags.json) out(JSON.stringify({ ...w.state, next: w.next() }, null, 2));
+      else out(statusText(w));
+      return;
+    }
+
+    case "log": {
+      const w = load();
+      if (flags.md) {
+        out(path.join(store.sessionDir(w.state.name), "transcript.md"));
+        return;
+      }
+      let es = store.transcript(w.state.name);
+      if (flags["no-thoughts"]) es = es.filter((e) => e.kind !== "think" && e.kind !== "note");
+      const tail = Number(str(flags, "tail") ?? 0);
+      if (tail > 0) es = es.slice(-tail);
+      for (const e of es) out(`[${e.iteration}:${e.phase}#${e.turn}] ${formatEntry(w.state, e)}`);
+      return;
+    }
+
+    case "say": {
+      const w = load();
+      const text = pos.join(" ").trim() || (await readStdin()).trim();
+      w.broadcast(text, str(flags, "as") ?? "human");
+      store.save(w);
+      out("ok");
+      return;
+    }
+
+    case "next": {
+      const w = load();
+      const ids = w.next();
+      const es = store.transcript(w.state.name);
+      const turnsDir = path.join(store.sessionDir(w.state.name), "turns");
+      const items = ids.map((id) => {
+        const p = buildPrompt(w.state, id, es, root);
+        const text = promptAsText(p);
+        // Prompts are also written to files so an orchestrator can hand a short
+        // path to a subagent instead of copying the whole prompt through its context.
+        fs.mkdirSync(turnsDir, { recursive: true });
+        const file = path.join(turnsDir, `${String(w.state.turn).padStart(4, "0")}-${id}.prompt.md`);
+        fs.writeFileSync(file, text);
+        return {
+          member: id,
+          name: w.member(id)!.persona.name,
+          role: p.role,
+          subagent: subagentFor(p.role),
+          promptFile: path.relative(root, file).split(path.sep).join("/"),
+          ...(flags.inline ? { prompt: text } : {}),
+        };
+      });
+      store.save(w); // scheduling may have advanced
+      if (flags.json) {
+        out(JSON.stringify({ status: w.state.status, phase: w.phase.id, iteration: w.state.iteration, round: w.state.round, pending: items }, null, 2));
+      } else if (w.state.status === "done") {
+        out("session is done. See: team log / team status");
+      } else {
+        for (const it of items) {
+          out(`===== NEXT: ${it.member} (${it.role}) → subagent: ${it.subagent} =====`);
+          out(fs.readFileSync(path.resolve(root, it.promptFile), "utf8"));
+        }
+      }
+      return;
+    }
+
+    case "record": {
+      const w = load();
+      const id = str(flags, "as");
+      if (!id) throw new Error("--as <member-id> is required");
+      const file = str(flags, "file");
+      const raw = file ? fs.readFileSync(path.resolve(root, file), "utf8") : await readStdin();
+      const actions = w.record(id, raw, { force: !!flags.force });
+      const next = w.next();
+      store.save(w);
+      out(`recorded ${actions.length} action(s) from ${id}: ${actions.map((a) => a.type).join(", ") || "-"}`);
+      out(w.state.status === "done" ? "session is done." : `next: ${next.join(", ")} (phase ${w.phase.id}, round ${w.state.round})`);
+      return;
+    }
+
+    case "run": {
+      const cfg = loadConfig(root, str(flags, "config"));
+      const bcfg: BackendConfig = { ...(cfg.backend ?? { type: "mock" }) };
+      const b = str(flags, "backend");
+      if (b) bcfg.type = b as BackendConfig["type"];
+      if (str(flags, "model")) bcfg.model = str(flags, "model");
+      const backend = createBackend(bcfg);
+      const maxTurns = Number(str(flags, "turns") ?? 200);
+      let turns = 0;
+      const w = load();
+      while (w.state.status === "running" && turns < maxTurns) {
+        const ids = w.next();
+        const es = store.transcript(w.state.name).concat(w.emitted);
+        const ctx = { state: w.state, root };
+        // Members scheduled in the same step act in parallel (like TinyWorld steps).
+        const replies = await Promise.all(ids.map((id) => backend.respond(buildPrompt(w.state, id, es, root), ctx)));
+        ids.forEach((id, i) => {
+          const before = w.emitted.length;
+          w.record(id, replies[i]);
+          for (const e of w.emitted.slice(before)) out(`[${e.phase}] ${formatEntry(w.state, e)}`);
+        });
+        store.save(w);
+        turns += ids.length;
+      }
+      out(w.state.status === "done" ? "session is done." : `stopped after ${turns} turn(s); run again to continue.`);
+      return;
+    }
+
+    default:
+      throw new Error(`unknown command: ${cmd}\n\n${HELP}`);
+  }
+}
+
+function statusText(w: World): string {
+  const s = w.state;
+  const next = w.next();
+  const lines = [
+    `session: ${s.name}  status: ${s.status}  iteration: ${s.iteration}/${s.maxIterations}`,
+    `phase: ${w.phase.id} (round ${s.round}/${w.phase.maxRounds}, ${w.phase.mode}) — ${w.phase.goal}`,
+    `next: ${s.status === "done" ? "-" : next.map((id) => displayName(s, id)).join(", ")}`,
+    "backlog:",
+    ...(s.tasks.length ? s.tasks.map(formatTask) : ["  (none)"]),
+  ];
+  return lines.join("\n");
+}

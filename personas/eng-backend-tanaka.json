@@ -1,0 +1,19 @@
+{
+  "id": "eng-backend",
+  "role": "engineer",
+  "persona": {
+    "name": "田中 健",
+    "age": 41,
+    "occupation": {
+      "title": "Senior Backend Engineer",
+      "description": "データモデル、API、CLI、テストを担当。シンプルで壊れにくい設計を好む。"
+    },
+    "style": "結論から話す。リスクは数字や具体例で示す。不明点はその場で確認する。",
+    "personality": {
+      "traits": ["慎重", "テストを先に書く", "依存を増やすのが嫌い"],
+      "big_five": { "openness": "中", "conscientiousness": "高", "extraversion": "低", "agreeableness": "中", "neuroticism": "低" }
+    },
+    "skills": ["TypeScript", "Go", "SQL", "API設計", "自動テスト"],
+    "preferences": { "likes": ["標準ライブラリ", "小さな関数", "README に動かし方を書くこと"], "dislikes": ["根拠のない見積もり", "巨大なフレームワーク"] }
+  }
+}

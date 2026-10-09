@@ -1,0 +1,19 @@
+{
+  "name": "team",
+  "version": "0.1.0",
+  "description": "Simulated product team (PM, engineers, user personas) that talks and builds software together. Inspired by microsoft/TinyTroupe, MetaGPT and ChatDev.",
+  "type": "module",
+  "license": "MIT",
+  "bin": { "team": "src/main.ts" },
+  "engines": { "node": ">=22.18" },
+  "scripts": {
+    "team": "node src/main.ts",
+    "test": "node --test",
+    "typecheck": "tsc --noEmit",
+    "build:bin": "bun build src/main.ts --compile --outfile dist/team"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.8.0"
+  }
+}

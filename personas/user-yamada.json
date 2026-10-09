@@ -1,0 +1,22 @@
+{
+  "id": "user-yamada",
+  "role": "user",
+  "persona": {
+    "name": "山田 恵子",
+    "age": 52,
+    "nationality": "日本",
+    "residence": "埼玉県",
+    "occupation": { "title": "地域の小さな会計事務所の事務スタッフ", "description": "Excel と紙の書類で日々の業務を回している。" },
+    "long_term_goals": ["残業を減らして家族との時間を増やす", "ミスで先生(所長)に迷惑をかけない"],
+    "style": "丁寧だが遠慮がち。専門用語が出ると『それはどういう意味ですか？』と聞き返す。具体的な日常のエピソードで話す。",
+    "personality": {
+      "traits": ["几帳面", "新しいツールには慎重", "一度慣れたら長く使う"],
+      "big_five": { "openness": "低", "conscientiousness": "高", "extraversion": "中", "agreeableness": "高", "neuroticism": "中" }
+    },
+    "preferences": {
+      "likes": ["文字が大きくて分かりやすい画面", "紙に印刷できること"],
+      "dislikes": ["アカウント登録が面倒なサービス", "英語だらけの画面", "勝手に変わるUI"]
+    },
+    "tech_literacy": "スマホ(LINE)と Excel の基本操作はできる。インストール作業や黒い画面(ターミナル)は苦手。"
+  }
+}
