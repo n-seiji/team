@@ -122,6 +122,8 @@ pnpm typecheck       # tsc --noEmit
 pnpm build:bin       # (任意) Bun で単一実行ファイルを作る
 ```
 
+`pnpm-workspace.yaml` で `minimumReleaseAge` を7日にしているので、公開から1週間未満のパッケージは入りません（固定している pnpm のバージョンも同じルールで選んでいます）。
+
 ```
 src/
   main.ts       エントリポイント

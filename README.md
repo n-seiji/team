@@ -125,6 +125,8 @@ pnpm typecheck       # tsc --noEmit
 pnpm build:bin       # (optional) single executable via Bun
 ```
 
+`pnpm-workspace.yaml` sets `minimumReleaseAge` to 7 days, so pnpm refuses package versions published less than a week ago (the pinned pnpm version follows the same rule).
+
 ```
 src/
   main.ts       entry point
