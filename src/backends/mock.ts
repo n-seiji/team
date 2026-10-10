@@ -2,15 +2,14 @@
 // CLI and transcript can be exercised in tests and demos without any LLM.
 import type { TurnPrompt } from "../prompt.ts";
 import type { Backend, TurnContext } from "./index.ts";
+import { currentPhase, findMember } from "../world.ts";
 
 export class MockBackend implements Backend {
-  readonly name = "mock";
-
   async respond(p: TurnPrompt, { state: s }: TurnContext): Promise<string> {
-    const phase = s.phases[s.phaseIndex].id;
+    const phase = currentPhase(s).id;
     const users = s.members.filter((m) => m.role === "user");
     const engineers = s.members.filter((m) => m.role === "engineer");
-    const me = s.members.find((m) => m.id === p.member)!;
+    const me = findMember(s, p.member)!;
     switch (`${p.role}:${phase}`) {
       case "pm:discovery":
         return `[THINK] Ask about concrete recent episodes.\n[SAY to=${users.map((u) => u.id).join(",") || "all"}] 最近「${s.brief}」に関して困ったことを具体的に教えてください。`;

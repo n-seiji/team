@@ -57,7 +57,7 @@ export function parseReply(raw: string): Action[] {
 function parseAttrs(s: string): { attrs: Record<string, string>; arg?: string } {
   const attrs: Record<string, string> = {};
   let arg: string | undefined;
-  for (const tok of s.trim().split(/\s+/).filter(Boolean)) {
+  for (const tok of s.split(/\s+/).filter(Boolean)) {
     const eq = tok.indexOf("=");
     if (eq > 0) attrs[tok.slice(0, eq).toLowerCase()] = tok.slice(eq + 1).replace(/^["']|["']$/g, "");
     else if (arg === undefined) arg = tok;

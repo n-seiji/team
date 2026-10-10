@@ -21,6 +21,7 @@ export const DEFAULT_PHASES: PhaseDef[] = [
     speakers: ["pm", "engineer"],
     mode: "round-robin",
     maxRounds: 2,
+    iterationStart: true,
   },
   {
     id: "build",
@@ -30,6 +31,8 @@ export const DEFAULT_PHASES: PhaseDef[] = [
     speakers: ["engineer"],
     mode: "parallel",
     maxRounds: 3,
+    untilTasksDone: true,
+    editors: ["engineer"],
   },
   {
     id: "review",
@@ -39,6 +42,7 @@ export const DEFAULT_PHASES: PhaseDef[] = [
     speakers: ["engineer", "pm"],
     mode: "round-robin",
     maxRounds: 1,
+    editors: ["engineer"],
   },
   {
     id: "acceptance",
@@ -51,42 +55,73 @@ export const DEFAULT_PHASES: PhaseDef[] = [
   },
 ];
 
-export const ROLE_GUIDE: Record<string, string> = {
-  pm:
-    "You are the Product Manager and the facilitator. You own the 'why' and the 'what': " +
-    "understand users, define scope, write tasks with acceptance criteria, make decisions, keep the team focused. " +
-    "You do not write production code. You may end a phase early with [ADVANCE] when its goal is met.",
-  engineer:
-    "You are a software engineer on the team. You own the 'how': design, implementation, tests and quality " +
-    "of the tasks assigned to you. Speak up early about risks and trade-offs. When building, actually write the " +
-    "code in the workspace, keep it runnable, and report what you did concretely (files, commands).",
-  user:
-    "You are a real end user (persona) being interviewed and later trying the product. You are NOT on the team: " +
-    "you know nothing about the implementation, you speak only from your own life, habits and frustrations, " +
-    "and you judge the product honestly — politely, but you will not pretend to like something that does not help you.",
+interface RoleDef {
+  guide: string;
+  /** Actions beyond the common ones. */
+  actions: string[];
+  /** Claude Code subagent that plays this role in host mode (.claude/agents/*.md). */
+  subagent: string;
+  /** What the workspace section of the prompt tells this role. */
+  workspace: string;
+}
+
+const ROLES: Record<string, RoleDef> = {
+  pm: {
+    guide:
+      "You are the Product Manager and the facilitator. You own the 'why' and the 'what': " +
+      "understand users, define scope, write tasks with acceptance criteria, make decisions, keep the team focused. " +
+      "You do not write production code. You may end a phase early with [ADVANCE] when its goal is met.",
+    actions: ["TASK", "DECISION", "ADVANCE"],
+    subagent: "team-pm",
+    workspace: "This is what the engineers have built so far. If you can read files, check it against the acceptance criteria.",
+  },
+  engineer: {
+    guide:
+      "You are a software engineer on the team. You own the 'how': design, implementation, tests and quality " +
+      "of the tasks assigned to you. Speak up early about risks and trade-offs. When building, actually write the " +
+      "code in the workspace, keep it runnable, and report what you did concretely (files, commands).",
+    actions: ["TASK", "TASK_START", "TASK_DONE"],
+    subagent: "team-engineer",
+    workspace:
+      "All product code lives here (relative to the repository root). When the phase allows editing and you have file tools, " +
+      "read and edit files here for real; keep the product runnable and document how to run it in its README.md.",
+  },
+  user: {
+    guide:
+      "You are a real end user (persona) being interviewed and later trying the product. You are NOT on the team: " +
+      "you know nothing about the implementation, you speak only from your own life, habits and frustrations, " +
+      "and you judge the product honestly — politely, but you will not pretend to like something that does not help you.",
+    actions: ["VERDICT"],
+    subagent: "team-persona",
+    workspace: "This is what the team has built so far. If you can read files, look at README.md and try it as a user would.",
+  },
 };
 
+const COMMON_ACTIONS = ["THINK", "SAY", "NOTE", "DONE"];
+
+function roleDef(role: Role): RoleDef | undefined {
+  return ROLES[role];
+}
+
 export function roleGuide(role: Role): string {
-  return ROLE_GUIDE[role] ?? `You act as the team's ${role}. Contribute from that perspective.`;
+  return roleDef(role)?.guide ?? `You act as the team's ${role}. Contribute from that perspective.`;
 }
 
 /** Actions each role may use. Everyone may THINK, SAY, NOTE and DONE. */
-export const ROLE_ACTIONS: Record<string, string[]> = {
-  pm: ["TASK", "DECISION", "ADVANCE"],
-  engineer: ["TASK", "TASK_START", "TASK_DONE"],
-  user: ["VERDICT"],
-};
-
-export const COMMON_ACTIONS = ["THINK", "SAY", "NOTE", "DONE"];
-
 export function allowedActions(role: Role): string[] {
-  return [...COMMON_ACTIONS, ...(ROLE_ACTIONS[role] ?? [])];
+  return [...COMMON_ACTIONS, ...(roleDef(role)?.actions ?? [])];
 }
 
-/** Claude Code subagent used for each role in host mode (.claude/agents/*.md). */
+/** Host-mode subagent for a role. Unknown roles get the read-only PM-style agent, never a write-capable one. */
 export function subagentFor(role: Role): string {
-  if (role === "pm") return "team-pm";
-  if (role === "engineer") return "team-engineer";
-  if (role === "user") return "team-persona";
-  return "team-engineer";
+  return roleDef(role)?.subagent ?? "team-pm";
+}
+
+export function workspaceGuide(role: Role): string {
+  return roleDef(role)?.workspace ?? "This is what the team has built so far.";
+}
+
+/** Whether `role` may edit the workspace during `phase`. */
+export function canEdit(phase: PhaseDef, role: Role): boolean {
+  return phase.editors?.includes(role) ?? false;
 }

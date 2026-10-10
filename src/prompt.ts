@@ -4,21 +4,28 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Entry, SessionState } from "./types.ts";
 import { ACTION_HELP, PROTOCOL_HELP } from "./protocol.ts";
-import { allowedActions, roleGuide } from "./sop.ts";
-import { formatEntry, formatTask } from "./render.ts";
-import { visibleTo } from "./world.ts";
+import { allowedActions, canEdit, roleGuide, workspaceGuide } from "./sop.ts";
+import { formatBacklog, formatEntry } from "./render.ts";
+import { currentPhase, findMember, visibleTo } from "./world.ts";
 
 export interface TurnPrompt {
   member: string;
   role: string;
+  /** Whether this member may edit the workspace this turn (decided by the phase, not the backend). */
+  canEdit: boolean;
   system: string;
   user: string;
 }
 
-export function buildPrompt(s: SessionState, memberId: string, entries: Entry[], root = "."): TurnPrompt {
-  const m = s.members.find((x) => x.id === memberId);
+/**
+ * @param files workspace listing from listWorkspace(); compute it once per step and share it
+ *              between members acting in the same step.
+ */
+export function buildPrompt(s: SessionState, memberId: string, entries: Entry[], files: string[]): TurnPrompt {
+  const m = findMember(s, memberId);
   if (!m) throw new Error(`unknown member: ${memberId}`);
-  const phase = s.phases[s.phaseIndex];
+  const phase = currentPhase(s);
+  const edit = canEdit(phase, m.role);
 
   const system = [
     `You are ${m.persona.name} (id: ${m.id}), role: ${m.role}. You take part in a simulated product team.`,
@@ -35,14 +42,15 @@ export function buildPrompt(s: SessionState, memberId: string, entries: Entry[],
     `Always write the content of your messages in the language "${s.language}". Be concise: say what matters, like in a real meeting.`,
   ].join("\n");
 
-  const visible = entries.filter((e) => visibleTo(e, m.id));
-  const window = visible.slice(-s.historyWindow);
-  const older = visible.length - window.length;
+  // Walk back from the end: only the latest window of visible entries is needed.
+  const window: Entry[] = [];
+  let i = entries.length - 1;
+  for (; i >= 0 && window.length < s.historyWindow; i--) if (visibleTo(entries[i], m.id)) window.unshift(entries[i]);
+  const older = i >= 0;
   const notes = s.notes[m.id] ?? [];
   const actions = allowedActions(m.role).filter((a) => ACTION_HELP[a]);
 
   const roster = s.members.map((x) => `- ${x.id}: ${x.persona.name} (${x.role})${x.id === m.id ? "  ← you" : ""}`);
-  const tasks = s.tasks.length ? s.tasks.map(formatTask) : ["(no tasks yet)"];
   const decisions = s.decisions.length ? s.decisions.map((d) => `- ${d.text}`) : ["(none)"];
 
   const user = [
@@ -56,14 +64,18 @@ export function buildPrompt(s: SessionState, memberId: string, entries: Entry[],
     ...roster,
     "",
     "## Backlog",
-    ...tasks,
+    formatBacklog(s.tasks, "(no tasks yet)"),
     "",
     "## Decisions",
     ...decisions,
     ...(notes.length ? ["", "## Your long-term notes", ...notes.map((n) => `- ${n}`)] : []),
-    ...(m.role !== "pm" || phase.id === "review" || phase.id === "acceptance" ? workspaceSection(s, m.role, root) : []),
     "",
-    `## Conversation so far${older > 0 ? ` (latest ${window.length}; ${older} older entries omitted)` : ""}`,
+    `## Workspace (${s.workspace}/)`,
+    workspaceGuide(m.role),
+    edit ? "You may edit files in the workspace during this phase." : "Do not edit files during this phase.",
+    ...(files.length ? files.map((f) => `- ${f}`) : ["(empty)"]),
+    "",
+    `## Conversation so far${older ? ` (latest ${window.length}; older entries omitted)` : ""}`,
     ...(window.length ? window.map((e) => formatEntry(s, e)) : ["(nothing yet)"]),
     "",
     "## Your turn",
@@ -72,38 +84,30 @@ export function buildPrompt(s: SessionState, memberId: string, entries: Entry[],
     ...actions.map((a) => "  " + ACTION_HELP[a]),
   ].join("\n");
 
-  return { member: m.id, role: m.role, system, user };
+  return { member: m.id, role: m.role, canEdit: edit, system, user };
 }
 
-function workspaceSection(s: SessionState, role: string, root: string): string[] {
-  const dir = path.resolve(root, s.workspace);
-  const files = listFiles(dir, 60);
-  const lines = ["", `## Workspace (${s.workspace}/)`];
-  if (role === "engineer") {
-    lines.push(
-      `All product code lives under "${s.workspace}/" (relative to the repository root). ` +
-        "If you have file tools, read and edit files there for real; keep the product runnable and document how to run it in its README.md.",
-    );
-  } else if (role === "user") {
-    lines.push("This is what the team has built so far. If you can read files, look at README.md and try it as a user would.");
-  }
-  lines.push(...(files.length ? files.map((f) => `- ${f}`) : ["(empty)"]));
-  return lines;
-}
+const SKIP_DIRS = new Set(["node_modules", "dist", "build", "target", "venv", "__pycache__"]);
 
-function listFiles(dir: string, max: number): string[] {
+/** Up to `max` workspace files (relative paths), skipping hidden and build/dependency folders. */
+export function listWorkspace(s: SessionState, root: string, max = 60): string[] {
   const out: string[] = [];
   const walk = (d: string, rel: string) => {
-    if (out.length >= max || !fs.existsSync(d)) return;
-    for (const ent of fs.readdirSync(d, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+    let ents: fs.Dirent[];
+    try {
+      ents = fs.readdirSync(d, { withFileTypes: true });
+    } catch {
+      return; // workspace not created yet
+    }
+    for (const ent of ents.sort((a, b) => a.name.localeCompare(b.name))) {
       if (out.length >= max) return;
-      if (ent.name === "node_modules" || ent.name.startsWith(".")) continue;
+      if (ent.name.startsWith(".") || SKIP_DIRS.has(ent.name)) continue;
       const r = rel ? `${rel}/${ent.name}` : ent.name;
       if (ent.isDirectory()) walk(path.join(d, ent.name), r);
       else out.push(r);
     }
   };
-  walk(dir, "");
+  walk(path.resolve(root, s.workspace), "");
   return out;
 }
 

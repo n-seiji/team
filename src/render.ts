@@ -1,7 +1,10 @@
 import type { Entry, SessionState, Task } from "./types.ts";
+import { currentPhase, findMember, isPrivate } from "./world.ts";
+
+const indent = (text: string, pad: string) => text.replace(/\n/g, "\n" + pad);
 
 export function displayName(s: SessionState, id: string): string {
-  const m = s.members.find((x) => x.id === id);
+  const m = findMember(s, id);
   return m ? `${m.persona.name} (${m.id})` : id;
 }
 
@@ -23,23 +26,30 @@ export function formatEntry(s: SessionState, e: Entry): string {
 }
 
 export function formatTask(t: Task): string {
-  const acc = t.acceptance ? `\n    acceptance: ${t.acceptance.replace(/\n/g, "\n    ")}` : "";
-  const sum = t.summary ? `\n    result: ${t.summary.replace(/\n/g, "\n    ")}` : "";
+  const acc = t.acceptance ? `\n    acceptance: ${indent(t.acceptance, "    ")}` : "";
+  const sum = t.summary ? `\n    result: ${indent(t.summary, "    ")}` : "";
   return `- ${t.id} [${t.status}] owner=${t.owner ?? "-"} ${t.title}${acc}${sum}`;
+}
+
+export function formatBacklog(tasks: Task[], empty: string): string {
+  return tasks.length ? tasks.map(formatTask).join("\n") : empty;
 }
 
 /** Human-readable transcript, including private thoughts (like TinyTroupe's console view). */
 export function renderMarkdown(s: SessionState, entries: Entry[]): string {
-  const out: string[] = [`# ${s.name}`, "", `**Brief:** ${s.brief}`, ""];
-  out.push(
-    `**Status:** ${s.status} · iteration ${s.iteration}/${s.maxIterations} · phase \`${s.phases[s.phaseIndex].id}\``,
+  const out: string[] = [
+    `# ${s.name}`,
+    "",
+    `**Brief:** ${s.brief}`,
+    "",
+    `**Status:** ${s.status} · iteration ${s.iteration}/${s.maxIterations} · phase \`${currentPhase(s).id}\``,
     "",
     "## Team",
     "",
-  );
+  ];
   for (const m of s.members) out.push(`- **${m.persona.name}** (\`${m.id}\`, ${m.role})`);
   out.push("", "## Backlog", "");
-  out.push(s.tasks.length ? s.tasks.map(formatTask).join("\n") : "_(none)_");
+  out.push(formatBacklog(s.tasks, "_(none)_"));
   out.push("", "## Decisions", "");
   out.push(s.decisions.length ? s.decisions.map((d) => `- (${d.phase}, ${displayName(s, d.by)}) ${d.text}`).join("\n") : "_(none)_");
   out.push("", "## Verdicts", "");
@@ -56,8 +66,8 @@ export function renderMarkdown(s: SessionState, entries: Entry[]): string {
       out.push(`### iteration ${e.iteration} · ${e.phase}`, "");
       lastPhase = key;
     }
-    const line = formatEntry(s, e).replace(/\n/g, "\n  ");
-    out.push(e.kind === "think" || e.kind === "note" ? `> _${line}_` : `- ${line}`, "");
+    const line = indent(formatEntry(s, e), "  ");
+    out.push(isPrivate(e) ? `> _${line}_` : `- ${line}`, "");
   }
   return out.join("\n");
 }

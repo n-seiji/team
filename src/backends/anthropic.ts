@@ -1,12 +1,12 @@
 // Direct Messages API call with fetch (no SDK dependency). Needs ANTHROPIC_API_KEY.
+import { setTimeout as sleep } from "node:timers/promises";
 import type { BackendConfig } from "../types.ts";
 import type { TurnPrompt } from "../prompt.ts";
 import type { Backend } from "./index.ts";
 
-export const DEFAULT_MODEL = "claude-sonnet-5-5";
+const DEFAULT_MODEL = "claude-sonnet-5-5";
 
 export class AnthropicBackend implements Backend {
-  readonly name = "anthropic";
   private model: string;
   private maxTokens: number;
 
@@ -31,7 +31,7 @@ export class AnthropicBackend implements Backend {
         }),
       });
       if ((res.status === 429 || res.status >= 500) && attempt < 4) {
-        await new Promise((r) => setTimeout(r, 2000 * 2 ** attempt));
+        await sleep(2000 * 2 ** attempt);
         continue;
       }
       if (!res.ok) throw new Error(`Anthropic API ${res.status}: ${(await res.text()).slice(0, 500)}`);

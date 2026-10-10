@@ -11,7 +11,6 @@ const READ_ONLY = ["Read", "Glob", "Grep"];
 const BUILDER = ["Read", "Glob", "Grep", "Write", "Edit", "Bash"];
 
 export class ClaudeCliBackend implements Backend {
-  readonly name = "claude-cli";
   private model?: string;
   private bin: string;
 
@@ -21,10 +20,8 @@ export class ClaudeCliBackend implements Backend {
   }
 
   respond(p: TurnPrompt, ctx: TurnContext): Promise<string> {
-    const phase = ctx.state.phases[ctx.state.phaseIndex].id;
-    const builds = p.role === "engineer" && (phase === "build" || phase === "review");
-    const args = ["-p", "--output-format", "text", "--allowedTools", (builds ? BUILDER : READ_ONLY).join(",")];
-    if (builds) args.push("--permission-mode", "acceptEdits");
+    const args = ["-p", "--output-format", "text", "--allowedTools", (p.canEdit ? BUILDER : READ_ONLY).join(",")];
+    if (p.canEdit) args.push("--permission-mode", "acceptEdits");
     if (this.model) args.push("--model", this.model);
     const input =
       promptAsText(p) +

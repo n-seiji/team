@@ -5,7 +5,7 @@ import type { Entry, EntryKind, PersonaSpec, PhaseDef, SessionState, Task } from
 import { parseReply, type Action } from "./protocol.ts";
 import { allowedActions } from "./sop.ts";
 
-export interface NewSessionOptions {
+interface NewSessionOptions {
   name: string;
   brief: string;
   members: PersonaSpec[];
@@ -23,7 +23,7 @@ export class World {
   readonly emitted: Entry[] = [];
   private now: () => string;
 
-  constructor(state: SessionState, now: () => string = () => new Date().toISOString()) {
+  constructor(state: SessionState, now: () => string = systemNow) {
     this.state = state;
     this.now = now;
   }
@@ -31,12 +31,12 @@ export class World {
   static create(o: NewSessionOptions): World {
     const ids = new Set<string>();
     for (const m of o.members) {
-      if (!m.id || !m.role || !m.persona?.name) throw new Error(`invalid persona: ${JSON.stringify(m).slice(0, 80)}`);
+      assertPersona(m);
       if (ids.has(m.id)) throw new Error(`duplicate member id: ${m.id}`);
       ids.add(m.id);
     }
     if (o.phases.length === 0) throw new Error("at least one phase is required");
-    const now = o.now ?? (() => new Date().toISOString());
+    const now = o.now ?? systemNow;
     const state: SessionState = {
       version: 1,
       name: o.name,
@@ -55,7 +55,6 @@ export class World {
       queue: [],
       pending: [],
       insertions: 0,
-      advanceRequested: false,
       tasks: [],
       decisions: [],
       verdicts: [],
@@ -64,17 +63,17 @@ export class World {
     };
     const w = new World(state, now);
     w.log("system", "system", `Session "${o.name}" started. Brief: ${o.brief}`);
-    w.log("system", "system", `Phase "${w.phase.id}" started — ${w.phase.goal}`);
+    w.logPhaseStart();
     w.schedule();
     return w;
   }
 
   get phase(): PhaseDef {
-    return this.state.phases[this.state.phaseIndex];
+    return currentPhase(this.state);
   }
 
   member(id: string): PersonaSpec | undefined {
-    return this.state.members.find((m) => m.id === id);
+    return findMember(this.state, id);
   }
 
   /** Members who should act now. Empty when the session is done. */
@@ -163,7 +162,8 @@ export class World {
         this.log(m.id, "decision", a.text);
         break;
       case "ADVANCE":
-        s.advanceRequested = true;
+        // Finishing the round early makes the scheduler end the phase.
+        s.round = this.phase.maxRounds;
         s.queue = [];
         this.log(m.id, "advance", a.text || `End of phase "${this.phase.id}".`);
         break;
@@ -195,7 +195,7 @@ export class World {
     const waiting = targets.filter((id) => s.queue.includes(id));
     s.queue = [...waiting, ...s.queue.filter((q) => !waiting.includes(q))];
     for (const id of targets) {
-      if (waiting.includes(id) || s.insertions >= s.members.length) continue;
+      if (waiting.includes(id) || s.insertions >= speakers.size) continue;
       s.queue.push(id);
       s.insertions++;
     }
@@ -214,8 +214,8 @@ export class World {
       if (guard > 1000) throw new Error("scheduler did not converge");
       if (s.queue.length === 0) {
         const p = this.phase;
-        const buildDone = p.mode === "parallel" && s.tasks.length > 0 && s.tasks.every((t) => t.status === "done");
-        if (s.round > 0 && (s.round >= p.maxRounds || s.advanceRequested || buildDone)) {
+        const tasksDone = !!p.untilTasksDone && s.tasks.length > 0 && s.tasks.every((t) => t.status === "done");
+        if (s.round > 0 && (s.round >= p.maxRounds || tasksDone)) {
           this.endPhase();
           continue;
         }
@@ -235,36 +235,36 @@ export class World {
     }
   }
 
+  /** Next phase; after the last one, either loop (users rejected) or finish. */
   private endPhase(): void {
     const s = this.state;
-    const last = s.phaseIndex === s.phases.length - 1;
     s.round = 0;
     s.queue = [];
-    s.advanceRequested = false;
-    if (!last) {
+    if (s.phaseIndex < s.phases.length - 1) {
       s.phaseIndex++;
-    } else {
-      const vs = s.verdicts.filter((v) => v.iteration === s.iteration);
-      const rejected = vs.filter((v) => v.verdict === "reject");
-      if (rejected.length > 0 && s.iteration < s.maxIterations) {
-        s.iteration++;
-        const loop = s.phases.findIndex((p) => p.id === "planning");
-        s.phaseIndex = loop >= 0 ? loop : 0;
-        this.log(
-          "system",
-          "system",
-          `Iteration ${s.iteration} begins: ${rejected.length}/${vs.length} users rejected (${rejected.map((r) => r.by).join(", ")}).`,
-        );
-      } else {
-        s.status = "done";
-        const summary = vs.length
-          ? `${vs.length - rejected.length}/${vs.length} users accepted.`
-          : "No user verdicts were given.";
-        this.log("system", "system", `Session finished after iteration ${s.iteration}. ${summary}`);
-        return;
-      }
+      this.logPhaseStart();
+      return;
     }
-    this.log("system", "system", `Phase "${this.phase.id}" started (iteration ${s.iteration}) — ${this.phase.goal}`);
+    const vs = s.verdicts.filter((v) => v.iteration === s.iteration);
+    const rejected = vs.filter((v) => v.verdict === "reject");
+    if (rejected.length === 0 || s.iteration >= s.maxIterations) {
+      s.status = "done";
+      const summary = vs.length ? `${vs.length - rejected.length}/${vs.length} users accepted.` : "No user verdicts were given.";
+      this.log("system", "system", `Session finished after iteration ${s.iteration}. ${summary}`);
+      return;
+    }
+    s.iteration++;
+    s.phaseIndex = Math.max(0, s.phases.findIndex((p) => p.iterationStart));
+    this.log(
+      "system",
+      "system",
+      `Iteration ${s.iteration} begins: ${rejected.length}/${vs.length} users rejected (${rejected.map((r) => r.by).join(", ")}).`,
+    );
+    this.logPhaseStart();
+  }
+
+  private logPhaseStart(): void {
+    this.log("system", "system", `Phase "${this.phase.id}" started (iteration ${this.state.iteration}) — ${this.phase.goal}`);
   }
 
   private log(from: string, kind: EntryKind, text: string, to?: string[]): void {
@@ -282,8 +282,26 @@ export class World {
   }
 }
 
+const systemNow = () => new Date().toISOString();
+
+export function currentPhase(s: SessionState): PhaseDef {
+  return s.phases[s.phaseIndex];
+}
+
+export function findMember(s: SessionState, id: string): PersonaSpec | undefined {
+  return s.members.find((m) => m.id === id);
+}
+
+export function assertPersona(m: PersonaSpec, where = "persona"): void {
+  if (!m?.id || !m.role || !m.persona?.name) throw new Error(`${where}: needs "id", "role" and "persona.name"`);
+}
+
+/** Private entries (thoughts, notes) belong only to their author's memory. */
+export function isPrivate(e: Entry): boolean {
+  return e.kind === "think" || e.kind === "note";
+}
+
 /** Whether a transcript entry is part of `member`'s episodic memory. */
 export function visibleTo(e: Entry, member: string): boolean {
-  if (e.kind === "think" || e.kind === "note") return e.from === member;
-  return true;
+  return !isPrivate(e) || e.from === member;
 }

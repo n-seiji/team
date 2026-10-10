@@ -11,7 +11,6 @@ export interface TurnContext {
 
 /** Something that can produce an agent's reply for one turn. */
 export interface Backend {
-  readonly name: string;
   respond(prompt: TurnPrompt, ctx: TurnContext): Promise<string>;
 }
 

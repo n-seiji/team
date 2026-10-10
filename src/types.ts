@@ -30,6 +30,12 @@ export interface PhaseDef {
   speakers: Role[];
   mode: PhaseMode;
   maxRounds: number;
+  /** End the phase early once every backlog task is done. */
+  untilTasksDone?: boolean;
+  /** Roles allowed to edit the workspace during this phase. */
+  editors?: Role[];
+  /** Where the next iteration restarts when users reject the result (default: first phase). */
+  iterationStart?: boolean;
 }
 
 export type TaskStatus = "todo" | "doing" | "done";
@@ -72,7 +78,6 @@ export interface SessionState {
   pending: string[];
   /** Reply-to insertions used this round (caps ping-pong). */
   insertions: number;
-  advanceRequested: boolean;
   tasks: Task[];
   decisions: { by: string; text: string; phase: string; iteration: number }[];
   verdicts: Verdict[];
