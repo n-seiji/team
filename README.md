@@ -86,7 +86,7 @@ node src/main.ts log --tail 20 --no-thoughts                     # transcript
 node src/main.ts say "Let's focus on sole proprietors"           # speak to the team as the human
 ```
 
-`npm run team -- <command>` works too, as does `team <command>` after `npm link`.
+`pnpm team <command>` works too, as does `team <command>` after `pnpm link --global`.
 
 To drive host mode yourself (for example from another agent framework):
 
@@ -118,10 +118,11 @@ Set the model with `backend.model` in `team.config.json`, `--model`, or the `TEA
 ## Development
 
 ```bash
-npm install          # devDependencies for type checking only
-npm test             # node --test, no dependencies
-npm run typecheck    # tsc --noEmit
-npm run build:bin    # (optional) single executable via Bun
+corepack enable      # once, if pnpm is not installed (pnpm version is pinned in package.json)
+pnpm install         # devDependencies for type checking only
+pnpm test            # node --test, no dependencies
+pnpm typecheck       # tsc --noEmit
+pnpm build:bin       # (optional) single executable via Bun
 ```
 
 ```

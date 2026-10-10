@@ -86,7 +86,7 @@ node src/main.ts log --tail 20 --no-thoughts                     # 会話ログ
 node src/main.ts say "ターゲットは個人事業主に絞りたい"           # 人間として発言を差し込む
 ```
 
-`npm run team -- <command>` や、`npm link` して `team <command>` でも同じです。
+`pnpm team <command>` や、`pnpm link --global` して `team <command>` でも同じです。
 
 host モードを自分で回す場合（他のエージェント基盤から使う場合など）:
 
@@ -115,10 +115,11 @@ node src/main.ts record --as pm --file reply.txt
 ## 開発
 
 ```bash
-npm install          # 型チェック用の devDependencies のみ
-npm test             # node --test（依存なし）
-npm run typecheck    # tsc --noEmit
-npm run build:bin    # (任意) Bun で単一実行ファイルを作る
+corepack enable      # pnpm が未インストールなら最初に1回（バージョンは package.json で固定）
+pnpm install         # 型チェック用の devDependencies のみ
+pnpm test            # node --test（依存なし）
+pnpm typecheck       # tsc --noEmit
+pnpm build:bin       # (任意) Bun で単一実行ファイルを作る
 ```
 
 ```

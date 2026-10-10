@@ -61,4 +61,4 @@ Claude Code では `.claude/agents/*.md` でツール権限の異なるサブエ
 ## 言語・実行環境の選定
 
 - **TypeScript (Node.js ≥ 22.18)**: Node.js 22.18 以降は型注釈を取り除いて `.ts` を直接実行できるため、ビルドなし・実行時依存ゼロで動きます。Linux / macOS / Windows のどこでも同じコマンドで動き、Claude Code が入っている環境には Node.js がほぼ確実にあります。
-- **Go** も単一バイナリ配布の点で有力でしたが、Claude Code（Node 製）と同じランタイムに乗れること、JSON のペルソナ定義との相性、`node --test` でテストまで依存なしで書けることから TypeScript にしました。単一バイナリが欲しい場合は `npm run build:bin`（Bun の `--compile`）で各 OS 向けの実行ファイルを作れます。
+- **Go** も単一バイナリ配布の点で有力でしたが、Claude Code（Node 製）と同じランタイムに乗れること、JSON のペルソナ定義との相性、`node --test` でテストまで依存なしで書けることから TypeScript にしました。単一バイナリが欲しい場合は `pnpm build:bin`（Bun の `--compile`）で各 OS 向けの実行ファイルを作れます。

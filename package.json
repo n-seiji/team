@@ -4,8 +4,13 @@
   "description": "Simulated product team (PM, engineers, user personas) that talks and builds software together. Inspired by microsoft/TinyTroupe, MetaGPT and ChatDev.",
   "type": "module",
   "license": "MIT",
-  "bin": { "team": "src/main.ts" },
-  "engines": { "node": ">=22.18" },
+  "bin": {
+    "team": "src/main.ts"
+  },
+  "engines": {
+    "node": ">=22.18"
+  },
+  "packageManager": "pnpm@10.28.0",
   "scripts": {
     "team": "node src/main.ts",
     "test": "node --test \"test/**/*.test.ts\"",
