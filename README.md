@@ -1,141 +1,146 @@
-# team — PM・エンジニア・ユーザーが会話しながら開発するチームシミュレーター
+# team — a simulated product team that talks and builds together
 
-[microsoft/TinyTroupe](https://github.com/microsoft/TinyTroupe) のペルソナ・シミュレーションと、MetaGPT / ChatDev の役割分担型の開発プロセスを組み合わせ、
+**English** | [日本語](README.ja.md)
 
-- **プロダクトマネージャー**（インタビュー・スコープ決定・受け入れ基準）
-- **エンジニア（複数）**（設計・実装・相互レビュー。`workspace/` に実際にコードを書く）
-- **ペルソナ＝ユーザー（複数）**（チーム外の人。インタビューに答え、できたものを試して accept / reject する）
+`team` combines persona simulation from [microsoft/TinyTroupe](https://github.com/microsoft/TinyTroupe) with the role-based development process of MetaGPT / ChatDev. A small team builds a product by **talking to each other**:
 
-が **会話しながら** プロダクトを作っていく仕組みです。
+- a **Product Manager** who interviews users, decides scope and writes acceptance criteria
+- several **engineers** who design, implement and review each other's work, writing real code in `workspace/`
+- several **user personas** who are outside the team: they answer interviews, then try what was built and accept or reject it
 
-- **どこでも動く**: TypeScript ですが Node.js ≥ 22.18 が `.ts` を直接実行するので、ビルドも実行時依存もありません。Linux / macOS / Windows、ローカル / クラウドで同じように動きます（CI で3 OS をテスト）。
-- **Claude Code (Web) でそのまま動く**: API キーは不要です。Claude Code がオーケストレーターになり、メンバーの1ターンずつをロール別のサブエージェントに演じさせます（host モード）。
-- **API / CLI で自動実行もできる**: `team run --backend anthropic | claude-cli | mock`（auto モード）。
+Key properties:
 
-調査内容と設計の対応は [docs/research.md](docs/research.md) にまとめています。
+- **Runs anywhere.** It is written in TypeScript, but Node.js ≥ 22.18 runs `.ts` files directly, so there is no build step and no runtime dependency. It behaves the same on Linux, macOS and Windows, locally or in the cloud (CI tests all three OSes).
+- **Runs inside Claude Code (Web) as-is.** No API key needed. Claude Code acts as the orchestrator and hands each member's turn to a role-specific subagent ("host mode").
+- **Can also run unattended.** `team run --backend anthropic | claude-cli | mock` ("auto mode").
 
-## 仕組み
+[docs/research.md](docs/research.md) (in Japanese) covers the prior work studied and how it maps to this design.
+
+## How it works
 
 ```
-             ┌──────────────── team エンジン (src/, 状態は .team/sessions/<name>/) ───────────────┐
-             │  roster (personas/*.json) · SOP フェーズ · 誰が次に話すか · 会話ログ · backlog · 決定 · 判定 │
+             ┌──────────────── team engine (src/, state in .team/sessions/<name>/) ───────────────┐
+             │  roster (personas/*.json) · SOP phases · who speaks next · transcript · backlog · decisions · verdicts │
              └───────▲───────────────────────────────┬──────────────────────────────────────────┘
-       team record   │ 返答 (アクションタグ)            │ team next → 次の話者 + ターン用プロンプト
+       team record   │ reply (action tags)            │ team next → next speaker(s) + turn prompt
                      │                               ▼
-  host モード: Claude Code (team-dev スキル) ── サブエージェント team-pm / team-engineer / team-persona
-  auto モード: team run ── backend: anthropic (API) | claude-cli (claude -p) | mock
+  host mode: Claude Code (team-dev skill) ── subagents team-pm / team-engineer / team-persona
+  auto mode: team run ── backend: anthropic (API) | claude-cli (claude -p) | mock
 ```
 
-### フェーズ (SOP)
+### Phases (SOP)
 
-| フェーズ | 話す人 | 内容 |
+| Phase | Who speaks | What happens |
 |---|---|---|
-| discovery | PM, ユーザー | PM がユーザーにインタビュー。具体的なエピソードを掘る。解決策の話はしない |
-| planning | PM, エンジニア | PM が受け入れ基準つきタスクを作って担当を決める。エンジニアは実現性・リスク・技術選定を議論 |
-| build | エンジニア（**並列**） | 自分のタスクを `workspace/` に実装し `[TASK_DONE]` |
-| review | エンジニア, PM | 相互レビューと修正。PM が受け入れ基準を確認 |
-| acceptance | ユーザー, PM | ユーザーが成果物を見て/動かして `[VERDICT accept/reject]`。PM がまとめる |
+| discovery | PM, users | The PM interviews users and digs into concrete episodes. No solutions yet |
+| planning | PM, engineers | The PM writes tasks with acceptance criteria and assigns owners; engineers debate feasibility, risks and tech choices |
+| build | engineers (**in parallel**) | Each engineer implements their tasks in `workspace/` and reports `[TASK_DONE]` |
+| review | engineers, PM | Cross-review and fixes; the PM checks the acceptance criteria |
+| acceptance | users, PM | Users read or run the result and give `[VERDICT accept/reject]`; the PM sums up |
 
-reject が1件でもあり、イテレーション上限 (`maxIterations`) に達していなければ planning に戻ります。各フェーズは最大ラウンド数で終わるほか、PM が `[ADVANCE]` で早めに切り上げられます。
+If any user rejects and the iteration limit (`maxIterations`) has not been reached, the team goes back to planning. Each phase ends after its maximum number of rounds, or earlier when the PM sends `[ADVANCE]`.
 
-### 会話のルール
+### Conversation protocol
 
-エージェントは TinyTroupe の THINK / TALK / DONE を拡張したテキストタグで返答します（`src/protocol.ts`）。
+Agents reply with plain-text tags, an extension of TinyTroupe's THINK / TALK / DONE actions (`src/protocol.ts`):
 
 ```
-[THINK] 本人にしか見えない思考
-[SAY to=user-yamada] 指名された人が次に話す（to=all なら全員宛て）
-[NOTE] 長期メモ（以降のターンで毎回本人に提示される）
-[TASK owner=eng-backend] タイトル
-受け入れ基準（次の行から）
-[TASK_DONE T1] 何をどのファイルに実装し、どう確認したか
-[DECISION] チームの決定事項
-[VERDICT accept] / [VERDICT reject] 理由
-[ADVANCE] フェーズを終える（PM のみ）
+[THINK] private reasoning, visible only to its author
+[SAY to=user-yamada] the addressed member speaks next (to=all addresses everyone)
+[NOTE] long-term memory, shown to its author on every later turn
+[TASK owner=eng-backend] title
+acceptance criteria (on the following lines)
+[TASK_DONE T1] what was implemented, in which files, and how it was verified
+[DECISION] a decision the team follows from now on
+[VERDICT accept] / [VERDICT reject] reasons
+[ADVANCE] end the current phase (PM only)
 [DONE]
 ```
 
-ロールごとに使えるアクションが決まっていて（ユーザーはタスクを作れない等）、範囲外のアクションは無視されログに残ります。
+Each role has its own set of allowed actions (for example, users cannot create tasks). Actions outside that set are ignored and noted in the log.
 
-## 使い方
+## Usage
 
-### Claude Code (Web / CLI / Desktop) で使う — おすすめ
+### In Claude Code (Web / CLI / Desktop) — recommended
 
-このリポジトリを開いた Claude Code で:
+Open this repository in Claude Code and run:
 
 ```
-/team-dev フリーランス向けの、ターミナルから数十秒で請求書を作れるツール
+/team-dev A tool that lets freelancers create an invoice from the terminal in under a minute
 ```
 
-あとは Claude Code が `team next` → サブエージェント → `team record` を繰り返します。途中で「予算は月1万円までと伝えて」などと話しかければ、`team say` でチーム全員に共有されます。「discovery だけやって」「次のフェーズまで」のように区切りも指定できます。
+Claude Code then repeats `team next` → subagent → `team record`. Anything you say mid-session that is meant for the team ("tell them the budget is small") is shared with every member through `team say`. You can also set a stopping point, such as "just discovery" or "up to the next phase".
 
-- 会話の全文（各メンバーの思考を含む）: `.team/sessions/<name>/transcript.md`
-- 作られたプロダクト: `workspace/`
+- Full conversation, including each member's private thoughts: `.team/sessions/<name>/transcript.md`
+- The product being built: `workspace/`
 
-### コマンドラインで使う
+### From the command line
 
 ```bash
-node src/main.ts init --brief "作りたいもの" --name my-session   # セッション作成
-node src/main.ts status                                          # フェーズ・次の話者・backlog
-node src/main.ts run --backend claude-cli                        # 自動実行 (claude -p で各ターンを実行)
-ANTHROPIC_API_KEY=... node src/main.ts run --backend anthropic   # 自動実行 (Messages API を直接呼ぶ)
-node src/main.ts run --backend mock                              # LLM なしで流れだけ確認
-node src/main.ts log --tail 20 --no-thoughts                     # 会話ログ
-node src/main.ts say "ターゲットは個人事業主に絞りたい"           # 人間として発言を差し込む
+node src/main.ts init --brief "what to build" --name my-session   # create a session
+node src/main.ts status                                          # phase, next speaker, backlog
+node src/main.ts run --backend claude-cli                        # auto mode: each turn via claude -p
+ANTHROPIC_API_KEY=... node src/main.ts run --backend anthropic   # auto mode: Messages API directly
+node src/main.ts run --backend mock                              # walk the flow without any LLM
+node src/main.ts log --tail 20 --no-thoughts                     # transcript
+node src/main.ts say "Let's focus on sole proprietors"           # speak to the team as the human
 ```
 
-`npm run team -- <command>` や、`npm link` して `team <command>` でも同じです。
+`npm run team -- <command>` works too, as does `team <command>` after `npm link`.
 
-host モードを自分で回す場合（他のエージェント基盤から使う場合など）:
+To drive host mode yourself (for example from another agent framework):
 
 ```bash
-node src/main.ts next --json          # → pending: [{ member, role, subagent, promptFile }]
-# promptFile を LLM に渡して返答を得る
+node src/main.ts next --json          # → pending: [{ member, role, subagent, canEdit, promptFile }]
+# give promptFile to an LLM and collect its reply
 node src/main.ts record --as pm --file reply.txt
 ```
 
-| backend | 必要なもの | 特徴 |
+| Backend | Requires | Notes |
 |---|---|---|
-| (host モード) | Claude Code | API キー不要。ロール別サブエージェント。エンジニアが実際にファイルを編集 |
-| `claude-cli` | `claude` コマンド | API キー不要。build/review ではエンジニアに編集ツールを許可して実装させる |
-| `anthropic` | `ANTHROPIC_API_KEY` | 依存なしの fetch 実装。テキスト会話のみ（ファイル編集はしない） |
-| `mock` | なし | 決まった返答で1イテレーションを流す。テスト・デモ用 |
+| (host mode) | Claude Code | No API key. Role-specific subagents. Engineers really edit files |
+| `claude-cli` | the `claude` command | No API key. Engineers get edit tools in the phases that allow editing |
+| `anthropic` | `ANTHROPIC_API_KEY` | Dependency-free `fetch` client. Conversation only (no file edits) |
+| `mock` | nothing | Canned replies through one iteration. For tests and demos |
 
-モデルは `team.config.json` の `backend.model`、`--model`、環境変数 `TEAM_MODEL` で指定できます。
+Set the model with `backend.model` in `team.config.json`, `--model`, or the `TEAM_MODEL` environment variable.
 
-## カスタマイズ
+## Customization
 
-- **メンバー**: `personas/*.json` を追加・編集して `team.config.json` の `members` に並べます。`role` は `pm` / `engineer` / `user`（それ以外のロール名も使え、汎用の説明で参加します）。`persona` 以下は TinyTroupe 形式の自由な JSON で、そのままプロンプトに入ります。ユーザーには `tech_literacy` のような「試用のしかたに影響する情報」を書くと受け入れテストが現実的になります。
-- **フェーズ**: `team.config.json` に `phases` を書くと `DEFAULT_PHASES` (`src/sop.ts`) を置き換えられます（`id` / `goal` / `speakers` / `mode: round-robin|parallel` / `maxRounds`、任意で `untilTasksDone`（タスクが全部終わったら早めに終える）/ `editors`（このフェーズで `workspace/` を編集できるロール）/ `iterationStart`（reject 後にここから次のイテレーションを始める））。
-- **言語**: `language`（既定 `ja`）。
-- **記憶の長さ**: `historyWindow`（プロンプトに入れる直近の会話件数）。
+- **Members**: add or edit `personas/*.json` and list them under `members` in `team.config.json`. `role` is `pm`, `engineer` or `user`; other role names also work and join with a generic description. Everything under `persona` is free-form TinyTroupe-style JSON and goes into the prompt as-is. For users, details that affect how they would try the product (such as `tech_literacy`) make acceptance testing much more realistic.
+- **Phases**: a `phases` array in `team.config.json` replaces `DEFAULT_PHASES` (`src/sop.ts`). Each phase has `id`, `goal`, `speakers`, `mode` (`round-robin` or `parallel`) and `maxRounds`. Optional fields:
+  - `untilTasksDone`: end early once every task is done
+  - `editors`: roles allowed to edit `workspace/` in this phase
+  - `iterationStart`: where the next iteration restarts after a rejection
+- **Language**: `language` (default `ja`) is the language the agents speak.
+- **Memory length**: `historyWindow` is the number of recent transcript entries included in each prompt.
 
-## 開発
+## Development
 
 ```bash
-npm install          # 型チェック用の devDependencies のみ
-npm test             # node --test（依存なし）
+npm install          # devDependencies for type checking only
+npm test             # node --test, no dependencies
 npm run typecheck    # tsc --noEmit
-npm run build:bin    # (任意) Bun で単一実行ファイルを作る
+npm run build:bin    # (optional) single executable via Bun
 ```
 
 ```
 src/
-  main.ts       エントリポイント
-  cli.ts        コマンド
-  world.ts      ワールド: スケジューリング・アクションの適用 (TinyWorld 相当)
-  sop.ts        フェーズ定義・ロールの責務・権限
-  protocol.ts   返答タグのパーサ
-  prompt.ts     ターンごとのプロンプト生成（ペルソナ・共有状態・記憶）
-  store.ts      .team/ への保存
-  render.ts     ログ・transcript.md の整形
+  main.ts       entry point
+  cli.ts        commands
+  world.ts      the world: scheduling and applying actions (TinyWorld equivalent)
+  sop.ts        phase definitions, role responsibilities and permissions
+  protocol.ts   reply tag parser
+  prompt.ts     per-turn prompt (persona, shared state, memory)
+  store.ts      persistence under .team/
+  render.ts     log and transcript.md formatting
   backends/     anthropic / claude-cli / mock
-personas/       メンバー定義
-.claude/        サブエージェント (agents/) と team-dev スキル (skills/)
+personas/       member definitions
+.claude/        subagents (agents/) and the team-dev skill (skills/)
 ```
 
-## 制約と注意
+## Limitations
 
-- シミュレーションしたユーザーは実ユーザーの代わりにはなりません。仮説出しと明らかな問題の発見に使い、重要な判断は実際のユーザーで確かめてください。
-- build フェーズのエンジニアは同じ `workspace/` を並列に編集します。担当ファイルを分ける指示はしていますが、競合したときは review フェーズで直す前提です。
-- `claude-cli` バックエンドの build/review では、エンジニア役に Bash と編集ツールを許可します。信頼できる環境（コンテナやクラウドセッションなど）で実行してください。
+- Simulated users do not replace real users. Use them to widen hypotheses and catch obvious problems, then confirm important decisions with real people.
+- Engineers in the build phase edit the same `workspace/` in parallel. They are told to keep to their own files, and conflicts are expected to be fixed in review.
+- The `claude-cli` backend gives engineers Bash and edit tools in phases that allow editing. Run it in a trusted environment, such as a container or a cloud session.
