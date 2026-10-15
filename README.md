@@ -5,7 +5,7 @@
 `team` combines persona simulation from [microsoft/TinyTroupe](https://github.com/microsoft/TinyTroupe) with the role-based development process of MetaGPT / ChatDev. A small team builds a product by **talking to each other**:
 
 - a **Product Manager** who interviews users, decides scope and writes acceptance criteria
-- several **engineers** who design, implement and review each other's work, writing real code in `workspace/`
+- several **engineers** who design, implement and review each other's work, writing real code in `workspace/<session>/`
 - several **user personas** who are outside the team: they answer interviews, then try what was built and accept or reject it
 
 Key properties:
@@ -34,7 +34,7 @@ Key properties:
 |---|---|---|
 | discovery | PM, users | The PM interviews users and digs into concrete episodes. No solutions yet |
 | planning | PM, engineers | The PM writes tasks with acceptance criteria and assigns owners; engineers debate feasibility, risks and tech choices |
-| build | engineers (**in parallel**) | Each engineer implements their tasks in `workspace/` and reports `[TASK_DONE]` |
+| build | engineers (**in parallel**) | Each engineer implements their tasks in `workspace/<session>/` and reports `[TASK_DONE]` |
 | review | engineers, PM | Cross-review and fixes; the PM checks the acceptance criteria |
 | acceptance | users, PM | Users read or run the result and give `[VERDICT accept/reject]`; the PM sums up |
 
@@ -72,7 +72,15 @@ Open this repository in Claude Code and run:
 Claude Code then repeats `team next` → subagent → `team record`. Anything you say mid-session that is meant for the team ("tell them the budget is small") is shared with every member through `team say`. You can also set a stopping point, such as "just discovery" or "up to the next phase".
 
 - Full conversation, including each member's private thoughts: `.team/sessions/<name>/transcript.md`
-- The product being built: `workspace/`
+- The product being built: `workspace/<name>/` (each session gets its own folder)
+
+#### Claude Code on the web and Claude Projects
+
+It works the same in cloud sessions. A few things differ because the container is temporary:
+
+- `.claude/hooks/session-start.sh` installs pnpm and the dev dependencies when a cloud session starts (the engine itself needs only Node).
+- The session state and the product are saved by committing and pushing `.team/sessions/<name>/` and `workspace/<name>/`; the `team-dev` skill does this after each phase. Another thread or a later session resumes with "continue the <name> session".
+- In a Claude Project, run one simulation per thread. Sessions build in separate folders, so threads never edit the same files.
 
 ### From the command line
 
@@ -118,7 +126,7 @@ Set the model with `backend.model` in `team.config.json`, `--model`, or the `TEA
 ## Development
 
 ```bash
-corepack enable      # once, if pnpm is not installed (pnpm version is pinned in package.json)
+npm install -g pnpm@12.9.0   # once, if pnpm is not installed (the version pinned in package.json; corepack cannot start pnpm 12)
 pnpm install         # devDependencies for type checking only
 pnpm test            # node --test, no dependencies
 pnpm typecheck       # tsc --noEmit
@@ -145,5 +153,5 @@ personas/       member definitions
 ## Limitations
 
 - Simulated users do not replace real users. Use them to widen hypotheses and catch obvious problems, then confirm important decisions with real people.
-- Engineers in the build phase edit the same `workspace/` in parallel. They are told to keep to their own files, and conflicts are expected to be fixed in review.
+- Engineers in the build phase edit the same `workspace/<session>/` in parallel. They are told to keep to their own files, and conflicts are expected to be fixed in review.
 - The `claude-cli` backend gives engineers Bash and edit tools in phases that allow editing. Run it in a trusted environment, such as a container or a cloud session.

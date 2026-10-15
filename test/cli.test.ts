@@ -28,6 +28,8 @@ test("auto mode with the mock backend completes a full iteration", async () => {
   const state = JSON.parse(fs.readFileSync(path.join(dir, ".team/sessions/s1/state.json"), "utf8"));
   assert.equal(state.status, "done");
   assert.ok(state.tasks.length >= 2);
+  assert.equal(state.workspace, "workspace/s1");
+  assert.ok(fs.existsSync(path.join(dir, "workspace/s1")));
   const md = fs.readFileSync(path.join(dir, ".team/sessions/s1/transcript.md"), "utf8");
   assert.match(md, /## Transcript/);
   assert.match(md, /acceptance/);

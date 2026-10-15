@@ -28,7 +28,7 @@ Repeat until the session is `done`, or until the stopping point the user asked f
 1. `team next --json` → `{ status, phase, round, pending: [{ member, name, role, subagent, promptFile }] }`.
    If `status` is `"done"`, go to step 3.
 2. For **every** entry in `pending`, launch the Agent tool with `subagent_type: <subagent>` and a prompt like:
-   > Read `<promptFile>` and play the turn of `<name>` (`<member>`) exactly as it instructs. Your final message must be only the action tags.
+   > Read `<promptFile>` and play the turn of `<name>` (`<member>`) exactly as it instructs. Your final message must be only the action tags. Do not message the user or call any chat/messaging tools.
 
    If that subagent type is not available (e.g. `.claude/agents/` was added after this Claude Code session started),
    use `general-purpose` instead and begin the prompt with the body of `.claude/agents/<subagent>.md`
@@ -46,9 +46,24 @@ Repeat until the session is `done`, or until the stopping point the user asked f
 ## 3. Finish
 
 - Show `team status` (backlog with results) and the users' verdicts, and point to
-  `.team/sessions/<name>/transcript.md` (full conversation including private thoughts) and `workspace/`.
+  `.team/sessions/<name>/transcript.md` (full conversation including private thoughts) and `workspace/<name>/`.
 - Suggest next steps: another iteration (if users rejected and iterations remain the engine already looped back to
   `planning` — just continue the loop), new personas, or committing the result.
+
+## Cloud sessions (Claude Code on the web, Claude Projects)
+
+When `CLAUDE_CODE_REMOTE=true`, the container is thrown away after the session, and other threads of a project each get
+their own fresh clone. So:
+
+- **Save by pushing.** After each phase change and when you stop, commit `.team/sessions/<name>/` and `workspace/<name>/`
+  and push to the branch you were told to work on. That is the only way the session survives and another thread
+  (or a later session) can resume it with `team use <name>`.
+- **One simulation per thread.** Every session builds in its own `workspace/<name>/`, so threads running different
+  sessions never touch the same files. Do not run the same session from two threads at once.
+- **Talk to the user through the host.** Your plain text may not reach the user (in Projects only the thread's reply
+  and status tools do). Send the loop's step 4 updates there and keep the status checklist on the current phase. Subagents never
+  message the user themselves.
+- `pnpm` and the dev dependencies are installed by `.claude/hooks/session-start.sh`; the engine itself needs only Node.
 
 ## Human in the loop
 

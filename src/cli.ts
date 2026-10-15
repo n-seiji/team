@@ -95,7 +95,8 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
         members: cfg.members.map((f) => loadPersona(root, f)),
         phases: cfg.phases ?? DEFAULT_PHASES,
         language: cfg.language,
-        workspace: cfg.workspace,
+        // each session builds in its own folder so sessions (e.g. parallel cloud threads) never share files
+        workspace: path.posix.join(cfg.workspace ?? "workspace", name),
         maxIterations: cfg.maxIterations,
         historyWindow: cfg.historyWindow,
       });

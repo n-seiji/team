@@ -3,7 +3,7 @@
   "name": "invoice-cli",
   "brief": "フリーランスや個人事業主が、ターミナルから数十秒で請求書(Markdown/HTML)を作れる小さなツール",
   "language": "ja",
-  "workspace": "workspace",
+  "workspace": "workspace/invoice-cli",
   "createdAt": "2026-10-09T15:02:37.234Z",
   "status": "done",
   "members": [

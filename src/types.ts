@@ -110,6 +110,7 @@ export interface Entry {
 
 export interface TeamConfig {
   language?: string;
+  /** Parent folder for products; each session builds in `<workspace>/<session name>/`. */
   workspace?: string;
   maxIterations?: number;
   historyWindow?: number;

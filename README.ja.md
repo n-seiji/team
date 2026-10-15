@@ -5,7 +5,7 @@
 [microsoft/TinyTroupe](https://github.com/microsoft/TinyTroupe) のペルソナ・シミュレーションと、MetaGPT / ChatDev の役割分担型の開発プロセスを組み合わせ、
 
 - **プロダクトマネージャー**（インタビュー・スコープ決定・受け入れ基準）
-- **エンジニア（複数）**（設計・実装・相互レビュー。`workspace/` に実際にコードを書く）
+- **エンジニア（複数）**（設計・実装・相互レビュー。`workspace/<セッション名>/` に実際にコードを書く）
 - **ペルソナ＝ユーザー（複数）**（チーム外の人。インタビューに答え、できたものを試して accept / reject する）
 
 が **会話しながら** プロダクトを作っていく仕組みです。
@@ -34,7 +34,7 @@
 |---|---|---|
 | discovery | PM, ユーザー | PM がユーザーにインタビュー。具体的なエピソードを掘る。解決策の話はしない |
 | planning | PM, エンジニア | PM が受け入れ基準つきタスクを作って担当を決める。エンジニアは実現性・リスク・技術選定を議論 |
-| build | エンジニア（**並列**） | 自分のタスクを `workspace/` に実装し `[TASK_DONE]` |
+| build | エンジニア（**並列**） | 自分のタスクを `workspace/<セッション名>/` に実装し `[TASK_DONE]` |
 | review | エンジニア, PM | 相互レビューと修正。PM が受け入れ基準を確認 |
 | acceptance | ユーザー, PM | ユーザーが成果物を見て/動かして `[VERDICT accept/reject]`。PM がまとめる |
 
@@ -72,7 +72,15 @@ reject が1件でもあり、イテレーション上限 (`maxIterations`) に�
 あとは Claude Code が `team next` → サブエージェント → `team record` を繰り返します。途中で「予算は月1万円までと伝えて」などと話しかければ、`team say` でチーム全員に共有されます。「discovery だけやって」「次のフェーズまで」のように区切りも指定できます。
 
 - 会話の全文（各メンバーの思考を含む）: `.team/sessions/<name>/transcript.md`
-- 作られたプロダクト: `workspace/`
+- 作られたプロダクト: `workspace/<name>/`（セッションごとに別フォルダ）
+
+#### Claude Code on the web / Claude のプロジェクト
+
+クラウドのセッションでも同じように動きます。コンテナが一時的なので、次の点だけ違います。
+
+- クラウドのセッションが始まると、`.claude/hooks/session-start.sh` が pnpm と開発用の依存を入れます（エンジン本体は Node だけで動きます）。
+- セッションの状態と作ったプロダクトは、`.team/sessions/<name>/` と `workspace/<name>/` をコミットして push することで残ります。`team-dev` スキルはフェーズが変わるたびにこれを行います。別のスレッドや後のセッションからは「<name> のセッションを続けて」で再開できます。
+- プロジェクトでは、1つのスレッドで1つのシミュレーションを回してください。セッションごとにフォルダが分かれているので、スレッド同士が同じファイルを編集することはありません。
 
 ### コマンドラインで使う
 
@@ -115,7 +123,7 @@ node src/main.ts record --as pm --file reply.txt
 ## 開発
 
 ```bash
-corepack enable      # pnpm が未インストールなら最初に1回（バージョンは package.json で固定）
+npm install -g pnpm@12.9.0   # pnpm が未インストールなら最初に1回（package.json で固定した版。corepack では pnpm 12 が起動しない）
 pnpm install         # 型チェック用の devDependencies のみ
 pnpm test            # node --test（依存なし）
 pnpm typecheck       # tsc --noEmit
@@ -142,5 +150,5 @@ personas/       メンバー定義
 ## 制約と注意
 
 - シミュレーションしたユーザーは実ユーザーの代わりにはなりません。仮説出しと明らかな問題の発見に使い、重要な判断は実際のユーザーで確かめてください。
-- build フェーズのエンジニアは同じ `workspace/` を並列に編集します。担当ファイルを分ける指示はしていますが、競合したときは review フェーズで直す前提です。
+- build フェーズのエンジニアは同じ `workspace/<セッション名>/` を並列に編集します。担当ファイルを分ける指示はしていますが、競合したときは review フェーズで直す前提です。
 - `claude-cli` バックエンドの build/review では、エンジニア役に Bash と編集ツールを許可します。信頼できる環境（コンテナやクラウドセッションなど）で実行してください。
