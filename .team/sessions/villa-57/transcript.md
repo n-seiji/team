@@ -28,7 +28,7 @@
 - 2: 「宿泊経験者」の定義 (confirmed かつチェックアウト済み)。招待コードなしの予約は通常料金
 - 3: メール変更は OTP で新アドレスを確認してから反映。`reservations.guest_email` / `guest_email_hash` / 招待セッションを更新
 
-**Status:** running · iteration 1/2 · phase `build`
+**Status:** running · iteration 1/2 · phase `review`
 
 ## Team
 
@@ -40,12 +40,18 @@
 
 ## Backlog
 
-- T1 [todo] owner=eng-backend Business Risk Review の spec を書く(docs/specs/ 配下)
+- T1 [done] owner=eng-backend Business Risk Review の spec を書く(docs/specs/ 配下)
     acceptance: villa の .claude/rules/business-risk-review.md の5カテゴリすべてを埋めた spec が、実装前に docs/specs/ に置かれていること。
     - 少なくとも次を扱う。料金の食い違い、不正な再訪なりすまし、他人のメールの存在確認(列挙)、招待人数の増加、再訪経由の追跡。
     - 個人情報・認証・メールに触れるため、pii-review の観点で確認する項目も spec に書く。
     - 今回やらないこと(メール変更、ゲスト発行UI)と、その理由を明記する。
-- T2 [todo] owner=eng-backend 宿泊済みメールの判定と、コードなしでの予約開始
+    result: Business Risk Review の spec を `docs/specs/2026-10-16-revisit-guest-reservation.md` に置きました。
+    - 5 カテゴリを全部埋めました。料金の食い違い、なりすまし、メールの存在確認(列挙)、招待人数の増加、再訪経由の追跡を扱っています。
+    - pii-review の確認項目(節 1・2・3・4・6・8)を書きました。
+    - 今回やらないこと(メール変更、ゲスト発行 UI)と理由を明記しました。
+    - totalCap にコードなし予約を数えない理由も書きました。再訪の宿泊もポストステイのコード発行対象になります。その分は既存の totalCap 判定で上限がかかります。
+    - 実装前の確認結果も書きました。`reservation.tsx`、`quote`、`checkout`、`checkout-flow` はどれも招待行を前提にしています。
+- T2 [done] owner=eng-backend 宿泊済みメールの判定と、コードなしでの予約開始
     acceptance: - 確認済みメール(OTP 通過)で、宿泊済み(confirmed かつチェックアウト日が今日(JST)より前、同一 guest_email_hash)なら、招待コードなしで予約セッションを開始できる。
     - 宿泊済みでないメールでは開始できない。OTP の送信可否や応答の文言・件数は宿泊済みの人と区別がつかない。
     - 作られる予約は normal 料金で、parent_invitation_id は無く、再訪経由と分かる印が残る。
@@ -53,13 +59,64 @@
     - OTP のレート制限は既存の仕組みを再利用する。
     - totalCap(30件)の扱いを確認して決め、理由を spec に書く(コードなしの予約を totalCap に数えるかどうか)。
     - ユニットテストを追加し、`pnpm test:run`、`npx tsc --noEmit`、lint が通る。
-- T3 [todo] owner=eng-frontend 予約入口に「前に泊まった方はこちら(メールで予約)」を追加する
+    result: 宿泊済みメールの判定と、コードなしでの予約開始を実装しました。
+    - 判定: `reservationRepo.hasCompletedStay` と `isReturningGuest`。OTP 検証後と、見積り・予約作成時の合計 3 か所で再判定します。外れた場合は、どこでも 403 `revisit_not_available` の 1 種類だけを返します。
+    - 予約開始:
+      - `lib/checkout-flow.ts` の `startCheckout` が `invitation: null` を受け付けます。
+      - 料金は `quoteForRevisit` で通常料金固定です。
+      - `invitation_id` は NULL で、招待の claim と used 化はしません。
+      - Stripe の metadata にも招待 ID を入れません。
+    - 見積りと予約確定の API:
+      - `api/quote.ts` と `api/checkout.ts` に revisit の分岐を入れました。
+      - 招待行は引きません。
+      - メールは OTP 確認済みのセッション値だけを使います。
+    - 予約画面:
+      - `reservation.tsx` の loader に revisit の分岐を入れました。
+      - メール確認済みかつ宿泊済みを毎回判定し、満たさなければ入口へ戻します。
+      - 画面には `kind` と `contactEmail` を渡します。
+      - 鈴木さんの待ち 2 点(`kind` と `contactEmail` の受け渡し、403 の固定エラー)はこれで入りました。
+    - ミドルウェア: `_middleware.ts` が `kind` を context に積みます。`/foret-noire/reservation/revisit` を公開パスに追加しました。これが無いと、メール入力画面がクッキー無しで入口に戻されていました。
+    - 再訪の印: `reservation.revisit_started` を予約 ID 付きで監査ログに残します。detail は `kind` と `price_mode` だけで、メールや宿泊歴は入れません。
+    - 重複予約の防止(今回追加):
+      - `hasUpcomingReservation`: 同じメールに、これから泊まる予約(pending / confirmed / cancelling)があるかを見ます。
+      - 招待コードの「1 コード 1 予約」に当たる歯止めが、コードなしでは無いための追加です。
+      - 作成前に確認し、作成後にも自分以外を再確認します。並列で後着になった側の pending は取り消します。
+    - totalCap: コードなし予約は数えません。理由は spec に書きました。
+    - spec: `docs/specs/2026-10-16-revisit-guest-reservation.md` の実装状況を更新し、既知の制約を明記しました。
+    - テスト: 新規 `checkout-flow.revisit.test.ts`、`api/checkout.revisit.test.ts`、`api/quote.revisit.test.ts`。`reservation.revisit.sqlite.test.ts`(実 SQLite)、`reservation.test.tsx`、`_middleware.test.ts` に追記しました。
+    - 確認:
+      - `pnpm test:run` は 169 ファイル・1519 件が通りました。
+      - `pnpm lint` は oxlint と oxfmt が通りました。
+      - `npx tsc --noEmit` は `dist/.vite/manifest.json` の 1 件だけ残っています。未ビルドによる既存のもので、今回の変更とは無関係です。
+    - 既知の制約(spec に記載):
+      - 再訪の pending の決済再開(status / retry)と日程変更は、招待コード前提のままです。
+      - 再訪で決済を離脱すると、pending の期限が切れるまで新規予約が 409 になります。
+      - 重複防止は DB の一意制約ではなく、作成前後の 2 回確認です。並列時は両方が取り消される側に倒れますが、二重予約にはなりません。
+    - 未検証: Resend / Stripe の実接続、本番 D1、実ブラウザでの通し操作。
+- T3 [done] owner=eng-frontend 予約入口に「前に泊まった方はこちら(メールで予約)」を追加する
     acceptance: - 予約入口で、招待コード入力と並んで「前に泊まった方」の導線が見える。スマホ幅(通勤電車で片手操作)でも操作できる。
     - メール入力、OTP 入力、予約画面へと進む流れが、既存の OTP 画面を使って動く。
     - 宿泊済みでないメールの場合も、「確認コードを送りました」の表示は宿泊済みの人と同じにする。予約に進めないときのメッセージは、メールの存在や宿泊歴が分からない文言にし、中村さんへの問い合わせ先を案内する。
     - 予約画面に「招待コードなし・通常料金」であることが、料金確定の前に表示される。
     - 既存の画面のコンポーネントとスタイルに合わせ、新しい依存は追加しない。
     - 画面のテストを追加し、`pnpm test:run`、`npx tsc --noEmit`、lint が通る。
+    result: 予約入口に「前に泊まった方はこちら（メールで予約）」を追加しました。田中さんの route 配線が入ったので完了にします。
+    - 入口は `app/routes/foret-noire/invitation-only.tsx` です。招待コード入力の下に、幅いっぱいで高さ 48px のボタンを置きました。折りたたみはしません。
+    - メール入力は `app/routes/foret-noire/reservation/revisit.tsx` と `app/islands/revisit-email-form.tsx` です。流れは、メール入力、確認コード入力、予約画面です。
+    - 文言と振り分けは `app/lib/revisit-ui.ts` にあります。
+      - 確認コード送信後の表示は、宿泊歴に関係なく全員同じです。
+      - 進めないときは、宿泊歴に触れない固定文言と、`CONTACT_EMAIL` の連絡先を出します。
+      - 予約確定時の 403 `revisit_not_available` も、`app/islands/reservation-confirm.tsx` で同じ固定文言に差し替えます。
+    - 予約画面の `app/components/revisit-notice.tsx` は、`kind==='revisit'` のときだけ、日程と料金の前に「招待コードなし・通常料金」を固定表示します。招待経由は今までどおりです。
+    - テストは `revisit-ui.test.ts`、`revisit-notice.test.tsx`、`revisit-email-form.test.tsx`、`invitation-only.test.tsx` です。
+    - 確認（今回再実行）:
+      - `pnpm test:run` は 169 ファイル・1519 件が通りました。
+      - `pnpm lint` も通りました。
+      - `npx tsc --noEmit` は `dist/.vite/manifest.json` の 1 件だけ残っています。未ビルドによる既存のもので、今回の変更とは無関係です。
+    - 未検証:
+      - 実ブラウザやスマホ実機での通し操作（メール入力から予約確定まで）。
+      - Resend と Stripe の実接続。
+      - 「前に泊まった方はこちら」の文言が伝わるか。小林さんの回答待ちです。
 
 ## Decisions
 
@@ -286,3 +343,168 @@ _(none)_
 ### iteration 1 · build
 
 - — Phase "build" started (iteration 1) — Engineers implement their own tasks in the workspace (real files, runnable code, tests when sensible), coordinate interfaces with each other, and mark finished work with [TASK_DONE].
+
+> _田中 健 (eng-backend) [thinks]: T1 は完了。T2 は前半だけ。checkout 側は招待行に強く依存していて、今回の範囲では終わっていない。TASK_DONE にはしない。鈴木さんにはセッションの kind と API の形を共有する。_
+
+- 田中 健 (eng-backend) [TASK_UPDATE]: T1 → done: Business Risk Review の spec を `docs/specs/2026-10-16-revisit-guest-reservation.md` に置きました。
+  - 5 カテゴリを全部埋めました。料金の食い違い、なりすまし、メールの存在確認(列挙)、招待人数の増加、再訪経由の追跡を扱っています。
+  - pii-review の確認項目(節 1・2・3・4・6・8)を書きました。
+  - 今回やらないこと(メール変更、ゲスト発行 UI)と理由を明記しました。
+  - totalCap にコードなし予約を数えない理由も書きました。再訪の宿泊もポストステイのコード発行対象になります。その分は既存の totalCap 判定で上限がかかります。
+  - 実装前の確認結果も書きました。`reservation.tsx`、`quote`、`checkout`、`checkout-flow` はどれも招待行を前提にしています。
+
+- 田中 健 (eng-backend) → eng-frontend, pm: 田中です。T2 は前半まで終わりました。今の状況を共有します。
+  
+  **実装済み(`pnpm test:run` 1501 件通過、lint 通過)**
+  - `reservationRepo.hasCompletedStay`(`app/db/repositories/reservation.ts`)
+    - 宿泊済み=同一メールのハッシュ、confirmed、`check_out` が今日(JST)より前。鍵ローテーション中の旧版ハッシュも拾います。
+    - 実 SQLite のテストで、当日チェックアウト・未来の予約・pending/cancelled/cancelling・別メールが false になることを確認済みです。
+  - `app/lib/revisit.ts` の `isReturningGuest`(メールを正規化し、JST の今日で判定)
+  - `invitation_session` に `kind: "invitation" | "revisit"` を追加しました(`app/lib/invitation-code.ts`)。
+    - 旧形式の Cookie は invitation として読みます。デプロイ時に進行中の人は切れません。
+    - revisit の `code` は空文字です。
+  - API は 2 本です。
+    - `POST /api/revisit/send-otp`: 宿泊歴を一切見ず、常に `200 { success: true }`。メール形式不正は 400、レート制限は既存の `issueOtp` どおり 429 です。
+    - `POST /api/revisit/verify`:
+      - コード違い・期限切れ・Cookie なし・形式不正は `400 { error: "invalid_code" }` の 1 種類です。
+      - 検証後に宿泊済みでなければ `403 { error: "revisit_not_available" }` の 1 種類です。
+      - 宿泊済みなら revisit セッションを発行し、`200 { success: true, redirect: "/foret-noire/reservation" }` を返します。
+  - 監査アクションの型に `reservation.revisit_started` を追加しました。
+  
+  **まだ終わっていません(T2 は TASK_DONE にしていません)**
+  1. `checkout` / `quote` / `checkout-flow` の revisit 分岐
+     - 招待行なし、normal 料金、claim/release なし。
+     - 同一メールでの重複予約防止。
+     - 確定時に `isReturningGuest` を再判定し、満たさなければ `revisit_not_available`。
+     - 予約 ID 付きの `reservation.revisit_started` 記録。
+  2. `reservation.tsx` loader の revisit 分岐
+     - 今は `findByCode('')` が null になり、招待のないページへ戻ります。安全側に止まるだけで、まだ使えません。
+  3. `_middleware.ts` が `kind` を context に積むこと
+  
+  **鈴木さんへ**
+  - 画面は上の 2 本の API に合わせてください。`/api/revisit/send-otp` を叩いた後は、既存の OTP 画面で `/api/revisit/verify` に `{ code }` を送る形です。
+  - `403 revisit_not_available` は固定文言にだけ対応づけてください。
+  - 予約確定時にも同じ 403 が返ります。
+  - 画面用の `kind` は、2 と 3 を入れたら context から取れる形にします。
+  - 実際に予約まで通る確認は、1〜3 が入ってからです。それまでは、画面のテストは API をモックにしてください。
+  
+  次の round で 1〜3 に入ります。
+  - 未検証: Resend / Stripe の実接続、本番 D1、実ブラウザ。
+  - `npx tsc --noEmit` に `dist/.vite/manifest.json` が見つからないエラーが 1 件残っています。未ビルドによるもので、今回の変更とは無関係です。
+
+> _田中 健 (eng-backend) [notes]: villa#57 T2 の進捗(build round 1): hasCompletedStay、isReturningGuest、session kind、/api/revisit/send-otp と /verify まで実装済み。残りは checkout/quote/checkout-flow の revisit 分岐、reservation.tsx loader の revisit 分岐、_middleware.ts の kind 受け渡しと reservation.revisit_started の記録。revisit の session.code は空文字で、loader は findByCode('') が null になって招待のないページへ戻る(安全側)。_
+
+> _鈴木 ひかり (eng-frontend) [thinks]: 画面側は実装済み。route の配線(kind 受け渡し)と checkout の 403 は田中さん側の作業なので、TASK_DONE にはせず着手中として報告する。_
+
+- 鈴木 ひかり (eng-frontend) [TASK_UPDATE]: T3 → doing: 画面側を実装しました。route の配線は田中さん待ちです。
+
+- 鈴木 ひかり (eng-frontend) → eng-backend, pm: 鈴木です。T3 の画面側は動く状態です。`/api/revisit/send-otp` と `/api/revisit/verify` は田中さんの実装と形が合っています。ただし T3 は完了にしていません。田中さんの変更待ちが2点あります。
+  - `app/routes/foret-noire/reservation.tsx` で、ReservationConfirm に `kind={'invitation'|'revisit'}` と `contactEmail={getEnv(c).CONTACT_EMAIL}` を渡してください。招待行なしで通す分岐もお願いします。これがないと、予約画面に「招待コードなし・通常料金」が出ません。
+  - `/api/checkout` が再訪で止まるときは、403 `{error:"revisit_not_available"}` を返してください。画面は固定文言に差し替えます。
+  
+  **実装したもの**
+  - 入口 `app/routes/foret-noire/invitation-only.tsx`: 招待コード入力の下に、幅いっぱいで高さ 48px の「前に泊まった方はこちら（メールで予約）」ボタンを置きました。折りたたみはしません。
+  - `app/routes/foret-noire/reservation/revisit.tsx`: メール入力のページです。問い合わせ先は既存の `CONTACT_EMAIL` を使います。
+  - `app/islands/revisit-email-form.tsx`: 流れは、メール入力、確認コード入力、予約画面です。
+    - 送信後の表示は誰でも「入力いただいたメールアドレス宛に確認コードを送りました」です。
+    - 検証失敗は `invalid_code` の1文言だけです。
+    - `revisit_not_available` のときは固定文言「ご予約を進められませんでした。お手数ですが、中村までご連絡ください。」を出し、連絡先の mailto と、招待コードの入力へ戻るボタンを付けます。宿泊歴には触れません。
+  - `app/lib/revisit-ui.ts`: 文言と、API 応答を画面の状態に振り分ける処理です。想定外のエラー文言は画面に出しません。
+  - `app/components/revisit-notice.tsx`: `ReservationConfirm` の先頭、つまり日程と料金の前に固定表示します。`kind==='revisit'` のときだけです。招待経由は `kind` を省略すると今までどおりです。
+  - `app/islands/reservation-confirm.tsx`: 確定時に `revisit_not_available` が返ったら、同じ固定文言を出します。
+  
+  **テスト**
+  - `revisit-ui.test.ts`: 応答の振り分けと、固定文言に宿泊歴を示す語が出ないこと。
+  - `revisit-notice.test.tsx`、`revisit-email-form.test.tsx`、`invitation-only.test.tsx`: 入口の導線表示、メールフォームの表示、注意書きの表示。
+  - `pnpm test:run`: 166 ファイル・1501 件が通りました。`pnpm lint` も通っています。
+  - `npx tsc --noEmit` は未通過です。原因は2つです。`_middleware.test.ts` が `InvitationSession.kind` を渡しておらず、これは田中さんの型変更に由来します。`dist/.vite/manifest.json` が無いのは、ビルド前の既存の状態です。
+  
+  **未検証**
+  - 実機のスマホ幅での操作。
+  - 確認コード入力からリダイレクトまでをブラウザでつないだ動作。
+  - 「前に泊まった方はこちら」の文言が伝わるかどうかは、小林さんの回答待ちです。
+
+> _鈴木 ひかり (eng-frontend) [notes]: T3 の画面は実装済み。残りは田中さんの reservation.tsx への kind/contactEmail の受け渡しと、checkout の 403 `revisit_not_available`。この2つが入ったら T3 を完了にする。tsc は _middleware.test.ts の kind 未指定で落ちている(田中さんの型変更由来)。_
+
+> _田中 健 (eng-backend) [thinks]: T2 の残り 3 点を実装し、品質ゲートは通過した。tsc の残り 1 件は dist 未ビルドによる既存のもの。_
+
+- 田中 健 (eng-backend) [TASK_UPDATE]: T2 → done: 宿泊済みメールの判定と、コードなしでの予約開始を実装しました。
+  - 判定: `reservationRepo.hasCompletedStay` と `isReturningGuest`。OTP 検証後と、見積り・予約作成時の合計 3 か所で再判定します。外れた場合は、どこでも 403 `revisit_not_available` の 1 種類だけを返します。
+  - 予約開始:
+    - `lib/checkout-flow.ts` の `startCheckout` が `invitation: null` を受け付けます。
+    - 料金は `quoteForRevisit` で通常料金固定です。
+    - `invitation_id` は NULL で、招待の claim と used 化はしません。
+    - Stripe の metadata にも招待 ID を入れません。
+  - 見積りと予約確定の API:
+    - `api/quote.ts` と `api/checkout.ts` に revisit の分岐を入れました。
+    - 招待行は引きません。
+    - メールは OTP 確認済みのセッション値だけを使います。
+  - 予約画面:
+    - `reservation.tsx` の loader に revisit の分岐を入れました。
+    - メール確認済みかつ宿泊済みを毎回判定し、満たさなければ入口へ戻します。
+    - 画面には `kind` と `contactEmail` を渡します。
+    - 鈴木さんの待ち 2 点(`kind` と `contactEmail` の受け渡し、403 の固定エラー)はこれで入りました。
+  - ミドルウェア: `_middleware.ts` が `kind` を context に積みます。`/foret-noire/reservation/revisit` を公開パスに追加しました。これが無いと、メール入力画面がクッキー無しで入口に戻されていました。
+  - 再訪の印: `reservation.revisit_started` を予約 ID 付きで監査ログに残します。detail は `kind` と `price_mode` だけで、メールや宿泊歴は入れません。
+  - 重複予約の防止(今回追加):
+    - `hasUpcomingReservation`: 同じメールに、これから泊まる予約(pending / confirmed / cancelling)があるかを見ます。
+    - 招待コードの「1 コード 1 予約」に当たる歯止めが、コードなしでは無いための追加です。
+    - 作成前に確認し、作成後にも自分以外を再確認します。並列で後着になった側の pending は取り消します。
+  - totalCap: コードなし予約は数えません。理由は spec に書きました。
+  - spec: `docs/specs/2026-10-16-revisit-guest-reservation.md` の実装状況を更新し、既知の制約を明記しました。
+  - テスト: 新規 `checkout-flow.revisit.test.ts`、`api/checkout.revisit.test.ts`、`api/quote.revisit.test.ts`。`reservation.revisit.sqlite.test.ts`(実 SQLite)、`reservation.test.tsx`、`_middleware.test.ts` に追記しました。
+  - 確認:
+    - `pnpm test:run` は 169 ファイル・1519 件が通りました。
+    - `pnpm lint` は oxlint と oxfmt が通りました。
+    - `npx tsc --noEmit` は `dist/.vite/manifest.json` の 1 件だけ残っています。未ビルドによる既存のもので、今回の変更とは無関係です。
+  - 既知の制約(spec に記載):
+    - 再訪の pending の決済再開(status / retry)と日程変更は、招待コード前提のままです。
+    - 再訪で決済を離脱すると、pending の期限が切れるまで新規予約が 409 になります。
+    - 重複防止は DB の一意制約ではなく、作成前後の 2 回確認です。並列時は両方が取り消される側に倒れますが、二重予約にはなりません。
+  - 未検証: Resend / Stripe の実接続、本番 D1、実ブラウザでの通し操作。
+
+- 田中 健 (eng-backend) → eng-frontend, pm: 田中です。T2 は完了にしました。鈴木さんの待ち 2 点は入っています。
+  - `reservation.tsx` は revisit で招待行なしで通り、`kind` と `contactEmail` を ReservationConfirm に渡します。
+  - `/api/checkout` と `/api/quote` は、予約に進めないときに 403 `{ error: "revisit_not_available" }` を返します。
+  - `/foret-noire/reservation/revisit` は公開パスにしました。これが無いと、メール入力画面が入口へ戻されていました。
+  - `_middleware.test.ts` の `kind` 抜けも直っています。`pnpm test:run` は 1519 件が通り、lint も通りました。tsc の残りは `dist/.vite/manifest.json` の 1 件だけで、未ビルドによる既存のものです。
+  
+  補足が 2 点あります。
+  - 同じメールに、これから泊まる予約(pending / confirmed / cancelling)がある間は、新しい再訪予約は 409 にしました。1 コード 1 予約の代わりの歯止めで、totalCap に数えない判断の根拠でもあります。画面では 409 のエラー文をそのまま出して問題ありません。
+  - 再訪で Stripe の決済を離脱した場合は、pending の期限が切れるまで再予約できません。status / retry も招待前提のままです。今回は対応せず、spec の既知の制約に書きました。
+  
+  鈴木さん: 画面の通し確認(メール入力から予約確定まで)は、実ブラウザではまだ誰も見ていません。T3 の受け入れ前に、ローカルの `pnpm dev` で一度通してください。
+  佐藤さん: 「前回の予約が残っている間は新規不可」という挙動は、小林さんと中村さんの受け入れ確認で一言確認してください。
+
+> _田中 健 (eng-backend) [notes]: villa#57 T2 は build round 1 で完了。startCheckout は invitation:null で再訪を扱い、宿泊済みを 3 か所で再判定する。同一メールに今後の予約があれば 409(hasUpcomingReservation、作成前後の 2 回確認)。再訪の status/retry/edit と pending の期限待ちは未対応で、spec の既知の制約に記載済み。整形は prettier ではなく `npx oxfmt --write app/` を使う(prettier は無関係なファイルまで書き換える)。_
+
+> _鈴木 ひかり (eng-frontend) [thinks]: テスト・lint は通過、tsc は既存の manifest 1 件のみ。田中さんの配線も入ったので T3 を完了にする。実ブラウザ通しは未実施と明記する。_
+
+- 鈴木 ひかり (eng-frontend) [TASK_UPDATE]: T3 → done: 予約入口に「前に泊まった方はこちら（メールで予約）」を追加しました。田中さんの route 配線が入ったので完了にします。
+  - 入口は `app/routes/foret-noire/invitation-only.tsx` です。招待コード入力の下に、幅いっぱいで高さ 48px のボタンを置きました。折りたたみはしません。
+  - メール入力は `app/routes/foret-noire/reservation/revisit.tsx` と `app/islands/revisit-email-form.tsx` です。流れは、メール入力、確認コード入力、予約画面です。
+  - 文言と振り分けは `app/lib/revisit-ui.ts` にあります。
+    - 確認コード送信後の表示は、宿泊歴に関係なく全員同じです。
+    - 進めないときは、宿泊歴に触れない固定文言と、`CONTACT_EMAIL` の連絡先を出します。
+    - 予約確定時の 403 `revisit_not_available` も、`app/islands/reservation-confirm.tsx` で同じ固定文言に差し替えます。
+  - 予約画面の `app/components/revisit-notice.tsx` は、`kind==='revisit'` のときだけ、日程と料金の前に「招待コードなし・通常料金」を固定表示します。招待経由は今までどおりです。
+  - テストは `revisit-ui.test.ts`、`revisit-notice.test.tsx`、`revisit-email-form.test.tsx`、`invitation-only.test.tsx` です。
+  - 確認（今回再実行）:
+    - `pnpm test:run` は 169 ファイル・1519 件が通りました。
+    - `pnpm lint` も通りました。
+    - `npx tsc --noEmit` は `dist/.vite/manifest.json` の 1 件だけ残っています。未ビルドによる既存のもので、今回の変更とは無関係です。
+  - 未検証:
+    - 実ブラウザやスマホ実機での通し操作（メール入力から予約確定まで）。
+    - Resend と Stripe の実接続。
+    - 「前に泊まった方はこちら」の文言が伝わるか。小林さんの回答待ちです。
+
+- 鈴木 ひかり (eng-frontend) → pm, eng-backend, user-guest, user-owner: 鈴木です。T3 を完了にしました。入口のボタン、メール入力、確認コード、予約画面の「招待コードなし・通常料金」表示まで入っています。テストと lint は通りました。tsc は未ビルドの manifest 1 件だけ残っています。
+  受け入れ確認でお願いしたいのは 3 点です。
+  - 小林さん: 入口に「招待コードを入れる」と「前に泊まった方はこちら」が並んでいて迷わないか。「前に泊まった方はこちら」で意味が伝わるか。
+  - 小林さん・中村さん: 進めないときの文言「ご予約を進められませんでした。お手数ですが、中村までご連絡ください。」で、宿泊歴が分からない形のまま問い合わせ先が伝わるか。
+  - 田中さんの補足にあった「前回の予約が残っている間は新規不可（409）」の挙動は、画面にエラー文をそのまま出す形です。許容できるか教えてください。
+  実ブラウザでの通しは、ローカルで `pnpm dev` を動かして確認するところが残っています。外部キーがないので、メール送信と決済の部分はモックです。
+
+### iteration 1 · review
+
+- — Phase "review" started (iteration 1) — Engineers review each other's work against the acceptance criteria and fix issues. PM checks every task against its acceptance criteria and states what is ready for users.

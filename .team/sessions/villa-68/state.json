@@ -5,7 +5,7 @@
   "language": "ja",
   "workspace": "workspace/villa-68",
   "createdAt": "2026-10-16T07:02:48.464Z",
-  "status": "running",
+  "status": "done",
   "members": [
     {
       "id": "pm",
@@ -289,16 +289,13 @@
       "maxRounds": 1
     }
   ],
-  "phaseIndex": 2,
+  "phaseIndex": 4,
   "iteration": 1,
   "maxIterations": 2,
-  "round": 1,
-  "turn": 11,
+  "round": 0,
+  "turn": 24,
   "queue": [],
-  "pending": [
-    "eng-backend",
-    "eng-frontend"
-  ],
+  "pending": [],
   "insertions": 0,
   "tasks": [
     {
@@ -338,29 +335,41 @@
       "title": "T1 session_epoch の保存と Cookie 検証（マイページのみ）",
       "acceptance": "- D1 マイグレーション 0021（追加のみ）で `guest_session_epochs(email_key TEXT PRIMARY KEY, epoch INTEGER NOT NULL DEFAULT 0, updated_at TEXT)` を作る。\n- `email_key` は `COOKIE_SECRET` による鍵付きハッシュ（接頭辞 `session-epoch:`）にする。平文メールと `reservations.guest_email_hash` は使わない。\n- Cookie のペイロードは `{email, epoch?}` にする。ログイン時だけ DB の現在値を入れる。\n- 検証は `guestAuth` と `readGuestSession` の両方から、同じ 1 つの関数で行う。\n- epoch が一致しなければ未ログイン扱いにする。DB 読み取りに失敗した場合も未ログイン扱いにする。\n- epoch なしの既存 Cookie と、epoch が未登録のゲストは epoch 0 として扱う。デプロイしても既存ログインは切れない。\n- スライディング更新（3 日）は変えない。更新時は検証で得た epoch を引き継ぐ。\n- 失効済み Cookie で `/mypage` を開くとログイン案内に誘導されることを、テストで確認する。\n- ユニットテストで、一致で有効、不一致で無効、epoch なしの既存 Cookie で有効、更新後も epoch を維持、DB 失敗で無効、の 5 点を確認する。\n- 招待セッションと法人見学セッションは変更しない。",
       "owner": "eng-backend",
-      "status": "todo",
-      "createdBy": "pm"
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "epoch テーブル(`migrations/0021_guest_session_epochs.sql`)、`session-epoch.ts`、Cookie ペイロードの epoch 対応、`guestAuth` と `readGuestSession` に共通の `resolveGuestSession`、ログイン時の epoch 付与を実装しました。DB 失敗時は未ログイン扱いです。`pnpm vitest run app/middleware` で確認できます。更新時の引き継ぎは、この作業コピーにスライディング更新がないため、ログイン時とボタン押下時の再発行で対応しました。"
     },
     {
       "id": "T6",
       "title": "T2 「他の端末からログアウト」エンドポイント",
       "acceptance": "- ログイン済みのゲストが POST すると、そのゲストの epoch が `INSERT ... ON CONFLICT DO UPDATE SET epoch = epoch + 1` の 1 文で +1 される。\n- 押した端末には新しい epoch の Cookie を再発行し、ログインを維持する。他の端末の Cookie は次のリクエストで無効になる。\n- 未ログインでの POST は何も変更せず、ログインへ誘導する。\n- CSRF 対策は、既存のキャンセル POST と同じ方式に合わせる。トークンの取り方は鈴木さんに共有する。\n- 完了後は `/mypage` へリダイレクトし、`setFlash(c, 'success', '他の端末からログアウトしました', { path: '/mypage' })` を出す。\n- 監査には `guest_logout_all` の事実だけを残す。email、hash、氏名は出さない。\n- テストで、別 Cookie が無効になること、押した端末が有効なままであること、他のゲストの epoch は変わらないこと、二重押しでも壊れないこと、を確認する。先にテストを書く。",
       "owner": "eng-backend",
-      "status": "todo",
-      "createdBy": "pm"
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "`app/routes/mypage/logout-all.tsx` で `POST /mypage/logout-all` を実装しました。epoch を +1 し、押した端末に Cookie を再発行して、`/mypage` 用のフラッシュを出します。`pnpm vitest run app/routes/mypage/logout-all.test.ts` で確認できます。"
     },
     {
       "id": "T7",
       "title": "T3 マイページのボタンと /mypage 用フラッシュ",
       "acceptance": "- `setFlash` / `consumeFlash` に path 引数を足す（既定値は `/admin`）。`/admin` の既存の挙動は変えない。`flash.test.ts` に path ごとのテストを足す。これを最初に入れる。\n- `/mypage` の画面に、既存の FlashBanner で完了バナーを出す。\n- メールアドレス表示の下に `<details><summary>他の端末からログアウト</summary>` を置く。開くと説明文「共用の端末や、なくした端末のログインを切ります。この端末はログインしたままです。」と、form POST の「他の端末からログアウトする」ボタンが出る。\n- JS なしで動き、キーボードだけで操作できる。ボタンを押すまでは何も変わらない。\n- 既存の「ログアウト」は、別の form のまま、動作も文言も変えない。\n- 表示のテストを追加する。確認するのは、details と説明文、ボタンの文言、既存ログアウトが不変であること、バナーが出ること。",
       "owner": "eng-frontend",
-      "status": "todo",
-      "createdBy": "pm"
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "flash の path 対応と、/mypage の「他の端末からログアウト」UI を入れました。\n- `app/lib/flash.ts`: `setFlash(c, kind, text, { path? })` と `consumeFlash(c, { path? })` を追加。既定値は `/admin` で、admin の既存の挙動は変わりません。\n- `app/lib/flash.test.ts`: path 省略で `/admin`、`/mypage` 指定で set と consume が同じ path になること（削除 Cookie も `/mypage`）を追加。\n- `app/routes/mypage/reservations/index.tsx`:\n  - `consumeFlash(c, { path: '/mypage' })` の結果を、既存の `FlashBanner` で一覧の上に出します。\n  - メールアドレス表示の下に、閉じた状態の `<details>` を置きました。summary は「他の端末からログアウト」。\n  - 開くと説明文と、`POST /mypage/logout-all` の form ボタン「他の端末からログアウトする」が出ます。JS は不要で、キーボードだけで操作できます。\n  - 既存の「ログアウト」の form は変えていません。\n- `app/routes/mypage/reservations/index.test.tsx`（新規）: details と説明文、ボタン文言、details が閉じていること、既存ログアウトの action と文言が不変で form が 2 つだけであること、flash の有無でバナーが出ることを確認します。\n- 確認コマンド:\n  - `pnpm vitest run app/routes/mypage app/lib/flash.test.ts` は 33 件通過。\n  - `pnpm lint` の oxlint は 0 件。\n  - oxfmt は私のファイルを整形済み。残る指摘は `app/routes/api/auth/verify.ts` のみ（田中さんの変更中）。\n  - `npx tsc --noEmit` の唯一のエラーは `dist/.vite/manifest.json` がないことで、ビルド前の既存のもの。\n- 未検証: 実ブラウザでの `<details>` の見た目と、`/mypage` path の Cookie の挙動。"
     },
     {
       "id": "T8",
       "title": "T4 spec と PII レビュー",
       "acceptance": "- `docs/specs/` に spec を書く。Business Risk Review の 5 カテゴリを埋める。\n- キーを鍵付きハッシュにした理由（ローテーションで epoch が戻ることを防ぐため）と、`COOKIE_SECRET` を替えたときの影響を書く。\n- 対象外（招待、法人見学、管理画面からの強制失効、ログイン中の端末一覧）と、それぞれの理由を書く。\n- PII レビューの観点で差分を確認し、結果を書く。\n- 未検証の点を明記する。実 D1 でのマイグレーション適用と、実ブラウザでの Cookie 再発行。\n- `pnpm test:run`、`npx tsc --noEmit`、lint が通る。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "前回の完了内容に追加で、ログイン時に epoch が Cookie に入ることのテストを `app/routes/api/auth/verify.test.ts` に足しました。`pnpm vitest run app/routes/api/auth/verify.test.ts` で確認できます。"
+    },
+    {
+      "id": "T9",
+      "title": "デプロイ手順と「行は削除しない」を目につく所に置く",
+      "acceptance": "- `docs/specs/guest-logout-all.md` の冒頭に「デプロイ前に必ず読む」節を置き、マイグレーション 0021 を先に適用する順番と、未適用だと全員が未ログイン扱いになることを書く。\n- 同じ節に「`guest_session_epochs` の行は削除しない（0 に戻り、失効済み Cookie が復活する）」と、revert 時の影響（最大 3 日復活）を書く。\n- 既存 README の既存構成を保ち、新規 README は作らず、デプロイ手順を書く既存の箇所から spec へリンクする。\n- コードは変更しない。`pnpm test:run`、`npx tsc --noEmit`、lint が通る。",
       "owner": "eng-backend",
       "status": "todo",
       "createdBy": "pm"
@@ -402,23 +411,52 @@
       "text": "フラッシュは `setFlash` / `consumeFlash` に path 引数を足し、既定値は `/admin` のままにする。変更は鈴木さんが持つ。田中さんの T2 はその後に `{ path: '/mypage' }` で呼ぶ。着手順は、鈴木さんの flash 変更を先に入れ、そのあと T2 とする。",
       "phase": "planning",
       "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "今回の成果は、上記の未検証 4 点と、マージ前の条件(マイグレーション 0021 を先に適用する、PII レビューを別セッションで再確認する)を明記した上で、ユーザー受け入れに進める。コードの追加変更は行わない。理由は、受け入れ条件を満たしており、残りは実環境でしか確認できないため。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "今回の成果は両ユーザーの ACCEPT で受け入れる。公開は、マイグレーション 0021 の先行適用、別セッションでの PII 再確認、実 D1・実ブラウザ・#59 結合の確認、繁忙期を避けた日程、の 4 条件を満たしてから行う。理由は、残りのリスクが実環境でしか確認できず、順序ミスの影響が全ゲストのログアウトと大きいため。",
+      "phase": "acceptance",
+      "iteration": 1
     }
   ],
-  "verdicts": [],
+  "verdicts": [
+    {
+      "by": "user-guest",
+      "verdict": "accept",
+      "reason": "私の困りごとは解決します。共用 iPad のログインをスマホから自分で切れて、完了表示で確認できます。押した端末のログインは続き、ログインの手間も増えません。条件が 2 つあります。1 つ目は、マイグレーションを先に適用してから公開することです。2 つ目は、個人情報のレビューを別の人でもう一度行うことです。summary の分かりやすさは、次の改善でお願いします。",
+      "iteration": 1
+    },
+    {
+      "by": "user-owner",
+      "verdict": "accept",
+      "reason": "ゲストの不安に答える手段が増え、運営の手間も設定も増えません。個人情報も残らず、監査ログで追えます。条件は 3 つです。(1) マイグレーション 0021 を先に適用してから公開する。(2) PII レビューを別セッションで再確認する。(3) 繁忙期を避けた日に公開する。実 D1 と実ブラウザでの確認も、公開前に必ず行ってください。",
+      "iteration": 1
+    }
+  ],
   "notes": {
     "pm": [
       "現状のログアウトは /mypage/logout でその端末の Cookie を消すだけ。セッションは #59 で「3日＋スライディング更新」に延びている。検討事項は2つ。(1)「3日待つ」で足りないほどの必要性があるか。(2) OTP・招待・法人見学のどのセッションに適用するか。discovery ではまず実際に起きた事例の有無を確かめる。",
       "discovery R1の事実: 被害の実例はゼロ(中村さん)。小林さんは去年、家族共用iPadでログインしログアウト未確認。スマホ置き忘れ時はマイページを思い出さなかった(メール・決済が先)。中村さんは「起きたときに打てる手がない」「ゲストが大丈夫か見えない」が不満。頻度が低いので運営の手間や設定の複雑化は避けたい。ログイン継続自体はゲストにとって便利(招待コード探しが面倒)。",
       "discovery 完了時点の事実: 被害の実例ゼロ。共通の課題は「切れているか確認できない」「大丈夫と言い切れる材料がない」。小林さんはログアウトを自分で決めたときだけ切りたく、ログインが切れやすくなるのは不可。中村さんは頻度が低いので、管理画面や設定が複雑になるなら不要。使う場面は過去にゼロ。",
       "planning R1 の合意案: 対象は予約者マイページのみ、epoch は guest_email_hash キー、既存 Cookie は epoch 0 で有効、押した端末は維持。後回し: 招待・法人見学セッション、管理画面からの強制失効、ログイン中の端末一覧。",
-      "planning の最終合意: epoch キーは `COOKIE_SECRET` の鍵付きハッシュ（`session-epoch:`）。検証は guestAuth と readGuestSession の両方。DB 失敗は未ログイン扱い。フラッシュは path 引数を足して `/mypage` でも使う。確認は details の 1 段。着手順は flash の path 対応、T1、T2、T3 の表示、T4 の順。後回しは、招待・法人見学セッション、管理画面からの強制失効、端末一覧。"
+      "planning の最終合意: epoch キーは `COOKIE_SECRET` の鍵付きハッシュ（`session-epoch:`）。検証は guestAuth と readGuestSession の両方。DB 失敗は未ログイン扱い。フラッシュは path 引数を足して `/mypage` でも使う。確認は details の 1 段。着手順は flash の path 対応、T1、T2、T3 の表示、T4 の順。後回しは、招待・法人見学セッション、管理画面からの強制失効、端末一覧。",
+      "review R1 の結果: T5〜T8 は受け入れ条件を満たした。ずれは監査名 `auth.logout_all` とリダイレクト先 `/mypage/reservations` で、どちらも了承した。マージ前の条件は、マイグレーション 0021 を先に適用することと、PII レビューの別セッションでの再確認。未検証は、実 D1、実ブラウザ(Cookie 再発行、details の見た目、flash Cookie)、#59 のスライディング更新との結合。受け入れで確認するのは、小林さんが details を開けると気づけるか。",
+      "acceptance R1 の結果: 小林さん・中村さんとも ACCEPT。公開条件は、マイグレーション 0021 先行適用、PII の別セッション再確認、実 D1・実ブラウザ・#59 結合の確認、繁忙期を避けた日程。小林さんの要望は summary に用途の一言（実ブラウザで見て判断）。後回し: 管理画面からの強制失効、端末一覧・最終ログイン時刻、招待・法人見学セッション。"
     ],
     "user-owner": [
       "実際の被害・問い合わせは今のところなし。困りごとは「起きたとき、オーナー側から状況が見えず打てる手がない」こと。ゲストから端末の相談を口頭で受けたことはある（鍵の受け渡し時）。複雑な設定が増えるのは嫌。",
-      "「家族のタブレットで開いたけど大丈夫？」の相談は、ここ一、二年で一、二度、鍵の受け渡し時に口頭で受けた。ゲストの関心は情報を見られないか、私の関心は返金につながるキャンセル。オーナー側がセッションを切る手段を使う場面は過去にない。「あれば安心」程度で、複雑になるなら不要という立場。"
+      "「家族のタブレットで開いたけど大丈夫？」の相談は、ここ一、二年で一、二度、鍵の受け渡し時に口頭で受けた。ゲストの関心は情報を見られないか、私の関心は返金につながるキャンセル。オーナー側がセッションを切る手段を使う場面は過去にない。「あれば安心」程度で、複雑になるなら不要という立場。",
+      "受け入れ時の立場: 「ゲストが自分で切れる」は歓迎。オーナー側から切る機能は不要だが、困った時は issue で要望する。公開条件はマイグレーション先行、PII 別レビュー、繁忙期を避けること。DB の行は手で消さない。"
     ],
     "user-guest": [
-      "小林さんは共用iPadで一度ログインしたまま。ログアウトしたか未確認で、確認手段も知らない。不安は「確認できないこと」。ログインの手間は増やしたくない。切るのは本人が決めたときだけ。"
+      "小林さんは共用iPadで一度ログインしたまま。ログアウトしたか未確認で、確認手段も知らない。不安は「確認できないこと」。ログインの手間は増やしたくない。切るのは本人が決めたときだけ。",
+      "小林さんは今回の「他の端末からログアウト」を accept した。条件は、マイグレーション 0021 を先に適用することと、PII レビューの再確認。次回の要望は、summary の用途表示と、端末一覧または最終ログイン時刻。"
     ],
     "eng-backend": [
       "#68 の設計: epoch テーブルのキーは reservations.guest_email_hash ではなく COOKIE_SECRET の HMAC (接頭辞 session-epoch:)。理由は guest_email_hash が v<n>: 付きで PII 鍵ローテーションで変わり、epoch が 0 に戻って失効済み Cookie が復活するため。検証は guest-auth.ts の guestAuth と readGuestSession の両方に入れる。マイグレーションは 0021。"

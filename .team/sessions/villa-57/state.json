@@ -289,15 +289,17 @@
       "maxRounds": 1
     }
   ],
-  "phaseIndex": 2,
+  "phaseIndex": 3,
   "iteration": 1,
   "maxIterations": 2,
   "round": 1,
-  "turn": 9,
-  "queue": [],
+  "turn": 13,
+  "queue": [
+    "eng-frontend",
+    "pm"
+  ],
   "pending": [
-    "eng-backend",
-    "eng-frontend"
+    "eng-backend"
   ],
   "insertions": 0,
   "tasks": [
@@ -306,24 +308,27 @@
       "title": "Business Risk Review の spec を書く(docs/specs/ 配下)",
       "acceptance": "villa の .claude/rules/business-risk-review.md の5カテゴリすべてを埋めた spec が、実装前に docs/specs/ に置かれていること。\n- 少なくとも次を扱う。料金の食い違い、不正な再訪なりすまし、他人のメールの存在確認(列挙)、招待人数の増加、再訪経由の追跡。\n- 個人情報・認証・メールに触れるため、pii-review の観点で確認する項目も spec に書く。\n- 今回やらないこと(メール変更、ゲスト発行UI)と、その理由を明記する。",
       "owner": "eng-backend",
-      "status": "todo",
-      "createdBy": "pm"
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "Business Risk Review の spec を `docs/specs/2026-10-16-revisit-guest-reservation.md` に置きました。\n- 5 カテゴリを全部埋めました。料金の食い違い、なりすまし、メールの存在確認(列挙)、招待人数の増加、再訪経由の追跡を扱っています。\n- pii-review の確認項目(節 1・2・3・4・6・8)を書きました。\n- 今回やらないこと(メール変更、ゲスト発行 UI)と理由を明記しました。\n- totalCap にコードなし予約を数えない理由も書きました。再訪の宿泊もポストステイのコード発行対象になります。その分は既存の totalCap 判定で上限がかかります。\n- 実装前の確認結果も書きました。`reservation.tsx`、`quote`、`checkout`、`checkout-flow` はどれも招待行を前提にしています。"
     },
     {
       "id": "T2",
       "title": "宿泊済みメールの判定と、コードなしでの予約開始",
       "acceptance": "- 確認済みメール(OTP 通過)で、宿泊済み(confirmed かつチェックアウト日が今日(JST)より前、同一 guest_email_hash)なら、招待コードなしで予約セッションを開始できる。\n- 宿泊済みでないメールでは開始できない。OTP の送信可否や応答の文言・件数は宿泊済みの人と区別がつかない。\n- 作られる予約は normal 料金で、parent_invitation_id は無く、再訪経由と分かる印が残る。\n- 既存の招待コード経由の予約は、挙動も料金も変わらない。\n- OTP のレート制限は既存の仕組みを再利用する。\n- totalCap(30件)の扱いを確認して決め、理由を spec に書く(コードなしの予約を totalCap に数えるかどうか)。\n- ユニットテストを追加し、`pnpm test:run`、`npx tsc --noEmit`、lint が通る。",
       "owner": "eng-backend",
-      "status": "todo",
-      "createdBy": "pm"
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "宿泊済みメールの判定と、コードなしでの予約開始を実装しました。\n- 判定: `reservationRepo.hasCompletedStay` と `isReturningGuest`。OTP 検証後と、見積り・予約作成時の合計 3 か所で再判定します。外れた場合は、どこでも 403 `revisit_not_available` の 1 種類だけを返します。\n- 予約開始:\n  - `lib/checkout-flow.ts` の `startCheckout` が `invitation: null` を受け付けます。\n  - 料金は `quoteForRevisit` で通常料金固定です。\n  - `invitation_id` は NULL で、招待の claim と used 化はしません。\n  - Stripe の metadata にも招待 ID を入れません。\n- 見積りと予約確定の API:\n  - `api/quote.ts` と `api/checkout.ts` に revisit の分岐を入れました。\n  - 招待行は引きません。\n  - メールは OTP 確認済みのセッション値だけを使います。\n- 予約画面:\n  - `reservation.tsx` の loader に revisit の分岐を入れました。\n  - メール確認済みかつ宿泊済みを毎回判定し、満たさなければ入口へ戻します。\n  - 画面には `kind` と `contactEmail` を渡します。\n  - 鈴木さんの待ち 2 点(`kind` と `contactEmail` の受け渡し、403 の固定エラー)はこれで入りました。\n- ミドルウェア: `_middleware.ts` が `kind` を context に積みます。`/foret-noire/reservation/revisit` を公開パスに追加しました。これが無いと、メール入力画面がクッキー無しで入口に戻されていました。\n- 再訪の印: `reservation.revisit_started` を予約 ID 付きで監査ログに残します。detail は `kind` と `price_mode` だけで、メールや宿泊歴は入れません。\n- 重複予約の防止(今回追加):\n  - `hasUpcomingReservation`: 同じメールに、これから泊まる予約(pending / confirmed / cancelling)があるかを見ます。\n  - 招待コードの「1 コード 1 予約」に当たる歯止めが、コードなしでは無いための追加です。\n  - 作成前に確認し、作成後にも自分以外を再確認します。並列で後着になった側の pending は取り消します。\n- totalCap: コードなし予約は数えません。理由は spec に書きました。\n- spec: `docs/specs/2026-10-16-revisit-guest-reservation.md` の実装状況を更新し、既知の制約を明記しました。\n- テスト: 新規 `checkout-flow.revisit.test.ts`、`api/checkout.revisit.test.ts`、`api/quote.revisit.test.ts`。`reservation.revisit.sqlite.test.ts`(実 SQLite)、`reservation.test.tsx`、`_middleware.test.ts` に追記しました。\n- 確認:\n  - `pnpm test:run` は 169 ファイル・1519 件が通りました。\n  - `pnpm lint` は oxlint と oxfmt が通りました。\n  - `npx tsc --noEmit` は `dist/.vite/manifest.json` の 1 件だけ残っています。未ビルドによる既存のもので、今回の変更とは無関係です。\n- 既知の制約(spec に記載):\n  - 再訪の pending の決済再開(status / retry)と日程変更は、招待コード前提のままです。\n  - 再訪で決済を離脱すると、pending の期限が切れるまで新規予約が 409 になります。\n  - 重複防止は DB の一意制約ではなく、作成前後の 2 回確認です。並列時は両方が取り消される側に倒れますが、二重予約にはなりません。\n- 未検証: Resend / Stripe の実接続、本番 D1、実ブラウザでの通し操作。"
     },
     {
       "id": "T3",
       "title": "予約入口に「前に泊まった方はこちら(メールで予約)」を追加する",
       "acceptance": "- 予約入口で、招待コード入力と並んで「前に泊まった方」の導線が見える。スマホ幅(通勤電車で片手操作)でも操作できる。\n- メール入力、OTP 入力、予約画面へと進む流れが、既存の OTP 画面を使って動く。\n- 宿泊済みでないメールの場合も、「確認コードを送りました」の表示は宿泊済みの人と同じにする。予約に進めないときのメッセージは、メールの存在や宿泊歴が分からない文言にし、中村さんへの問い合わせ先を案内する。\n- 予約画面に「招待コードなし・通常料金」であることが、料金確定の前に表示される。\n- 既存の画面のコンポーネントとスタイルに合わせ、新しい依存は追加しない。\n- 画面のテストを追加し、`pnpm test:run`、`npx tsc --noEmit`、lint が通る。",
       "owner": "eng-frontend",
-      "status": "todo",
-      "createdBy": "pm"
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "予約入口に「前に泊まった方はこちら（メールで予約）」を追加しました。田中さんの route 配線が入ったので完了にします。\n- 入口は `app/routes/foret-noire/invitation-only.tsx` です。招待コード入力の下に、幅いっぱいで高さ 48px のボタンを置きました。折りたたみはしません。\n- メール入力は `app/routes/foret-noire/reservation/revisit.tsx` と `app/islands/revisit-email-form.tsx` です。流れは、メール入力、確認コード入力、予約画面です。\n- 文言と振り分けは `app/lib/revisit-ui.ts` にあります。\n  - 確認コード送信後の表示は、宿泊歴に関係なく全員同じです。\n  - 進めないときは、宿泊歴に触れない固定文言と、`CONTACT_EMAIL` の連絡先を出します。\n  - 予約確定時の 403 `revisit_not_available` も、`app/islands/reservation-confirm.tsx` で同じ固定文言に差し替えます。\n- 予約画面の `app/components/revisit-notice.tsx` は、`kind==='revisit'` のときだけ、日程と料金の前に「招待コードなし・通常料金」を固定表示します。招待経由は今までどおりです。\n- テストは `revisit-ui.test.ts`、`revisit-notice.test.tsx`、`revisit-email-form.test.tsx`、`invitation-only.test.tsx` です。\n- 確認（今回再実行）:\n  - `pnpm test:run` は 169 ファイル・1519 件が通りました。\n  - `pnpm lint` も通りました。\n  - `npx tsc --noEmit` は `dist/.vite/manifest.json` の 1 件だけ残っています。未ビルドによる既存のもので、今回の変更とは無関係です。\n- 未検証:\n  - 実ブラウザやスマホ実機での通し操作（メール入力から予約確定まで）。\n  - Resend と Stripe の実接続。\n  - 「前に泊まった方はこちら」の文言が伝わるか。小林さんの回答待ちです。"
     }
   ],
   "decisions": [
@@ -350,10 +355,13 @@
     ],
     "eng-backend": [
       "villa#57 backend 方針: 再訪の印は監査ログ (action=reservation.revisit_started、resource_id=予約ID) に残し、reservations に列は追加しない。理由は、reservations の変更が 0010 / 0011 / 0019 でテーブル再構築になっており、リスクが高いため。宿泊済み判定は OTP 検証後のみ、かつ予約作成時にも再判定する。OTP は未宿泊でも同じ経路で発行・送信し、レート制限は issueOtp を再利用する。totalCap にはコードなし予約を数えない。",
-      "villa#57 API 案: OTP 送信は常に同じ 200。検証失敗は 400 invalid_code の 1 種類。検証成功だが進めない場合は 403 revisit_not_available の 1 種類。セッションに kind=invitation|revisit を持たせる。予約作成時にも宿泊済みを再判定する。routes と loader が招待行前提かは T2 の最初に確認する。"
+      "villa#57 API 案: OTP 送信は常に同じ 200。検証失敗は 400 invalid_code の 1 種類。検証成功だが進めない場合は 403 revisit_not_available の 1 種類。セッションに kind=invitation|revisit を持たせる。予約作成時にも宿泊済みを再判定する。routes と loader が招待行前提かは T2 の最初に確認する。",
+      "villa#57 T2 の進捗(build round 1): hasCompletedStay、isReturningGuest、session kind、/api/revisit/send-otp と /verify まで実装済み。残りは checkout/quote/checkout-flow の revisit 分岐、reservation.tsx loader の revisit 分岐、_middleware.ts の kind 受け渡しと reservation.revisit_started の記録。revisit の session.code は空文字で、loader は findByCode('') が null になって招待のないページへ戻る(安全側)。",
+      "villa#57 T2 は build round 1 で完了。startCheckout は invitation:null で再訪を扱い、宿泊済みを 3 か所で再判定する。同一メールに今後の予約があれば 409(hasUpcomingReservation、作成前後の 2 回確認)。再訪の status/retry/edit と pending の期限待ちは未対応で、spec の既知の制約に記載済み。整形は prettier ではなく `npx oxfmt --write app/` を使う(prettier は無関係なファイルまで書き換える)。"
     ],
     "eng-frontend": [
-      "T3 の文言方針は次のとおり。OTP 送信後の表示は全員共通にする。進めないときは宿泊歴に触れない固定文言にして、中村さんの連絡先を案内する。予約画面は、料金確定の前に「招待コードなし・通常料金」を固定表示する。API のエラーコードと session の種別(kind)は、田中さんから T2 の最初に共有してもらう。"
+      "T3 の文言方針は次のとおり。OTP 送信後の表示は全員共通にする。進めないときは宿泊歴に触れない固定文言にして、中村さんの連絡先を案内する。予約画面は、料金確定の前に「招待コードなし・通常料金」を固定表示する。API のエラーコードと session の種別(kind)は、田中さんから T2 の最初に共有してもらう。",
+      "T3 の画面は実装済み。残りは田中さんの reservation.tsx への kind/contactEmail の受け渡しと、checkout の 403 `revisit_not_available`。この2つが入ったら T3 を完了にする。tsc は _middleware.test.ts の kind 未指定で落ちている(田中さんの型変更由来)。"
     ]
   },
   "historyWindow": 40

@@ -60,7 +60,7 @@
 ## 関連
 - `app/domain/pricing/`、`app/routes/admin/rates/index.tsx`、`migrations/0017_pricing_and_invitation_modes.sql`
 
-**Status:** running · iteration 1/2 · phase `build`
+**Status:** running · iteration 1/2 · phase `acceptance`
 
 ## Team
 
@@ -72,7 +72,7 @@
 
 ## Backlog
 
-- T1 [doing] owner=eng-backend シーズン定義と見積りロジックへの組み込み(spec + Business Risk Review 含む)
+- T1 [done] owner=eng-backend シーズン定義と見積りロジックへの組み込み(spec + Business Risk Review 含む)
     acceptance: - docs/specs/ に spec を書き、Business Risk Review の5カテゴリを埋める。特に表示額と請求額の一致、整数演算、キャンセルポリシーの返金額への影響、pending 予約と発行済み招待の見積り挙動を書く。
     - シーズンはコード定数で、月日の範囲を毎年繰り返す形にする(ハイ=GW・お盆・年末年始 / ショルダー / オフ)。年またぎ(12/28〜1/5)も正しく判定できる。係数は整数%で持つ。
     - 優先順位: `base_rates` の期間行が一致したらシーズン係数は掛けない。一致しなければ 既定行×シーズン×曜日(×リードタイム100%)。
@@ -81,18 +81,76 @@
     - 見積り関数が返す1泊ごとの内訳に、シーズン名と曜日区分(祝前日など)を含める。
     - 確定済み予約の `price_breakdown` は変わらない(回帰テスト)。
     - `pnpm test:run` と `npx tsc --noEmit` が通る。
-- T2 [todo] owner=eng-frontend 見積り内訳で「高い理由」を見せる+管理画面プレビューへのシーズン反映
+    result: シーズン定義と見積りへの組み込みを実装し、spec と Business Risk Review を書いた。
+    - **検証**: `pnpm test:run` は 1502 件通過、`npx tsc --noEmit` は新規エラーなし。`pnpm lint` で田中の変更ファイルは問題なし。lint の format 指摘は鈴木さんの未整形ファイルのみ。
+    - **新規ファイル**:
+      - `app/domain/pricing/seasons.ts` (+ test): シーズン定義。月日の閉区間で、年またぎにも対応。
+      - `app/domain/pricing/quote-season.test.ts`: 見積りの統合テスト。
+      - `docs/specs/2026-10-seasonal-pricing.md`: spec と Business Risk Review。
+    - **変更ファイル**: `quote.ts`、`day-type-preview.ts`、`sample-stays.ts`、`index.ts`、`app/lib/quote-service.ts`、既存テスト 3 本。
+    - **丸め**: `base × シーズン% × 曜日% × リード%` を整数で一度に計算し、1,000 円未満切り捨てを 1 回だけ行う。オフ・ショルダーの金額は従来と同じ。高×土曜は 258,750 → 258,000。
+    - **優先順位**:
+      - 期間行に当たる日: 絶対額で `source=period_rate`、シーズン係数なし。
+      - 当たらない日: 既定行×シーズン×曜日で `source=season`。
+    - **招待**:
+      - `discount_rate`: シーズン込みの 225,000 円に掛けて 180,000 円。
+      - `fixed_per_night`: シーズン係数を無視する。
+      - どちらもテストで固定した。
+    - **境界日テスト**: 5/1、5/6→5/7、8/10、8/16、12/27→12/28、12/31→1/1、1/5→1/6、2/29 を固定した。
+    - **係数**: `SEASON_PCT` の 1 箇所に集約。high=150 (仮値)、shoulder=100、off=100。
+    - **pending 予約** (コードで確認):
+      - 予約作成時に `total_price` と `price_breakdown` を保存し、決済は保存値で行う。再計算はしない。
+      - 日程を変えた再送だけ再見積りされる。
+      - 返金も `total_price` から計算するので、既存予約の返金額は変わらない。
+    - **回帰テスト**: 古い `price_breakdown` JSON (新フィールドなし) が読めること、保存→復元で一致すること。
+    - **未検証・未決**:
+      - 外部の宿の実料金は未検証。
+      - 150% の根拠は中村さんの感覚のみで、承認待ち。
+      - 金曜 110、土曜 115、祝前日 115 の裏取りは未検証。
+      - 梅雨・冬の閑散期と連休の中日・端は次イテレーション。
+- T2 [done] owner=eng-frontend 見積り内訳で「高い理由」を見せる+管理画面プレビューへのシーズン反映
     acceptance: - ゲストの見積り表示で、各泊の行に「繁忙期(お盆)」「土曜」「祝前日」などの理由ラベルを出す。合計は従来どおり最初から表示し、清掃費などは込みと分かる文言にする。
     - 決済直前の画面と見積りの合計が、同じ関数の結果と一致する。UI側で再計算しない。
     - `/admin/rates` のプレビューで、シーズン別・日タイプ別の単価と、代表的な滞在(`pickSampleStays`)の合計金額を確認できる。期間行が優先される行には、その旨を表示する。
     - ラベルは eng-backend の内訳フィールドに依存する。型を先に合意して並行で進める。
     - コンポーネントのテストと `npx tsc --noEmit` が通る。
-- T3 [todo] owner=eng-backend ベース金額の見直し案(根拠付き。承認前は migration を作らない)
+    result: 見積り内訳の理由ラベルと `/admin/rates` のシーズン別プレビューまで、T2 の3点を済ませました。
+    
+    **検証**
+    - `npx tsc --noEmit` は `static/[...path].ts` の `dist/.vite/manifest.json` のエラーだけです。ビルド成果物が無いためです。
+    - `app/components`、`app/lib`、`app/routes` のテストは 116 ファイル 1099 件が通りました。
+    - `pnpm lint` は警告もエラーも 0 件で、format も通っています。前に指摘された私の未整形ファイルは `oxfmt` で直しました。
+    - `/admin/rates` を実際にブラウザで開いての確認はしていません。route のテストはありません。コンポーネントのテストと型チェックまでです。
+    
+    **変更点**
+    - **`app/routes/admin/rates/index.tsx`**:
+      - 既定料金のカードに、シーズン別・日タイプ別の単価表（`previewSeasonDayTypePrices` の結果）を出します。倍率(%)はここにだけ出しています。
+      - 同じカードに、代表的な滞在の合計（`pickSampleStays` の `totalYen`、直近60日・通常料金）を出します。
+      - 期間指定の行には「この期間は期間設定の金額が使われます(シーズン係数は掛かりません)」を付けました。
+      - 掛け算や丸めは route に入れていません。
+    - **`app/islands/reservation-confirm.tsx`**: `describeDayType` の暫定フォールバックを消し、`quote.nights` をそのまま `NightBreakdownList` に渡します。ラベルは `/api/quote` が返す値だけを使います。
+    - **整形**: `night-breakdown*`、`season-preview*`、`reservation-confirm.tsx`、`reservation-form.ts` を `oxfmt` で整えました。
+    
+    **残していること**
+    - `/admin/rates` の行見出し（「繁忙期(GW・お盆・年末年始)」「準繁忙期」「通常期」）だけは、route 側の小さな対応表で持っています。ゲスト画面のラベルではなく管理画面専用ですが、文言が `seasons.ts` と二箇所に分かれます。次イテレーションでシーズン名を `seasons.ts` 側に寄せる候補です。
+    - 期間指定の行に「この期間は期間設定の金額が使われます」を出す条件は、行が期間指定であることだけです。その期間がシーズン定義と重なるかどうかは見ていません。
+    - `describeDayType` は `reservation-form.ts` とそのテストに残っています。画面からはもう使っていません。
+- T3 [done] owner=eng-backend ベース金額の見直し案(根拠付き。承認前は migration を作らない)
     acceptance: - 調査結果を調査メモにまとめる。外部サイトを実際に確認できなかった項目は「未検証」と明記する。
     - 運営コスト(1回3〜4万円)と、定員いっぱい前提の込み価格で、オフ平日1泊のベース案を2〜3案出す。
     - 各案について、平日2泊・週末2泊・連休3泊の合計を `pickSampleStays` で出し、相場の幅に収まるか比較表にする。
     - 既定の150,000円を変えるかは、オーナーの確認後に決める。この時点では migration を書かない。
     - 金額を変えたときの影響(pending の予約、発行済み招待)を1段落でまとめる。
+    result: ベース金額の見直し案を `docs/specs/2026-10-base-rate-review.md` にまとめた。migration は作っていない。
+    - **調査メモ**: 外部の宿の実料金、金 110 / 土 115 / 祝前日 115 の裏取り、清掃費の相場はすべて「未検証」と明記した。ハイ 150% は中村さんの感覚のみで、承認待ちとした。
+    - **案**: ベースはオフ平日 1 泊で、A=150,000(現状維持)、B=130,000、C=110,000 の 3 案。運営コスト 3.5 万円は 2 泊で 1 泊あたり約 1.8 万円になる。どの案でも吸収できるので、コストを理由にベースを上げる必要はない。
+    - **比較表**: 平日 2 泊、週末 2 泊、連休 3 泊、ハイの平日 2 泊、ハイの連休 3 泊を、案ごとに出した。`quote.ts` / `pickSampleStays` と同じ丸め(1,000 円未満切り捨て)で計算した。
+      - 案A: 300,000 / 337,000 / 509,000 / 450,000 / 763,000 円
+      - 案B: 260,000 / 292,000 / 441,000 / 390,000 / 662,000 円
+      - 案C: 220,000 / 247,000 / 373,000 / 330,000 / 559,000 円
+    - **推奨**: 今は 150,000 円を変えない。相場が未検証のまま下げると、減収は確実で効果の根拠がないため。先に、人が公式料金表で 5〜10 施設を調べる。あわせて中村さんから稼働率と成約額を聞く。
+    - **影響**: pending 予約と返金は保存値のまま変わらない。発行済み招待の見積りは、変更後に開いた時点で新しい額になる。`discount_rate` 招待は割引後も連動して動く。`fixed_per_night` 招待と期間行は動かない。
+    - **検証**: 比較表の数字は計算スクリプトの出力。「相場の幅に収まるか」は、相場が未検証のため判定できない。仮置きの相場帯は根拠にしないでほしい。
 
 ## Decisions
 
@@ -107,7 +165,20 @@
 
 ## Verdicts
 
-_(none)_
+- iteration 1 · 小林 直子 (user-guest) · **accept** — ゲストとしては受け入れます。条件が3つあります。
+
+良い点:
+- 合計が最初から出て、「清掃・リネン・薪込み」と書いてあります。私が見る金額はこの合計です。
+- 各泊に「繁忙期(お盆)・平日」「期間設定・土曜」のような理由が付くので、なぜ高いかが分かります。倍率が出ないのも、私には十分です。
+- 決済画面の合計は見積りと同じ関数の値で、予約後は保存値で決済されます。直前に金額が変わるのが一番嫌なので、ここは安心しました。
+- すでに決済待ちの予約は、料金を変えても動きません。
+
+条件:
+1. 150%は仮値だと理解しています。期間行のないお盆の平日が15万円から22万5千円になるのは大きいです。中村さんの承認前に、本番へ出さないでください。
+2. 実際のiPhoneの画面で、予約から決済までの金額表示を通しで確認してください。今回は画面を実機で見ていないとのことなので、折り返しや文字の大きさが心配です。
+3. 招待コードの扱いは今回の範囲外ですが、毎回探す手間は残っています。次に検討してください。
+
+要望: ベース15万円は相場未確認のままなので、次回までに調べてください。金曜110・土曜115の根拠も同じです。12/28や1/3前後の扱いも、年末に泊まる私には大事なので、次回の対象に入れてください。
 
 ## Transcript
 
@@ -441,3 +512,273 @@ _(none)_
 ### iteration 1 · build
 
 - — Phase "build" started (iteration 1) — Engineers implement their own tasks in the workspace (real files, runnable code, tests when sensible), coordinate interfaces with each other, and mark finished work with [TASK_DONE].
+
+> _田中 健 (eng-backend) [thinks]: T1 は実装・テスト・spec まで完了。T3 の調査メモは未着手なので、T1 だけ DONE にする。_
+
+- 田中 健 (eng-backend) [TASK_UPDATE]: T1 → done: シーズン定義と見積りへの組み込みを実装し、spec と Business Risk Review を書いた。
+  - **検証**: `pnpm test:run` は 1502 件通過、`npx tsc --noEmit` は新規エラーなし。`pnpm lint` で田中の変更ファイルは問題なし。lint の format 指摘は鈴木さんの未整形ファイルのみ。
+  - **新規ファイル**:
+    - `app/domain/pricing/seasons.ts` (+ test): シーズン定義。月日の閉区間で、年またぎにも対応。
+    - `app/domain/pricing/quote-season.test.ts`: 見積りの統合テスト。
+    - `docs/specs/2026-10-seasonal-pricing.md`: spec と Business Risk Review。
+  - **変更ファイル**: `quote.ts`、`day-type-preview.ts`、`sample-stays.ts`、`index.ts`、`app/lib/quote-service.ts`、既存テスト 3 本。
+  - **丸め**: `base × シーズン% × 曜日% × リード%` を整数で一度に計算し、1,000 円未満切り捨てを 1 回だけ行う。オフ・ショルダーの金額は従来と同じ。高×土曜は 258,750 → 258,000。
+  - **優先順位**:
+    - 期間行に当たる日: 絶対額で `source=period_rate`、シーズン係数なし。
+    - 当たらない日: 既定行×シーズン×曜日で `source=season`。
+  - **招待**:
+    - `discount_rate`: シーズン込みの 225,000 円に掛けて 180,000 円。
+    - `fixed_per_night`: シーズン係数を無視する。
+    - どちらもテストで固定した。
+  - **境界日テスト**: 5/1、5/6→5/7、8/10、8/16、12/27→12/28、12/31→1/1、1/5→1/6、2/29 を固定した。
+  - **係数**: `SEASON_PCT` の 1 箇所に集約。high=150 (仮値)、shoulder=100、off=100。
+  - **pending 予約** (コードで確認):
+    - 予約作成時に `total_price` と `price_breakdown` を保存し、決済は保存値で行う。再計算はしない。
+    - 日程を変えた再送だけ再見積りされる。
+    - 返金も `total_price` から計算するので、既存予約の返金額は変わらない。
+  - **回帰テスト**: 古い `price_breakdown` JSON (新フィールドなし) が読めること、保存→復元で一致すること。
+  - **未検証・未決**:
+    - 外部の宿の実料金は未検証。
+    - 150% の根拠は中村さんの感覚のみで、承認待ち。
+    - 金曜 110、土曜 115、祝前日 115 の裏取りは未検証。
+    - 梅雨・冬の閑散期と連休の中日・端は次イテレーション。
+
+- 田中 健 (eng-backend) → eng-frontend, pm: T1 完了です。鈴木さんは、型の名前だけ合意案と違う点に注意してください。既存の `price_breakdown` JSON と互換にするため、名前を増やしていません。
+  - 泊の金額は `amountYen` ではなく `unit`、曜日区分は `dayKind` ではなく `dayType` です。
+  - 合計は `totalYen` ではなく `Quote.total` です。型は `QuotedNight`、別名が `NightLine` です。
+  - 追加フィールド: `source`、`season`、`seasonPercent`、`dayKindLabel`。
+  - 期間行と固定単価の泊は `season` と `seasonPercent` が null です。固定単価の泊は `source='fixed_per_night'` で、この場合も `dayKindLabel` は入ります。
+  - 古い予約は `LegacyQuotedNight` (新フィールドは optional) で読んでください。
+  - `/admin/rates` 用の関数:
+    - `previewSeasonDayTypePrices(price, DAY_TYPE_MULTIPLIER_PCT, SEASON_PCT)` が season×dayType の表を返します。
+    - `SampleStay.totalYen` に代表的な滞在の合計が入っています。
+    - どちらも見積りと同じ丸めです。UI で掛け算はしないでください。
+  - `lint` で format 指摘が出ているのは、鈴木さんの `night-breakdown*`、`season-preview*`、`reservation-confirm.tsx`、`reservation-form.ts` です。`npx oxfmt <file>` で直ります。
+  佐藤さんへ: ハイ 150% は、期間行のないお盆・年末年始・GW の平日で 150,000 円から 225,000 円 (+75,000 円/泊) になります。中村さんの承認がリリース条件です。承認が取れなければ、`SEASON_PCT.high` を 100 にして出せます。これは spec にも書きました。次は T3 の調査メモに入ります。
+
+> _田中 健 (eng-backend) [notes]: T1 の実装メモ:
+  - 型名は既存互換にした。泊の金額は `unit`、曜日区分は `dayType`、合計は `Quote.total`。
+  - 係数は `app/domain/pricing/seasons.ts` の `SEASON_PCT` の 1 箇所に集約している。
+  - pending の請求額は保存済みの `total_price`。再計算は日程変更の再送時だけ。
+  - 整形は `oxfmt` を使う (prettier は使わない)。
+  - T3 は未着手。外部の宿の実料金は未検証で、migration は承認前に作らない。_
+
+> _鈴木 ひかり (eng-frontend) [thinks]: T2 の UI 部品とゲスト画面への組み込みは終わった。`/admin/rates` への配線は、田中さんの T1 が出す関数を待つので未完。T2 は完了にせず、状況を共有する。_
+
+- 鈴木 ひかり (eng-frontend) [TASK_UPDATE]: T2 → doing: 見積り内訳の理由ラベル表示と、管理画面プレビュー用の部品を実装中
+
+- 鈴木 ひかり (eng-frontend) → eng-backend, pm: 鈴木です。T2 の進捗です。ゲスト画面は動く状態で、`/admin/rates` への配線は T1 待ちです。
+  **入れたもの** (すべて `workspace/villa-77/app/` 配下)
+  - `components/night-breakdown.tsx` と `night-breakdown.test.tsx`
+    - 泊ごとの行は `<ul>` にします。金額が主役で、理由は「繁忙期(お盆)・平日」の形の補足にします。倍率(%)は出しません。
+    - `source='period_rate'` の泊は「期間設定・土曜」と出します。
+    - 新フィールドが無い古い予約は、日付と金額だけを出します。
+    - 「清掃・リネン・薪込み」の一文は定数 `INCLUSIVE_NOTE` にしてあります。
+  - `islands/reservation-confirm.tsx`
+    - 内訳を上の部品に差し替えました。
+    - 合計は `quote.total` をそのまま表示し、UI では再計算しません。その下に「清掃・リネン・薪込み」を出します。
+  - `lib/reservation-form.ts`
+    - `QuotedNightView` に、optional の `dayKindLabel` / `seasonLabel` / `source` を足しました。
+  - `components/season-preview.tsx` と `season-preview.test.tsx`
+    - season × 日タイプの単価表 (`SeasonPreviewTable`)、`pickSampleStays` の合計 (`SampleStayTotals`)、期間行の優先注記 (`PeriodPriorityNote`) です。
+    - 渡された数値を出すだけで、掛け算も丸めもしません。
+  - `npx vitest run app/components app/lib/reservation-form.test.ts` は 6 ファイル 39 件が通ります。
+  - `npx tsc --noEmit` で、私のファイルに型エラーはありません。残っているのは `quote.test.ts` の `seasons` / `seasonPct` の型エラーで、田中さんが作業中の T1 側と思います。`static/[...path].ts` の `manifest.json` のエラーは、ビルド成果物が無いためです。
+  
+  **田中さんへのお願い**
+  1. `/api/quote` の `toPublicNights` に `dayKindLabel`・`seasonLabel`・`source` を足してください。`base` / `listUnit` / `seasonPercent` / `dayKindPercent` は、今までどおり返さないでください。割引率が逆算できてしまうからです。ゲストに出すのはラベルだけです。
+  2. `/admin/rates` 用に、次の 3 つを関数から返してください。
+     - 列は `{key,label,percent}[]` で、`DAY_TYPE_MULTIPLIER_PCT` から作ります。
+     - 行は `{seasonLabel, seasonPercent, unitByDayKind}[]` です。
+     - `pickSampleStays` の合計は `{label,totalYen}[]` です。
+     型が違う場合は、私の部品の props に合わせます。
+  3. 古い予約の `LegacyNightLine` は、`parsePriceBreakdown` が新フィールドを optional のまま通せば足ります。
+  
+  **暫定対応の通知**
+  - `reservation-confirm.tsx` に、`dayKindLabel ?? describeDayType(n.dayType)` を入れてあります。API がラベルを返すまでの間、現状の「平日/金曜」表示を落とさないためです。TODO コメントを付けてあり、T1 統合後に消します。
+  - `/admin/rates` の route への配線は、T1 の関数が出てから行います。
+
+> _鈴木 ひかり (eng-frontend) [notes]: T2 の UI 部品は完成済み: components/night-breakdown.tsx、components/season-preview.tsx、islands/reservation-confirm.tsx への組み込み。残りは (1) /api/quote の toPublicNights にラベル追加 (田中さん)、(2) /admin/rates route への配線 (T1 の関数待ち)、(3) reservation-confirm の describeDayType 暫定フォールバック削除。T2 の TASK_DONE はこの 3 点が済んでから。_
+
+> _田中 健 (eng-backend) [thinks]: 鈴木さん依頼の1点目(`/api/quote` のラベル追加)は対応済み。tsc は新規エラーなし、routes と lib のテストは通った。T3 はまだ着手していない。_
+
+- 田中 健 (eng-backend) [TASK_UPDATE]: T3 → doing: ベース金額の見直し案の調査メモ作成に着手
+
+- 田中 健 (eng-backend) → eng-frontend, pm: 田中です。鈴木さんの依頼 3 点の状況です。
+  1. `/api/quote` の `toPublicNights` に `dayKindLabel`、`seasonLabel`(`season.label`)、`source` を足しました(`app/routes/api/quote.ts`)。`base`、`listUnit`、`seasonPercent`、`dayKindPercent` は返しません。割引率が逆算できてしまうためです。古い予約の `price_breakdown` では新フィールドが無いので、キーごと省きます。`npx tsc --noEmit` は新規エラーなし。`app/routes` と `app/lib` のテスト 1068 件が通りました。
+  2. `/admin/rates` 用の関数は、型が鈴木さんの props と少し違います。列は `DAY_TYPE_MULTIPLIER_PCT`、行は `previewSeasonDayTypePrices` の戻り値です。合計は `SampleStay.totalYen` に入っています。props に合わせた変換が要るなら、route 側で薄い `map` を書いてください。計算は足さないでください。
+  3. 古い予約は `LegacyQuotedNight` で読めます。`parsePriceBreakdown` が新フィールドを optional のまま通すことは、T1 の回帰テストで固定済みです。
+  
+  暫定の `describeDayType` フォールバックは、`/api/quote` がラベルを返すようになったので消してかまいません。
+  
+  T3 は今から調査メモに入ります。外部の宿の実料金は確認できていないので、比較表は仮の相場帯で作り、「未検証」と明記します。migration は、中村さんの承認前には作りません。
+
+- 鈴木 ひかり (eng-frontend) [TASK_UPDATE]: T2 → done: 見積り内訳の理由ラベルと `/admin/rates` のシーズン別プレビューまで、T2 の3点を済ませました。
+  
+  **検証**
+  - `npx tsc --noEmit` は `static/[...path].ts` の `dist/.vite/manifest.json` のエラーだけです。ビルド成果物が無いためです。
+  - `app/components`、`app/lib`、`app/routes` のテストは 116 ファイル 1099 件が通りました。
+  - `pnpm lint` は警告もエラーも 0 件で、format も通っています。前に指摘された私の未整形ファイルは `oxfmt` で直しました。
+  - `/admin/rates` を実際にブラウザで開いての確認はしていません。route のテストはありません。コンポーネントのテストと型チェックまでです。
+  
+  **変更点**
+  - **`app/routes/admin/rates/index.tsx`**:
+    - 既定料金のカードに、シーズン別・日タイプ別の単価表（`previewSeasonDayTypePrices` の結果）を出します。倍率(%)はここにだけ出しています。
+    - 同じカードに、代表的な滞在の合計（`pickSampleStays` の `totalYen`、直近60日・通常料金）を出します。
+    - 期間指定の行には「この期間は期間設定の金額が使われます(シーズン係数は掛かりません)」を付けました。
+    - 掛け算や丸めは route に入れていません。
+  - **`app/islands/reservation-confirm.tsx`**: `describeDayType` の暫定フォールバックを消し、`quote.nights` をそのまま `NightBreakdownList` に渡します。ラベルは `/api/quote` が返す値だけを使います。
+  - **整形**: `night-breakdown*`、`season-preview*`、`reservation-confirm.tsx`、`reservation-form.ts` を `oxfmt` で整えました。
+  
+  **残していること**
+  - `/admin/rates` の行見出し（「繁忙期(GW・お盆・年末年始)」「準繁忙期」「通常期」）だけは、route 側の小さな対応表で持っています。ゲスト画面のラベルではなく管理画面専用ですが、文言が `seasons.ts` と二箇所に分かれます。次イテレーションでシーズン名を `seasons.ts` 側に寄せる候補です。
+  - 期間指定の行に「この期間は期間設定の金額が使われます」を出す条件は、行が期間指定であることだけです。その期間がシーズン定義と重なるかどうかは見ていません。
+  - `describeDayType` は `reservation-form.ts` とそのテストに残っています。画面からはもう使っていません。
+
+- 鈴木 ひかり (eng-frontend) → pm, eng-backend: 鈴木です。T2 を完了にしました。
+  
+  - **ゲスト画面**: `/api/quote` のラベルをそのまま表示します。UI では組み立てず、再計算もしません。暫定フォールバックは消しました。
+  - **`/admin/rates`**: 既定料金のカードに、シーズン別・日タイプ別の単価表と、代表的な滞在の合計を出しました。期間指定の行には、期間設定が優先される注記を付けています。倍率(%)を出すのはこの画面だけです。
+  - **検証**: `tsc`（manifest.json の既知エラーのみ）、テスト 1099 件、`pnpm lint` は通っています。実際にブラウザで開いての確認はしていません。route のテストも無く、コンポーネントのテストと型チェックまでです。
+  - **気になる点**: 管理画面の行見出しの季節名だけは、route 側の対応表で持っています。文言が `seasons.ts` と二箇所に分かれるので、次イテレーションでシーズン名を `seasons.ts` に寄せたいです。
+  - **リリース条件**: 中村さんの 150% 承認はそのままです。承認前は、プレビューの「繁忙期」行が 225,000 円などと見えます。承認前に中村さんがこの画面を見るなら、仮値であることを先に伝えてください。
+
+> _鈴木 ひかり (eng-frontend) [notes]: T2 は完了済み。/admin/rates 配線、/api/quote ラベル利用、暫定フォールバック削除まで済み。残課題は管理画面の季節行見出しが route 側の対応表で seasons.ts と二重管理になっていること（次イテレーションで寄せる）と、/admin/rates を実ブラウザで開いての確認が未実施なこと。_
+
+> _田中 健 (eng-backend) [thinks]: 調査メモを書いた。外部の相場は未検証のまま、比較表は計算で出した。migration は作っていない。T3 を完了にして、中村さんに確認する点を PM に渡す。_
+
+- 田中 健 (eng-backend) [TASK_UPDATE]: T3 → done: ベース金額の見直し案を `docs/specs/2026-10-base-rate-review.md` にまとめた。migration は作っていない。
+  - **調査メモ**: 外部の宿の実料金、金 110 / 土 115 / 祝前日 115 の裏取り、清掃費の相場はすべて「未検証」と明記した。ハイ 150% は中村さんの感覚のみで、承認待ちとした。
+  - **案**: ベースはオフ平日 1 泊で、A=150,000(現状維持)、B=130,000、C=110,000 の 3 案。運営コスト 3.5 万円は 2 泊で 1 泊あたり約 1.8 万円になる。どの案でも吸収できるので、コストを理由にベースを上げる必要はない。
+  - **比較表**: 平日 2 泊、週末 2 泊、連休 3 泊、ハイの平日 2 泊、ハイの連休 3 泊を、案ごとに出した。`quote.ts` / `pickSampleStays` と同じ丸め(1,000 円未満切り捨て)で計算した。
+    - 案A: 300,000 / 337,000 / 509,000 / 450,000 / 763,000 円
+    - 案B: 260,000 / 292,000 / 441,000 / 390,000 / 662,000 円
+    - 案C: 220,000 / 247,000 / 373,000 / 330,000 / 559,000 円
+  - **推奨**: 今は 150,000 円を変えない。相場が未検証のまま下げると、減収は確実で効果の根拠がないため。先に、人が公式料金表で 5〜10 施設を調べる。あわせて中村さんから稼働率と成約額を聞く。
+  - **影響**: pending 予約と返金は保存値のまま変わらない。発行済み招待の見積りは、変更後に開いた時点で新しい額になる。`discount_rate` 招待は割引後も連動して動く。`fixed_per_night` 招待と期間行は動かない。
+  - **検証**: 比較表の数字は計算スクリプトの出力。「相場の幅に収まるか」は、相場が未検証のため判定できない。仮置きの相場帯は根拠にしないでほしい。
+
+- 田中 健 (eng-backend) → pm, user-owner: 田中です。T3 を完了にしました。結論は「今は 150,000 円を変えない」です。資料は `docs/specs/2026-10-base-rate-review.md` にあります。
+  
+  - **理由**: 同価格帯の実料金を確認できていません。相場が分からないまま下げると、減収は確実で効果は不明です。
+  - **案**: A=150,000、B=130,000、C=110,000 円の 3 案を比べました。たとえば週末 2 泊は 337,000 / 292,000 / 247,000 円です。運営コスト 3.5 万円は、どの案でも吸収できます。
+  
+  **中村さんに 3 点、確認をお願いします**
+  1. 今の 150,000 円で、稼働率や、予約が入る日・入らない日はどうですか。
+  2. ハイ 150% を承認すると、期間行のないお盆の平日は 225,000 円になります。許容できますか。
+  3. 既存の GW などの期間行は、ベースを変えても動きません。ベースを下げるなら、期間行も先に見直しますか。
+  
+  **佐藤さんへ**: 外部の宿の実料金は、人が公式料金表で 5〜10 施設を調べる必要があります。私はここでは確認できていません。次イテレーションの冒頭に調査枠を入れてください。
+
+> _鈴木 ひかり (eng-frontend) [thinks]: T2 は完了済み。今ラウンドは新規作業なし。残課題を短く共有して終える。_
+
+- 鈴木 ひかり (eng-frontend) → pm, eng-backend: 鈴木です。T2 は完了のままです。次に動くための残りを 3 点だけ共有します。
+  1. **管理画面の確認**: `/admin/rates` は実ブラウザで未確認です。route のテストもありません。リリース前に、中村さんか誰かが実際に開いて見てください。仮値の 150% で「繁忙期」行が 225,000 円などと出るので、中村さんには仮値と先に伝えてください。
+  2. **季節名の二重管理**: 管理画面の行見出しの季節名が route 側にあり、`seasons.ts` と二箇所に分かれています。田中さん、次イテレーションで `seasons.ts` に管理画面用の名前を持たせられるか、先に見てもらえますか。持たせられたら、私が route の対応表を消します。
+  3. **期間設定の注記**: 「期間設定が優先されます」は、行が期間指定なら必ず出ます。その期間がシーズンと重なっているかは見ていません。重ならない期間にも出てしまうので、紛らわしければ次イテレーションで条件を足します。
+  T3 のベース金額案が出たら、`/admin/rates` のサンプル滞在の表示が案ごとに見比べられるかを確認します。
+
+> _鈴木 ひかり (eng-frontend) [notes]: T2 完了済み。次イテレーション候補: 季節名を seasons.ts に寄せる、期間行の注記条件(シーズンと重なる時のみ)、/admin/rates の実ブラウザ確認、T3 案ごとのサンプル滞在比較表示。_
+
+> _田中 健 (eng-backend) [thinks]: T1 と T3 は完了済み。build round 2 で新しい作業はなく、中村さんの回答待ち。新規タスクは切らず、現状と残リスクを短く共有して終える。_
+
+- 田中 健 (eng-backend) → pm, user-owner: 田中です。T1・T3 は完了のままで、今ラウンドに追加の実装はありません。リリース前に決める点が 2 つ残っています。
+  
+  **中村さんの回答待ち(リリース条件)**
+  - ハイ 150% を承認できるか。期間行のないお盆・GW・年末年始の平日は、150,000 円から 225,000 円(+75,000 円/泊)になります。
+  - 承認できない場合は `app/domain/pricing/seasons.ts` の `SEASON_PCT.high` の値だけを変えます。テストの期待値は定数から作っているので、直すのは 1 箇所で済みます。
+  - 例: 130% なら平日 195,000 円です。
+  - ベース 150,000 円は、相場を確認するまで変えません。
+  
+  **未検証のもの(spec の末尾にも書いてあります)**
+  - 同価格帯の宿の実料金。人が公式料金表で 5〜10 施設を調べる必要があります。
+  - 金曜 110、土曜 115、祝前日 115 の裏取り。
+  - 清掃費の相場。
+  - 梅雨・冬の閑散期の扱いと、連休の中日・端の係数。次イテレーションに回します。
+  
+  **次イテレーションの冒頭に入れたいこと**
+  1. 相場調査(人手)。
+  2. シーズン名を `seasons.ts` に寄せる。鈴木さんの二重管理の件です。実装は小さく、私が先に見ます。
+  3. 期間行とシーズンが重なる場合の注記条件。鈴木さんが挙げた件です。
+
+### iteration 1 · review
+
+- — Phase "review" started (iteration 1) — Engineers review each other's work against the acceptance criteria and fix issues. PM checks every task against its acceptance criteria and states what is ready for users.
+
+> _田中 健 (eng-backend) [thinks]: 全テストと tsc は通った（manifest のエラーのみ）。T2 の受け入れ基準を、コードの読みに基づいて報告する。route の実機確認は無いまま。_
+
+- 田中 健 (eng-backend) → pm, eng-frontend: 田中です。T2 をレビューしました。
+  - **検証**: `pnpm test:run` は 162 ファイル 1502 件が通りました。`npx tsc --noEmit` は `dist/.vite/manifest.json` の既知エラーだけです。
+  - **T2 の受け入れ基準**: ラベルは `/api/quote` が返す値を使い、UI で再計算していません。`/admin/rates` の表と代表滞在の合計は `previewSeasonDayTypePrices` と `SampleStay.totalYen` の結果です。問題は見つかりませんでした。
+  - **確認できていないこと**: 管理画面を実ブラウザで開いていません。route のテストもありません。`/admin/rates` の表示は、鈴木さんの報告とコードの読みに頼っています。
+  - **残リスク**
+    - `/admin/rates` の行見出し (`SEASON_ROW_LABELS`) が `seasons.ts` と二重管理です。次イテレーションで寄せます。
+    - 期間行の注記は、シーズンと重ならない期間にも出ます。
+    - ハイ 150% は中村さんの承認がリリース条件のままです。外部の宿の実料金は未検証です。
+  - 私の T1・T3 に修正はありません。ほかに指摘がなければ、このまま PM の判定に回してください。
+
+> _佐藤 美咲 (pm) [thinks]: T1・T2・T3 は報告と田中さんのレビューが受け入れ基準と合っている。未達はリリース条件(中村さんの承認)と未検証項目で、このラウンドで実装を足しても解けない。判定を残して次へ進む。_
+
+- 佐藤 美咲 (pm): 佐藤です。受け入れ基準に照らした判定です。
+  
+  **T1 (田中さん): 基準を満たしています。**
+  - シーズンはコード定数で、月日の閉区間を毎年繰り返し、年またぎにも対応しています。係数は `SEASON_PCT` の 1 箇所です。
+  - 優先順位は、期間行が絶対額、当たらない日はシーズン×曜日です。
+  - `discount_rate` はシーズン込みの額に掛け、`fixed_per_night` はシーズン係数を無視します。どちらもテストで固定されています。
+  - 境界日のテストと、古い `price_breakdown` を読む回帰テストがあります。
+  - 1 泊ごとの内訳にシーズン名と曜日区分が入っています。
+  - spec と Business Risk Review があります。
+  - `pnpm test:run` 1502 件通過、`tsc` は既知の manifest エラーのみです。
+  
+  **T2 (鈴木さん): 基準を満たしています。ただし画面は未確認です。**
+  - ゲストの各泊に理由ラベルが出ます。倍率は出しません。
+  - 合計は `/api/quote` の値をそのまま出し、「清掃・リネン・薪込み」を添えています。UI で再計算していません。
+  - `/admin/rates` に、シーズン×日タイプの単価表、代表的な滞在の合計、期間行の優先注記が出ます。
+  - 実ブラウザでの確認と route のテストはありません。リリース前に誰かが `/admin/rates` を実際に開いてください。
+  
+  **T3 (田中さん): 基準を満たしています。ただし「相場の幅に収まるか」は判定できていません。**
+  - 案 A/B/C の比較表と影響の整理はあります。migration は作っていません。
+  - 外部の宿の実料金は未検証で、相場が分からないので判定できません。
+  - 結論は、150,000 円は変えず、先に相場を調べることです。これで進めます。
+  
+  **ユーザーに出せる状態か**
+  - T1 と T2 はコードとして出せます。ただし中村さんがハイ 150% を承認するまでは、本番に出しません。
+  - 承認前は、期間行のないお盆・GW・年末年始の平日が 150,000 円から 225,000 円に上がります。
+  - 承認が取れなければ、`SEASON_PCT.high` の値だけ変えて出します。130% なら平日 195,000 円です。
+  - 中村さんに `/admin/rates` を見てもらうときは、150% が仮値だと先に伝えます。
+  
+  **残課題(次イテレーション)**
+  - 外部の宿の相場調査(人手)。金 110、土 115、祝前日 115 の裏取りも含みます。
+  - シーズン名を `seasons.ts` に寄せる(管理画面の二重管理の解消)。
+  - 期間行の注記を、シーズンと重なる期間だけに出す。
+  - 連休の中日・端の係数。12/28 や 1/3 前後が空く件も含みます。
+  - 梅雨・冬の閑散期の扱い。
+  - 管理画面でのシーズン編集。
+  - リードタイム係数。
+
+> _佐藤 美咲 (pm) [notes]: review 1回目の判定: T1/T2/T3 は受け入れ基準を満たす。T2 の /admin/rates は実ブラウザ・route テスト未確認。リリース条件は中村さんのハイ 150% 承認(未回答)。承認が取れなければ SEASON_PCT.high の値だけ変更する。ベース 150,000 円は相場調査(人手、5〜10 施設の公式料金表)まで変えない。次イテレーションの冒頭は相場調査、季節名を seasons.ts に寄せる、期間行の注記条件。_
+
+- 佐藤 美咲 (pm) [ADVANCE]: レビューの目標は達成。3 タスクとも基準を満たし、未検証項目とリリース条件(中村さんの 150% 承認)は明記した。
+
+### iteration 1 · acceptance
+
+- — Phase "acceptance" started (iteration 1) — Users try what was built (read the workspace, run it if possible) and judge it from their own needs. Each user gives a [VERDICT accept|reject] with reasons. PM summarizes and decides next steps.
+
+> _小林 直子 (user-guest) [thinks]: 合計が最初から出て、泊ごとの理由ラベルがあり、決済は保存値で変わらない。私の不安には答えている。ただし実機での確認はなく、150%は未承認。_
+
+- 小林 直子 (user-guest) [VERDICT]: ACCEPT: ゲストとしては受け入れます。条件が3つあります。
+  
+  良い点:
+  - 合計が最初から出て、「清掃・リネン・薪込み」と書いてあります。私が見る金額はこの合計です。
+  - 各泊に「繁忙期(お盆)・平日」「期間設定・土曜」のような理由が付くので、なぜ高いかが分かります。倍率が出ないのも、私には十分です。
+  - 決済画面の合計は見積りと同じ関数の値で、予約後は保存値で決済されます。直前に金額が変わるのが一番嫌なので、ここは安心しました。
+  - すでに決済待ちの予約は、料金を変えても動きません。
+  
+  条件:
+  1. 150%は仮値だと理解しています。期間行のないお盆の平日が15万円から22万5千円になるのは大きいです。中村さんの承認前に、本番へ出さないでください。
+  2. 実際のiPhoneの画面で、予約から決済までの金額表示を通しで確認してください。今回は画面を実機で見ていないとのことなので、折り返しや文字の大きさが心配です。
+  3. 招待コードの扱いは今回の範囲外ですが、毎回探す手間は残っています。次に検討してください。
+  
+  要望: ベース15万円は相場未確認のままなので、次回までに調べてください。金曜110・土曜115の根拠も同じです。12/28や1/3前後の扱いも、年末に泊まる私には大事なので、次回の対象に入れてください。
+
+> _小林 直子 (user-guest) [notes]: 小林さんの受け入れ判定(iter1): 条件付き accept。条件は、(1) 150%は中村さん承認前に本番へ出さない、(2) iPhone実機で予約〜決済の金額表示を通し確認、(3) 招待コードの手間は次回に検討。要望は、相場調査、金/土係数の根拠、年末の連休前後の扱い。_
