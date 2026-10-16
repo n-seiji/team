@@ -78,7 +78,7 @@ Claude Code then repeats `team next` → subagent → `team record`. Anything yo
 
 It works the same in cloud sessions. A few things differ because the container is temporary:
 
-- `.claude/hooks/session-start.sh` installs pnpm and the dev dependencies when a cloud session starts (the engine itself needs only Node).
+- `.claude/hooks/session-start.sh` installs pnpm and the dev dependencies in the background when a cloud session starts, so the session does not wait for it (the engine itself needs only Node).
 - The session state and the product are saved by committing and pushing `.team/sessions/<name>/` and `workspace/<name>/`; the `team-dev` skill does this after each phase. Another thread or a later session resumes with "continue the <name> session".
 - In a Claude Project, run one simulation per thread. Sessions build in separate folders, so threads never edit the same files.
 

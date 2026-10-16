@@ -66,3 +66,24 @@ test("say injects a human message into everyone's context", async () => {
   const log = await run(dir, "log");
   assert.match(log, /human: 予算は月1万円までです/);
 });
+
+test("init --json starts the session and returns the first turn in one call", async () => {
+  const dir = sandbox();
+  const first = JSON.parse(await run(dir, "init", "家計簿アプリ", "--name", "q1", "--json"));
+  assert.equal(first.phase, "discovery");
+  assert.equal(first.pending[0].member, "pm");
+  assert.match(fs.readFileSync(path.join(dir, first.pending[0].promptFile), "utf8"), /家計簿アプリ/);
+  // a following `next` returns the same pending turn instead of scheduling another one
+  assert.deepEqual(JSON.parse(await run(dir, "next", "--json")).pending, first.pending);
+});
+
+test("record --json returns the next turn in the same call", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "x", "--name", "r1");
+  const reply = path.join(dir, "reply.txt");
+  fs.writeFileSync(reply, "[SAY to=user-garcia] 最近いつ家計簿をつけましたか？");
+  await run(dir, "next", "--json");
+  const after = JSON.parse(await run(dir, "record", "--as", "pm", "--file", reply, "--json"));
+  assert.equal(after.pending[0].member, "user-garcia");
+  assert.match(fs.readFileSync(path.join(dir, after.pending[0].promptFile), "utf8"), /最近いつ家計簿をつけましたか/);
+});

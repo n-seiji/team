@@ -16,8 +16,8 @@ const HELP = `team — PM・エンジニア・ペルソナ(ユーザー)が会�
 Usage: team <command> [options]
 
 Session
-  init --brief <text> | --brief-file <f>  [--name <n>] [--config <f>] [--force]
-                       新しいセッションを作成して current にする
+  init [<brief>] --brief <text> | --brief-file <f>  [--name <n>] [--config <f>] [--force] [--json]
+                       新しいセッションを作成して current にする (--json は next --json と同じ出力)
   status [--json]      フェーズ・バックログ・次の発言者を表示
   log [--tail N] [--md] [--no-thoughts]
                        会話ログを表示 (--md は transcript.md のパス)
@@ -28,8 +28,8 @@ Host mode (Claude Code などの外部オーケストレーターが各エージ
   next [--json] [--inline]
                        次に行動すべきメンバーと、そのメンバー用プロンプトを出力
                        (プロンプトは .team/sessions/<s>/turns/*.prompt.md にも保存)
-  record --as <id> [--file <f>] [--force]
-                       メンバーの返答(stdin か --file)を記録して次へ進める
+  record --as <id> [--file <f>] [--force] [--json]
+                       メンバーの返答(stdin か --file)を記録して次へ進める (--json は next --json と同じ出力)
 
 Auto mode (このプロセスが LLM を呼ぶ)
   run [--backend anthropic|claude-cli|mock] [--model <m>] [--turns N]
@@ -74,6 +74,45 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
   const session = flags.session;
   const load = () => store.load(session);
 
+  /** Schedule the next speaker(s) and print their turn prompts (`next`, and `init --json`). */
+  function next(w: World) {
+    const ids = w.next();
+    const es = store.transcript(w.state.name);
+    const view = es.concat(w.emitted);
+    const files = listWorkspace(w.state, root);
+    const turnsDir = path.join(store.sessionDir(w.state.name), "turns");
+    if (ids.length) fs.mkdirSync(turnsDir, { recursive: true });
+    const items = ids.map((id) => {
+      const p = buildPrompt(w.state, id, view, files);
+      const text = promptAsText(p);
+      // Prompts are also written to files so an orchestrator can hand a short
+      // path to a subagent instead of copying the whole prompt through its context.
+      const file = path.join(turnsDir, `${String(w.state.turn).padStart(4, "0")}-${id}.prompt.md`);
+      fs.writeFileSync(file, text);
+      return {
+        member: id,
+        name: w.member(id)!.persona.name,
+        role: p.role,
+        subagent: subagentFor(p.role),
+        canEdit: p.canEdit,
+        promptFile: path.relative(root, file).split(path.sep).join("/"),
+        text,
+      };
+    });
+    store.save(w, es); // no-op unless scheduling advanced
+    if (flags.json) {
+      const pending = items.map(({ text, ...it }) => (flags.inline ? { ...it, prompt: text } : it));
+      out(JSON.stringify({ status: w.state.status, phase: w.phase.id, iteration: w.state.iteration, round: w.state.round, pending }, null, 2));
+    } else if (w.state.status === "done") {
+      out("session is done. See: team log / team status");
+    } else {
+      for (const it of items) {
+        out(`===== NEXT: ${it.member} (${it.role}) → subagent: ${it.subagent} =====`);
+        out(it.text);
+      }
+    }
+  }
+
   switch (cmd) {
     case "help":
     case "--help":
@@ -103,6 +142,8 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
       fs.mkdirSync(path.resolve(root, w.state.workspace), { recursive: true });
       store.save(w);
       store.setCurrent(name);
+      // With --json, answer like `next --json` so an orchestrator can start the first turn without another call.
+      if (flags.json) return next(w);
       out(`created session "${name}" with ${w.state.members.length} members → .team/sessions/${name}/`);
       out(statusText(w));
       return;
@@ -154,45 +195,9 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
       return;
     }
 
-    case "next": {
-      const w = load();
-      const ids = w.next();
-      const es = store.transcript(w.state.name);
-      const view = es.concat(w.emitted);
-      const files = listWorkspace(w.state, root);
-      const turnsDir = path.join(store.sessionDir(w.state.name), "turns");
-      if (ids.length) fs.mkdirSync(turnsDir, { recursive: true });
-      const items = ids.map((id) => {
-        const p = buildPrompt(w.state, id, view, files);
-        const text = promptAsText(p);
-        // Prompts are also written to files so an orchestrator can hand a short
-        // path to a subagent instead of copying the whole prompt through its context.
-        const file = path.join(turnsDir, `${String(w.state.turn).padStart(4, "0")}-${id}.prompt.md`);
-        fs.writeFileSync(file, text);
-        return {
-          member: id,
-          name: w.member(id)!.persona.name,
-          role: p.role,
-          subagent: subagentFor(p.role),
-          canEdit: p.canEdit,
-          promptFile: path.relative(root, file).split(path.sep).join("/"),
-          text,
-        };
-      });
-      store.save(w, es); // no-op unless scheduling advanced
-      if (flags.json) {
-        const pending = items.map(({ text, ...it }) => (flags.inline ? { ...it, prompt: text } : it));
-        out(JSON.stringify({ status: w.state.status, phase: w.phase.id, iteration: w.state.iteration, round: w.state.round, pending }, null, 2));
-      } else if (w.state.status === "done") {
-        out("session is done. See: team log / team status");
-      } else {
-        for (const it of items) {
-          out(`===== NEXT: ${it.member} (${it.role}) → subagent: ${it.subagent} =====`);
-          out(it.text);
-        }
-      }
+    case "next":
+      next(load());
       return;
-    }
 
     case "record": {
       const w = load();
@@ -201,10 +206,13 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
       const file = flags.file;
       const raw = file ? fs.readFileSync(path.resolve(root, file), "utf8") : await readStdin();
       const actions = w.record(id, raw, { force: !!flags.force });
-      const next = w.next();
+      store.save(w);
+      // With --json, answer like `next --json` so the orchestrator saves a call per turn.
+      if (flags.json) return next(w);
+      const ids = w.next();
       store.save(w);
       out(`recorded ${actions.length} action(s) from ${id}: ${actions.map((a) => a.type).join(", ") || "-"}`);
-      out(w.state.status === "done" ? "session is done." : `next: ${next.join(", ")} (phase ${w.phase.id}, round ${w.state.round})`);
+      out(w.state.status === "done" ? "session is done." : `next: ${ids.join(", ")} (phase ${w.phase.id}, round ${w.state.round})`);
       return;
     }
 

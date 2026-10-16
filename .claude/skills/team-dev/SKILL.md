@@ -11,14 +11,15 @@ is played by a dedicated subagent, and you just move messages between the engine
 
 All commands run from the repository root. `team` below means `node src/main.ts`.
 
-## 1. Start or resume
+## 1. Start or resume (one command, no checks first)
 
-- `team status` — if it errors with "no session yet", or the user gave a new product idea, start one:
-  `team init --brief "<product idea from the user, in their words>" --name <short-kebab-name>`
-  (Brief is required. If the user gave none, ask them for one sentence about the product and who it is for.)
-- Otherwise resume the current session (`team sessions` / `team use <name>` to switch).
+- **The user gave a product idea** → `team init "<their idea, in their words>" --name <short-kebab-name> --json`.
+  Its output is the same as `team next --json`, so go straight to step 2.2 and launch the first subagent.
+- **"Continue" / no idea** → `team next --json` resumes the current session (`team sessions` / `team use <name>`
+  to switch). Only if there is no session, or it is `done`, ask for one sentence about the product and who it is for.
 
-Tell the user the session name, the team roster (from `team status`) and that they can interject at any time.
+Do not run `team status` or read other files before the first turn. In the same message that launches the first
+subagent, tell the user in one line the session name and that they can interject at any time.
 
 ## 2. The loop
 
@@ -35,12 +36,21 @@ Repeat until the session is `done`, or until the stopping point the user asked f
    (its role rules and allowed tools still apply).
    When `pending` has several members (e.g. engineers in `build`), launch them **in the same message** so they work
    in parallel, and run them in the foreground (you need their results before the next step).
-3. For each finished subagent, take its final message verbatim and record it:
-   - Write it with the Write tool to `.team/inbox/<member>.txt` (overwrite).
-   - `team record --as <member> --file .team/inbox/<member>.txt`
-   Record the replies in the same order as `pending`. Do not edit, summarize or "fix" a reply; if a subagent
-   replied with no tags at all, record it anyway (untagged text becomes `[SAY]`).
-4. When the output of `record` shows a new phase started (or every ~6 turns), give the user a 2–4 line update:
+3. Record every reply in **one** Bash call, in the same order as `pending`, passing each final message verbatim
+   through a quoted heredoc, and add `--json` to the last one:
+   ```bash
+   node src/main.ts record --as eng-backend <<'TEAM_REPLY_END'
+   <eng-backend's final message, verbatim>
+   TEAM_REPLY_END
+   node src/main.ts record --as eng-frontend --json <<'TEAM_REPLY_END'
+   <eng-frontend's final message, verbatim>
+   TEAM_REPLY_END
+   ```
+   The `--json` output is the next step 1 result, so go straight to step 2 (no separate `team next`).
+   Do not edit, summarize or "fix" a reply; if a subagent replied with no tags at all, record it anyway (untagged
+   text becomes `[SAY]`). If a reply itself contains a line `TEAM_REPLY_END`, write it to `.team/inbox/<member>.txt`
+   and use `--file` instead.
+4. When `phase` in that output changed (or every ~6 turns), give the user a 2–4 line update:
    what happened, key decisions/tasks, what's next. Use `team log --tail 15 --no-thoughts` if you need a recap.
 
 ## 3. Finish

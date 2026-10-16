@@ -7,6 +7,10 @@ if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
   exit 0
 fi
 
+# Run in the background so the session starts immediately: only `pnpm typecheck` / `pnpm test` need this,
+# and /team-dev itself runs on plain Node.
+echo '{"async": true, "asyncTimeout": 300000}'
+
 cd "${CLAUDE_PROJECT_DIR:-$(dirname "$0")/../..}"
 
 # The pnpm version pinned in package.json ("packageManager": "pnpm@x.y.z").
