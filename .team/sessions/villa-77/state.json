@@ -1,0 +1,396 @@
+{
+  "version": 1,
+  "name": "villa-77",
+  "brief": "既存プロダクト「Villa Karuizawa」(軽井沢の 1 棟貸し別荘の招待制予約サイト。HonoX + Cloudflare Workers + D1 + Stripe + Resend) に対する GitHub issue をチームで解決する。\n\n- ワークスペースは villa リポジトリの作業コピー (git worktree) そのもの。ゼロから作らず、既存コードを読んで変更する。README.md は既存のものを保ち、新規 README は作らない。\n- villa の CLAUDE.md と .claude/rules/ に従う。機能追加は実装前に Business Risk Review (.claude/rules/business-risk-review.md の 5 カテゴリ) を spec に書く (例: docs/specs/ 配下)。個人情報・認証・メールに触れる変更は .claude/skills/pii-review/SKILL.md の観点で差分を確認する。\n- 品質ゲート: `pnpm test:run` (ユニット)、`npx tsc --noEmit`、`pnpm lint` 相当。依存の追加は避ける (pnpm の 7 日ルールあり)。外部 API キーは無いので、外部サービスはモックかインターフェースまでで止め、何が未検証かを明記する。\n- git の commit / push はしない (ファシリテーターが最後にまとめる)。\n- ユーザー役: 小林さん (リピーターのゲスト) と中村さん (オーナー兼運営者)。\n- issue の「検討事項」で決まっていない点は、チームで決めて理由を残す。スコープが大きければ 1 イテレーションで出せる最小の価値に絞り、残りは明記する。\n\n以下が issue 本文。\n# villa#77 季節に応じた料金ロジックとベース金額を見直す\n\n## 要望\n1. 季節による料金の変え方がまだ甘いので、実在する料金ロジック (同価格帯の貸別荘・旅館・OTA) を調べて、根拠のあるロジックにする\n2. あわせて、ベース金額そのもの (既定 150,000 円) が妥当かを見直す\n\n## 現状\n1 泊の単価は `app/domain/pricing/quote.ts` で次のように決まる。\n\n```\n単価 = roundYen( ベース料金 × 曜日係数 × リードタイム係数 )   ※ 1,000 円未満切り捨て\n```\n\n- **ベース料金** (`base_rates` テーブル、`/admin/rates` で編集): 既定行 1 件 + 期間行 (from〜to)。期間が重なったら期間の短い行が優先 (`resolveBaseRate`)\n- **季節という概念はコードに無い**。季節差は、運営が期間行を手で登録することでしか表現できない。毎年、繁忙期ごとに行を作り直す必要がある\n- **曜日係数** (`multipliers.ts`、コード定数): 平日 100 / 金 110 / 土 115 / 日 100 / 祝前日 115。コメントに「2026-09 時点の相場調査ベースの仮値」とあり、根拠は弱い\n- **リードタイム係数** (`lead-time.ts`): 帯の仕組みはあるが、初期値は常に 100% で実質未使用\n- 祝日は内閣府 CSV 由来 (`holidays.data.ts`、2027 年分まで)。「祝前日」だけを見ており、連休の中日・最終日、年末年始、GW、お盆のような「期間としての繁忙期」は扱っていない\n- 管理画面 `/admin/rates` は各行の日タイプ別プレビュー単価 (`previewDayTypePrices`) を出す。変更は監査ログ (`rate.created` / `rate.updated` / `rate.deleted`) に残る\n- 確定済み予約は `price_breakdown` に見積り時点の内訳を保存しているので、料金を変えても過去の予約金額は変わらない\n\n## やること (案)\n### 調査\n- 軽井沢の 1 棟貸し・同価格帯の宿で、季節 (ハイ / ショルダー / オフ)、連休、年末年始、曜日の価格差が実際にどれくらいか。倍率か、加算額か\n- 一般的な料金設計のパターン: シーズン区分 × 曜日のマトリクス、特定日 (正月・GW・お盆) の個別設定、最低連泊数、直前割・早割\n- 現在の曜日係数 (金 110 / 土 115) の裏取り\n- ベース金額の相場: 同じ定員・設備・立地の 1 棟貸しの平日 1 泊がいくらか。清掃費などを別建てにしているか込みにしているか\n\n### 設計・実装\n- シーズンを毎年の手入力ではなく定義として持つ (例: 月日の範囲で毎年繰り返すシーズン区分 + 係数)。期間行 (`base_rates`) との役割分担と優先順位を決める\n- 連休・特定日の扱い (祝前日だけでなく、連休期間全体)\n- リードタイム係数を使うかどうか\n\n### ベース金額の見直し\n- 調査結果をもとに、既定のベース金額 (現在 150,000 円。`migrations/0017` で投入、`/admin/rates` で変更可) を決め直す\n- ベースは「オフシーズンの平日 1 泊」を表す値とし、シーズン・曜日の係数を掛けた結果が相場の幅に収まるかを、代表的な滞在 (平日 2 泊 / 週末 2 泊 / 連休 3 泊、`pickSampleStays` が既にある) の合計金額で確かめる\n- 金額を変えたとき、決済待ち (pending) の予約や発行済み招待の見積りにどう効くかを確認する\n\n## 検討事項\n- ベース金額に何を含めるか (清掃費・リネン・薪などを込みにするか)。人数係数は持たない方針なので、定員いっぱいで泊まる前提の金額にするか\n- シーズン定義をコード定数にするか (変更は PR)、管理画面で編集できるようにするか (D1)\n- 2026-09-16 に決めた方針との整合: 人数係数なし、外部プライシング API は使わない、予約は招待必須\n- 割引招待 (`discount_rate`) や固定単価招待 (`fixed_per_night`) とシーズン係数の掛け合わせ方\n\n## 進め方\n課金ロジックの変更なので、実装前に Business Risk Review (`.claude/rules/business-risk-review.md`) を spec に書く。特に、表示金額と請求金額の一致 (景表法・金銭リスク)、整数演算、キャンセルポリシーの返金額への影響。\n\n## 関連\n- `app/domain/pricing/`、`app/routes/admin/rates/index.tsx`、`migrations/0017_pricing_and_invitation_modes.sql`",
+  "language": "ja",
+  "workspace": "workspace/villa-77",
+  "createdAt": "2026-10-16T07:02:48.836Z",
+  "status": "running",
+  "members": [
+    {
+      "id": "pm",
+      "role": "pm",
+      "persona": {
+        "name": "佐藤 美咲",
+        "age": 36,
+        "occupation": {
+          "title": "Product Manager",
+          "organization": "小さなSaaSスタートアップ",
+          "description": "ユーザーインタビューから課題を言語化し、最小のスコープで価値を届けることに責任を持つ。"
+        },
+        "long_term_goals": [
+          "ユーザーが本当に使い続けるプロダクトを作る",
+          "チームが迷わず動ける判断を素早く下す"
+        ],
+        "style": "質問が具体的で短い。『最後にそれが起きたのはいつですか？』のように事実を掘る。決めるときは理由とトレードオフを一言添える。",
+        "personality": {
+          "traits": [
+            "好奇心が強い",
+            "スコープを削るのが得意",
+            "ユーザーの言葉をそのまま引用する"
+          ],
+          "big_five": {
+            "openness": "高",
+            "conscientiousness": "高",
+            "extraversion": "中",
+            "agreeableness": "中",
+            "neuroticism": "低"
+          }
+        },
+        "skills": [
+          "ユーザーインタビュー (The Mom Test)",
+          "ジョブ理論",
+          "受け入れ基準の記述",
+          "優先順位付け"
+        ],
+        "beliefs": [
+          "ユーザーが言う解決策より、ユーザーの過去の行動を信じる",
+          "最初のリリースは恥ずかしいくらい小さくていい"
+        ]
+      }
+    },
+    {
+      "id": "eng-backend",
+      "role": "engineer",
+      "persona": {
+        "name": "田中 健",
+        "age": 41,
+        "occupation": {
+          "title": "Senior Backend Engineer",
+          "description": "データモデル、API、CLI、テストを担当。シンプルで壊れにくい設計を好む。"
+        },
+        "style": "結論から話す。リスクは数字や具体例で示す。不明点はその場で確認する。",
+        "personality": {
+          "traits": [
+            "慎重",
+            "テストを先に書く",
+            "依存を増やすのが嫌い"
+          ],
+          "big_five": {
+            "openness": "中",
+            "conscientiousness": "高",
+            "extraversion": "低",
+            "agreeableness": "中",
+            "neuroticism": "低"
+          }
+        },
+        "skills": [
+          "TypeScript",
+          "Go",
+          "SQL",
+          "API設計",
+          "自動テスト"
+        ],
+        "preferences": {
+          "likes": [
+            "標準ライブラリ",
+            "小さな関数",
+            "README に動かし方を書くこと"
+          ],
+          "dislikes": [
+            "根拠のない見積もり",
+            "巨大なフレームワーク"
+          ]
+        }
+      }
+    },
+    {
+      "id": "eng-frontend",
+      "role": "engineer",
+      "persona": {
+        "name": "鈴木 ひかり",
+        "age": 29,
+        "occupation": {
+          "title": "Frontend / UX Engineer",
+          "description": "画面・CLI の使い勝手、アクセシビリティ、初回体験を担当。ユーザー視点で仕様に意見を言う。"
+        },
+        "style": "フレンドリーで提案型。『ユーザーはここで迷いそう』と体験ベースで話す。",
+        "personality": {
+          "traits": [
+            "共感力が高い",
+            "手を動かして試作するのが早い",
+            "細部にこだわる"
+          ],
+          "big_five": {
+            "openness": "高",
+            "conscientiousness": "中",
+            "extraversion": "高",
+            "agreeableness": "高",
+            "neuroticism": "中"
+          }
+        },
+        "skills": [
+          "TypeScript",
+          "HTML/CSS",
+          "React",
+          "アクセシビリティ",
+          "プロトタイピング"
+        ],
+        "preferences": {
+          "likes": [
+            "空状態やエラー時の丁寧なメッセージ",
+            "キーボードだけで操作できるUI"
+          ],
+          "dislikes": [
+            "説明が必要なUI"
+          ]
+        }
+      }
+    },
+    {
+      "id": "user-guest",
+      "role": "user",
+      "persona": {
+        "name": "小林 直子",
+        "age": 44,
+        "nationality": "日本",
+        "residence": "東京都世田谷区",
+        "occupation": {
+          "title": "IT 企業の経理マネージャー",
+          "description": "夫と小学生 2 人の 4 人家族。知人の紹介 (招待コード) で軽井沢の貸別荘に 2 回泊まったリピーター。"
+        },
+        "long_term_goals": [
+          "家族の長期休みを手間なく良い場所で過ごす",
+          "気に入った宿を友人にも紹介したい"
+        ],
+        "style": "要点をはっきり言う。予約や支払いで不安になった具体的な場面を例に話す。お金の表示には細かい。",
+        "personality": {
+          "traits": [
+            "段取り重視",
+            "スマホで完結させたい",
+            "個人情報の扱いには敏感"
+          ],
+          "big_five": {
+            "openness": "中",
+            "conscientiousness": "高",
+            "extraversion": "中",
+            "agreeableness": "中",
+            "neuroticism": "中"
+          }
+        },
+        "preferences": {
+          "likes": [
+            "iPhone だけで予約から鍵の受け取りまで済むこと",
+            "合計金額が最初から分かること",
+            "メールに必要な情報がまとまっていること"
+          ],
+          "dislikes": [
+            "毎回招待コードやパスワードを探すこと",
+            "直前に金額が変わること",
+            "アプリのインストールを強いられること"
+          ]
+        },
+        "tech_literacy": "スマホ・Web サービスは日常的に使う。アプリのインストールはできるが、宿のためだけに入れるのは嫌。ターミナルは使わない。"
+      }
+    },
+    {
+      "id": "user-owner",
+      "role": "user",
+      "persona": {
+        "name": "中村 誠",
+        "age": 58,
+        "nationality": "日本",
+        "residence": "長野県軽井沢町 (別荘の近く)",
+        "occupation": {
+          "title": "貸別荘のオーナー兼運営者",
+          "description": "1 棟貸しの別荘を招待制で貸している。予約サイトの管理画面 (/admin) で料金・予約・メールを見ている。清掃と鍵の受け渡しも自分でやることが多い。"
+        },
+        "long_term_goals": [
+          "稼働率と単価を上げつつ、運営の手間を減らす",
+          "トラブル (返金・苦情・個人情報) を起こさない"
+        ],
+        "style": "現場の経験で話す。『繁忙期の金曜はこう』『この前こんなゲストがいた』と具体的。数字の根拠を気にする。",
+        "personality": {
+          "traits": [
+            "慎重",
+            "お金と法律のリスクに敏感",
+            "仕組みで楽をしたい"
+          ],
+          "big_five": {
+            "openness": "中",
+            "conscientiousness": "高",
+            "extraversion": "中",
+            "agreeableness": "中",
+            "neuroticism": "中"
+          }
+        },
+        "preferences": {
+          "likes": [
+            "管理画面で変更前に結果を確認できること",
+            "毎年の手作業が減ること",
+            "監査ログで後から追えること"
+          ],
+          "dislikes": [
+            "ゲストに誤った金額が出ること",
+            "設定を間違えると取り返しがつかない操作",
+            "外部サービスへの依存が増えること"
+          ]
+        },
+        "tech_literacy": "管理画面とスマホは使える。コードは読まないが、開発者 (オーナーの家族) に GitHub の issue で要望を出している。"
+      }
+    }
+  ],
+  "phases": [
+    {
+      "id": "discovery",
+      "goal": "PM interviews the users to uncover their real situation, pains and jobs-to-be-done. Users answer strictly in character, with concrete episodes. No solutions yet.",
+      "speakers": [
+        "pm",
+        "user"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 2
+    },
+    {
+      "id": "planning",
+      "goal": "PM turns findings into a small, shippable scope: [TASK] items with clear acceptance criteria, each assigned to an engineer. Engineers challenge feasibility, split or re-assign tasks, and agree on tech choices.",
+      "speakers": [
+        "pm",
+        "engineer"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 2,
+      "iterationStart": true
+    },
+    {
+      "id": "build",
+      "goal": "Engineers implement their own tasks in the workspace (real files, runnable code, tests when sensible), coordinate interfaces with each other, and mark finished work with [TASK_DONE].",
+      "speakers": [
+        "engineer"
+      ],
+      "mode": "parallel",
+      "maxRounds": 3,
+      "untilTasksDone": true,
+      "editors": [
+        "engineer"
+      ]
+    },
+    {
+      "id": "review",
+      "goal": "Engineers review each other's work against the acceptance criteria and fix issues. PM checks every task against its acceptance criteria and states what is ready for users.",
+      "speakers": [
+        "engineer",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1,
+      "editors": [
+        "engineer"
+      ]
+    },
+    {
+      "id": "acceptance",
+      "goal": "Users try what was built (read the workspace, run it if possible) and judge it from their own needs. Each user gives a [VERDICT accept|reject] with reasons. PM summarizes and decides next steps.",
+      "speakers": [
+        "user",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1
+    }
+  ],
+  "phaseIndex": 2,
+  "iteration": 1,
+  "maxIterations": 2,
+  "round": 1,
+  "turn": 11,
+  "queue": [],
+  "pending": [
+    "eng-backend",
+    "eng-frontend"
+  ],
+  "insertions": 0,
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "シーズン定義と見積りロジックへの組み込み(spec + Business Risk Review 含む)",
+      "acceptance": "- docs/specs/ に spec を書き、Business Risk Review の5カテゴリを埋める。特に表示額と請求額の一致、整数演算、キャンセルポリシーの返金額への影響、pending 予約と発行済み招待の見積り挙動を書く。\n- シーズンはコード定数で、月日の範囲を毎年繰り返す形にする(ハイ=GW・お盆・年末年始 / ショルダー / オフ)。年またぎ(12/28〜1/5)も正しく判定できる。係数は整数%で持つ。\n- 優先順位: `base_rates` の期間行が一致したらシーズン係数は掛けない。一致しなければ 既定行×シーズン×曜日(×リードタイム100%)。\n- `discount_rate` はシーズン込みの額に適用する。`fixed_per_night` はシーズン係数を無視する。どちらも単体テストで固定する。\n- 境界日(5/1、お盆の初日と最終日、12/31→1/1、閏年の2/29)のテストが通る。\n- 見積り関数が返す1泊ごとの内訳に、シーズン名と曜日区分(祝前日など)を含める。\n- 確定済み予約の `price_breakdown` は変わらない(回帰テスト)。\n- `pnpm test:run` と `npx tsc --noEmit` が通る。",
+      "owner": "eng-backend",
+      "status": "doing",
+      "createdBy": "pm"
+    },
+    {
+      "id": "T2",
+      "title": "見積り内訳で「高い理由」を見せる+管理画面プレビューへのシーズン反映",
+      "acceptance": "- ゲストの見積り表示で、各泊の行に「繁忙期(お盆)」「土曜」「祝前日」などの理由ラベルを出す。合計は従来どおり最初から表示し、清掃費などは込みと分かる文言にする。\n- 決済直前の画面と見積りの合計が、同じ関数の結果と一致する。UI側で再計算しない。\n- `/admin/rates` のプレビューで、シーズン別・日タイプ別の単価と、代表的な滞在(`pickSampleStays`)の合計金額を確認できる。期間行が優先される行には、その旨を表示する。\n- ラベルは eng-backend の内訳フィールドに依存する。型を先に合意して並行で進める。\n- コンポーネントのテストと `npx tsc --noEmit` が通る。",
+      "owner": "eng-frontend",
+      "status": "todo",
+      "createdBy": "pm"
+    },
+    {
+      "id": "T3",
+      "title": "ベース金額の見直し案(根拠付き。承認前は migration を作らない)",
+      "acceptance": "- 調査結果を調査メモにまとめる。外部サイトを実際に確認できなかった項目は「未検証」と明記する。\n- 運営コスト(1回3〜4万円)と、定員いっぱい前提の込み価格で、オフ平日1泊のベース案を2〜3案出す。\n- 各案について、平日2泊・週末2泊・連休3泊の合計を `pickSampleStays` で出し、相場の幅に収まるか比較表にする。\n- 既定の150,000円を変えるかは、オーナーの確認後に決める。この時点では migration を書かない。\n- 金額を変えたときの影響(pending の予約、発行済み招待)を1段落でまとめる。",
+      "owner": "eng-backend",
+      "status": "todo",
+      "createdBy": "pm"
+    }
+  ],
+  "decisions": [
+    {
+      "by": "pm",
+      "text": "料金は引き続き清掃・リネン・薪などを込みの総額で表示し、別建てにしない。人数係数は持たない (定員いっぱい前提)。見積りと請求の一致を最優先の制約とする。",
+      "phase": "discovery",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "優先順位は「`base_rates` の期間行(絶対額、シーズン係数は掛けない)>シーズン定義×曜日係数」とする。理由: 二重掛けを避け、既存の期間行を壊さないため。割引招待はシーズン込みの額に掛け、固定単価招待はシーズン係数を無視する。トレードオフ: 期間行を登録した期間は、その期間の係数調整を運営が自分で行う。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "シーズン定義はまずコード定数にする(変更は PR)。管理画面での編集(D1)は次イテレーション以降。理由: 迷わず出せる最小スコープで、料金変更の監査とテストを PR に残せる。トレードオフ: 運営が自分で季節を変えるには開発者の手が要る。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "1 泊の金額は、泊ごとに 1 回だけ丸める。`base × seasonPercent × dayKindPercent / 10000` を整数で計算し、1,000 円未満を切り捨てる。理由: 係数ごとに丸めると表示額と請求額がずれるため。トレードオフ: 係数を足すたびに、丸めの境界テストが増える。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "ハイ係数 150% は仮値のまま実装し、リリース前に中村さんの承認を条件にする。ショルダーとオフは 100 で、今の金額を変えない。理由: 期間行が無いお盆や年末年始の平日が、承認なしに 150,000 円から 225,000 円に上がるため。トレードオフ: 承認待ちの間は、値が確定しない。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "見積り内訳の理由ラベルは、見積り関数が返す。`season.label` と `dayKindLabel` を持たせ、UI では組み立てない。古い予約の `price_breakdown` は新フィールドを optional で読み、無ければ日付と金額だけを出す。理由: 文言を二箇所に分けないため、また過去の予約表示を壊さないため。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "ゲスト画面には倍率(%)を出さず、金額・理由ラベル・合計(「清掃・リネン・薪込み」)だけを出す。倍率は `/admin/rates` のプレビュー表にだけ出す。理由: 小林さんが比べるのは合計で、理由が分かれば足りる。中村さんにはプレビューで倍率が要る。トレードオフ: ゲストは倍率の根拠まで追えないが、理由ラベルで「なぜ高いか」は答えられる。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "ハイ係数などシーズン係数の値は、コード定数の 1 箇所に集約する。中村さんの承認結果で値だけ差し替えられる形にし、構造は変えない。ショルダーの定義は置くが、1 イテレーション目では 100 のままにする。梅雨・冬の閑散期の扱いと、連休の中日・端の係数は、ベース改定と一緒に次イテレーションで決める。",
+      "phase": "planning",
+      "iteration": 1
+    }
+  ],
+  "verdicts": [],
+  "notes": {
+    "user-guest": [
+      "小林さんの重視点: 最初から合計が分かる、決済直前に金額が変わらない、高い日の理由が見える。比較は常に合計額で行う。日程は子どもの休み優先で決め、その後で空き日を探す。"
+    ],
+    "pm": [
+      "discovery 1 回目の事実: (オーナー) 期間行は春の GW 前に手入力、金額は勘と近隣 2〜3 軒の参照。毎年作り直しでお盆・年末年始は直前に気づいたことがある。GW/お盆は半年前に埋まり「もっと高くても」だが常連関係が怖い。年末年始は 12/30 発は埋まり 12/28・1/3 前後が空く。閑散期は 1 月中旬〜2 月と 6 月平日、冬は暖房費で値下げ不可。割引招待は数回手動で、割引率に毎回不安。1 回の運営コストは清掃約 2 万 + リネン約 1 万弱 + 薪消耗品数千〜1 万 = 3〜4 万円。料金は全部込み、定員いっぱい前提、人数係数は不要。(ゲスト) 最後は夏休み前に 4 人 2 泊、合計が最初に出るのが安心。他サイトは清掃費・入湯税が後付けで比べにくい。日程は子どもの休み優先で、金曜と土曜の差を確認。高い理由 (祝前日/繁忙期) が画面で分からないと納得感が落ちる。決済直前に金額が変わると離脱。内訳が追えない金額は不安。",
+      "planning 1回目の方針: 1イテレーション目はコード定数のシーズン定義+見積りの理由表示。期間行が優先でシーズン係数は掛けない。割引招待は後掛け、固定単価はシーズン無視。ベース金額は案を出して中村さんの確認待ち。連休の中日・端の係数、リードタイム、管理画面でのシーズン編集は次回以降。",
+      "planning 1回目の追加決定: ハイ=150%は仮値で中村さんの承認がリリース条件。ショルダーとオフは100で現行額を維持。丸めは泊ごとに1回(整数、1,000円未満切り捨て)。見積り関数が totalYen と理由ラベルを返す。古い price_breakdown は新フィールド optional で日付と金額だけ表示。pending の予約が決済時に再計算されているかは田中さんが T1 冒頭で確認し、再計算なら保存値を請求額の正とする。",
+      "planning 2回目: ゲスト画面は倍率を出さず、倍率は `/admin/rates` の表だけ。`Quote = { nights, totalYen }`、`LegacyNightLine` は optional 読み。シーズン係数は定数 1 箇所に集約し、150% は中村さんの承認待ち(リリース条件)。未検証項目(外部宿の実料金、150% の根拠、閑散期の扱い)は spec 末尾に一覧にする。次イテレーションの候補は、連休の中日・端、ショルダー/オフの割引、管理画面でのシーズン編集、リードタイム。"
+    ],
+    "eng-backend": [
+      "T1 の設計合意案:\n- 内訳は `NightLine`(date, amountYen, season{id,label}|null, dayKind, source: period_rate|season|fixed_per_night, seasonPercent, dayKindPercent)。\n- 初期係数は shoulder=100、off=100、high=150(仮値で未検証)。\n- 期間は GW 4/29〜5/6、お盆 8/10〜8/16、年末年始 12/28〜1/5。\n- 先に確認すること: pending 予約が予約作成時の保存値なのか、決済時の再計算なのか。\n- オフ割引とベース改定は、オーナー承認後。",
+      "計画フェーズの確認事項: (1) pending 予約が保存値か再計算かを T1 の最初にコードで確認する。(2) ハイ 150% はお盆の平日で +75,000 円(150,000→225,000)。中村さん承認がリリース条件。(3) 割引招待は割引前の額が変わるので、発行済み招待の新しい見積りも上がる。spec に明記する。(4) 同価格帯の宿の実料金は未検証。"
+    ]
+  },
+  "historyWindow": 40
+}

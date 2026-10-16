@@ -1,0 +1,14 @@
+{
+  "language": "ja",
+  "workspace": "workspace",
+  "maxIterations": 2,
+  "historyWindow": 40,
+  "members": [
+    "personas/pm-sato.json",
+    "personas/eng-backend-tanaka.json",
+    "personas/eng-frontend-suzuki.json",
+    "personas/villa/user-guest-kobayashi.json",
+    "personas/villa/user-owner-nakamura.json"
+  ],
+  "backend": { "type": "claude-cli" }
+}

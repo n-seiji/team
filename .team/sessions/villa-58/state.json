@@ -1,0 +1,389 @@
+{
+  "version": 1,
+  "name": "villa-58",
+  "brief": "既存プロダクト「Villa Karuizawa」(軽井沢の 1 棟貸し別荘の招待制予約サイト。HonoX + Cloudflare Workers + D1 + Stripe + Resend) に対する GitHub issue をチームで解決する。\n\n- ワークスペースは villa リポジトリの作業コピー (git worktree) そのもの。ゼロから作らず、既存コードを読んで変更する。README.md は既存のものを保ち、新規 README は作らない。\n- villa の CLAUDE.md と .claude/rules/ に従う。機能追加は実装前に Business Risk Review (.claude/rules/business-risk-review.md の 5 カテゴリ) を spec に書く (例: docs/specs/ 配下)。個人情報・認証・メールに触れる変更は .claude/skills/pii-review/SKILL.md の観点で差分を確認する。\n- 品質ゲート: `pnpm test:run` (ユニット)、`npx tsc --noEmit`、`pnpm lint` 相当。依存の追加は避ける (pnpm の 7 日ルールあり)。外部 API キーは無いので、外部サービスはモックかインターフェースまでで止め、何が未検証かを明記する。\n- git の commit / push はしない (ファシリテーターが最後にまとめる)。\n- ユーザー役: 小林さん (リピーターのゲスト) と中村さん (オーナー兼運営者)。\n- issue の「検討事項」で決まっていない点は、チームで決めて理由を残す。スコープが大きければ 1 イテレーションで出せる最小の価値に絞り、残りは明記する。\n\n以下が issue 本文。\n# villa#58 セサミ (SESAME) 連携で鍵をゲストに渡す\n\n## 要望\nスマートロック SESAME と連携し、予約確定後にゲストへ鍵 (解錠権限) を渡せるようにする。今は初回は対面、リピートはキーボックス (LP の記載)。\n\n## 検討事項\n- SESAME の API (CANDY HOUSE Web API) で「期間限定の合鍵」を発行できるか、Wi-Fi モジュール (Hub) が必要か\n- 発行タイミング: チェックイン日の 15:00 有効開始、チェックアウト 11:00 で失効。予約のキャンセル・日程変更時に失効/再発行\n- 渡し方: 確認メール or マイページに合鍵 URL / QR。SESAME アプリのインストールが要るか、Web から解錠できるか\n- 障害時のフォールバック (キーボックス継続)\n- API キーは Worker secret、監査ログに発行・失効を記録",
+  "language": "ja",
+  "workspace": "workspace/villa-58",
+  "createdAt": "2026-10-16T07:02:48.273Z",
+  "status": "running",
+  "members": [
+    {
+      "id": "pm",
+      "role": "pm",
+      "persona": {
+        "name": "佐藤 美咲",
+        "age": 36,
+        "occupation": {
+          "title": "Product Manager",
+          "organization": "小さなSaaSスタートアップ",
+          "description": "ユーザーインタビューから課題を言語化し、最小のスコープで価値を届けることに責任を持つ。"
+        },
+        "long_term_goals": [
+          "ユーザーが本当に使い続けるプロダクトを作る",
+          "チームが迷わず動ける判断を素早く下す"
+        ],
+        "style": "質問が具体的で短い。『最後にそれが起きたのはいつですか？』のように事実を掘る。決めるときは理由とトレードオフを一言添える。",
+        "personality": {
+          "traits": [
+            "好奇心が強い",
+            "スコープを削るのが得意",
+            "ユーザーの言葉をそのまま引用する"
+          ],
+          "big_five": {
+            "openness": "高",
+            "conscientiousness": "高",
+            "extraversion": "中",
+            "agreeableness": "中",
+            "neuroticism": "低"
+          }
+        },
+        "skills": [
+          "ユーザーインタビュー (The Mom Test)",
+          "ジョブ理論",
+          "受け入れ基準の記述",
+          "優先順位付け"
+        ],
+        "beliefs": [
+          "ユーザーが言う解決策より、ユーザーの過去の行動を信じる",
+          "最初のリリースは恥ずかしいくらい小さくていい"
+        ]
+      }
+    },
+    {
+      "id": "eng-backend",
+      "role": "engineer",
+      "persona": {
+        "name": "田中 健",
+        "age": 41,
+        "occupation": {
+          "title": "Senior Backend Engineer",
+          "description": "データモデル、API、CLI、テストを担当。シンプルで壊れにくい設計を好む。"
+        },
+        "style": "結論から話す。リスクは数字や具体例で示す。不明点はその場で確認する。",
+        "personality": {
+          "traits": [
+            "慎重",
+            "テストを先に書く",
+            "依存を増やすのが嫌い"
+          ],
+          "big_five": {
+            "openness": "中",
+            "conscientiousness": "高",
+            "extraversion": "低",
+            "agreeableness": "中",
+            "neuroticism": "低"
+          }
+        },
+        "skills": [
+          "TypeScript",
+          "Go",
+          "SQL",
+          "API設計",
+          "自動テスト"
+        ],
+        "preferences": {
+          "likes": [
+            "標準ライブラリ",
+            "小さな関数",
+            "README に動かし方を書くこと"
+          ],
+          "dislikes": [
+            "根拠のない見積もり",
+            "巨大なフレームワーク"
+          ]
+        }
+      }
+    },
+    {
+      "id": "eng-frontend",
+      "role": "engineer",
+      "persona": {
+        "name": "鈴木 ひかり",
+        "age": 29,
+        "occupation": {
+          "title": "Frontend / UX Engineer",
+          "description": "画面・CLI の使い勝手、アクセシビリティ、初回体験を担当。ユーザー視点で仕様に意見を言う。"
+        },
+        "style": "フレンドリーで提案型。『ユーザーはここで迷いそう』と体験ベースで話す。",
+        "personality": {
+          "traits": [
+            "共感力が高い",
+            "手を動かして試作するのが早い",
+            "細部にこだわる"
+          ],
+          "big_five": {
+            "openness": "高",
+            "conscientiousness": "中",
+            "extraversion": "高",
+            "agreeableness": "高",
+            "neuroticism": "中"
+          }
+        },
+        "skills": [
+          "TypeScript",
+          "HTML/CSS",
+          "React",
+          "アクセシビリティ",
+          "プロトタイピング"
+        ],
+        "preferences": {
+          "likes": [
+            "空状態やエラー時の丁寧なメッセージ",
+            "キーボードだけで操作できるUI"
+          ],
+          "dislikes": [
+            "説明が必要なUI"
+          ]
+        }
+      }
+    },
+    {
+      "id": "user-guest",
+      "role": "user",
+      "persona": {
+        "name": "小林 直子",
+        "age": 44,
+        "nationality": "日本",
+        "residence": "東京都世田谷区",
+        "occupation": {
+          "title": "IT 企業の経理マネージャー",
+          "description": "夫と小学生 2 人の 4 人家族。知人の紹介 (招待コード) で軽井沢の貸別荘に 2 回泊まったリピーター。"
+        },
+        "long_term_goals": [
+          "家族の長期休みを手間なく良い場所で過ごす",
+          "気に入った宿を友人にも紹介したい"
+        ],
+        "style": "要点をはっきり言う。予約や支払いで不安になった具体的な場面を例に話す。お金の表示には細かい。",
+        "personality": {
+          "traits": [
+            "段取り重視",
+            "スマホで完結させたい",
+            "個人情報の扱いには敏感"
+          ],
+          "big_five": {
+            "openness": "中",
+            "conscientiousness": "高",
+            "extraversion": "中",
+            "agreeableness": "中",
+            "neuroticism": "中"
+          }
+        },
+        "preferences": {
+          "likes": [
+            "iPhone だけで予約から鍵の受け取りまで済むこと",
+            "合計金額が最初から分かること",
+            "メールに必要な情報がまとまっていること"
+          ],
+          "dislikes": [
+            "毎回招待コードやパスワードを探すこと",
+            "直前に金額が変わること",
+            "アプリのインストールを強いられること"
+          ]
+        },
+        "tech_literacy": "スマホ・Web サービスは日常的に使う。アプリのインストールはできるが、宿のためだけに入れるのは嫌。ターミナルは使わない。"
+      }
+    },
+    {
+      "id": "user-owner",
+      "role": "user",
+      "persona": {
+        "name": "中村 誠",
+        "age": 58,
+        "nationality": "日本",
+        "residence": "長野県軽井沢町 (別荘の近く)",
+        "occupation": {
+          "title": "貸別荘のオーナー兼運営者",
+          "description": "1 棟貸しの別荘を招待制で貸している。予約サイトの管理画面 (/admin) で料金・予約・メールを見ている。清掃と鍵の受け渡しも自分でやることが多い。"
+        },
+        "long_term_goals": [
+          "稼働率と単価を上げつつ、運営の手間を減らす",
+          "トラブル (返金・苦情・個人情報) を起こさない"
+        ],
+        "style": "現場の経験で話す。『繁忙期の金曜はこう』『この前こんなゲストがいた』と具体的。数字の根拠を気にする。",
+        "personality": {
+          "traits": [
+            "慎重",
+            "お金と法律のリスクに敏感",
+            "仕組みで楽をしたい"
+          ],
+          "big_five": {
+            "openness": "中",
+            "conscientiousness": "高",
+            "extraversion": "中",
+            "agreeableness": "中",
+            "neuroticism": "中"
+          }
+        },
+        "preferences": {
+          "likes": [
+            "管理画面で変更前に結果を確認できること",
+            "毎年の手作業が減ること",
+            "監査ログで後から追えること"
+          ],
+          "dislikes": [
+            "ゲストに誤った金額が出ること",
+            "設定を間違えると取り返しがつかない操作",
+            "外部サービスへの依存が増えること"
+          ]
+        },
+        "tech_literacy": "管理画面とスマホは使える。コードは読まないが、開発者 (オーナーの家族) に GitHub の issue で要望を出している。"
+      }
+    }
+  ],
+  "phases": [
+    {
+      "id": "discovery",
+      "goal": "PM interviews the users to uncover their real situation, pains and jobs-to-be-done. Users answer strictly in character, with concrete episodes. No solutions yet.",
+      "speakers": [
+        "pm",
+        "user"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 2
+    },
+    {
+      "id": "planning",
+      "goal": "PM turns findings into a small, shippable scope: [TASK] items with clear acceptance criteria, each assigned to an engineer. Engineers challenge feasibility, split or re-assign tasks, and agree on tech choices.",
+      "speakers": [
+        "pm",
+        "engineer"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 2,
+      "iterationStart": true
+    },
+    {
+      "id": "build",
+      "goal": "Engineers implement their own tasks in the workspace (real files, runnable code, tests when sensible), coordinate interfaces with each other, and mark finished work with [TASK_DONE].",
+      "speakers": [
+        "engineer"
+      ],
+      "mode": "parallel",
+      "maxRounds": 3,
+      "untilTasksDone": true,
+      "editors": [
+        "engineer"
+      ]
+    },
+    {
+      "id": "review",
+      "goal": "Engineers review each other's work against the acceptance criteria and fix issues. PM checks every task against its acceptance criteria and states what is ready for users.",
+      "speakers": [
+        "engineer",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1,
+      "editors": [
+        "engineer"
+      ]
+    },
+    {
+      "id": "acceptance",
+      "goal": "Users try what was built (read the workspace, run it if possible) and judge it from their own needs. Each user gives a [VERDICT accept|reject] with reasons. PM summarizes and decides next steps.",
+      "speakers": [
+        "user",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1
+    }
+  ],
+  "phaseIndex": 2,
+  "iteration": 1,
+  "maxIterations": 2,
+  "round": 1,
+  "turn": 11,
+  "queue": [],
+  "pending": [
+    "eng-backend",
+    "eng-frontend"
+  ],
+  "insertions": 0,
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "鍵発行の抽象化・モック・保存と Business Risk Review spec",
+      "acceptance": "- docs/specs/ に Business Risk Review (5 カテゴリ) 入りの spec がある。実機未確認で未検証の点も明記されている。\n- 鍵プロバイダのインターフェース (issue / revoke) と、モック実装、キーボックス実装がある。SESAME 実クライアントは作らない。\n- D1 マイグレーションで予約ごとの鍵レコード (状態、有効開始、有効終了、外部ID) を保持できる。有効期間は、チェックイン日 15:00 から チェックアウト日 11:00 (JST) に固定される。\n- 鍵情報の平文をログや監査ログに残さない。API キーは Worker secret 経由でのみ読み、未設定ならキーボックスにフォールバックする。\n- ユニットテストが通り、`pnpm test:run`、`npx tsc --noEmit`、`pnpm lint` が通る。",
+      "owner": "eng-backend",
+      "status": "todo",
+      "createdBy": "pm"
+    },
+    {
+      "id": "T2",
+      "title": "予約ライフサイクルとの連動と監査ログ",
+      "acceptance": "- 予約確定時に鍵を発行し、発行を監査ログに記録する。\n- キャンセル時に失効させ、失効を監査ログに記録する。\n- 日程変更時は旧鍵を失効させ、新しい期間で再発行する。金額や日程が変わっても古い鍵が残らない。\n- プロバイダが失敗しても予約確定とキャンセルは成功する。鍵の状態は「失敗(キーボックスで対応)」になり、失敗は監査ログに残る。\n- 上記それぞれにテストがある (成功、失敗、キャンセル、日程変更)。",
+      "owner": "eng-backend",
+      "status": "todo",
+      "createdBy": "pm"
+    },
+    {
+      "id": "T3",
+      "title": "ゲストのマイページに鍵カードを表示し、オーナー管理画面に状態を表示する",
+      "acceptance": "- マイページの予約詳細に、滞在期間のみ鍵情報を表示する。期間外、キャンセル済み、他人の予約では表示されない。\n- 電波が悪い場所でも使えるよう、鍵情報を表示するページは短く、画像に頼らず、スクリーンショットしやすい。番号を間違えたときの案内と連絡先が、同じ画面にある。\n- 鍵の発行に失敗した場合や未発行の場合は、キーボックスの案内を同じ場所に表示する。\n- 到着前日のメールに、鍵本文を載せずマイページへのリンクだけを入れる。既存のメールテンプレートに沿い、PII レビューの観点で差分を確認する。\n- オーナー管理画面の予約詳細に、鍵の状態 (発行済み、失効、失敗) と発行・失効の履歴が見える。\n- コンポーネントのテストがあり、iPhone 幅で表示崩れがない。",
+      "owner": "eng-frontend",
+      "status": "todo",
+      "createdBy": "pm"
+    }
+  ],
+  "decisions": [
+    {
+      "by": "pm",
+      "text": "設備 (SESAME 本体と Hub の有無) は未確認なので、実機が付いている前提では作らない。SESAME API はインターフェースとモックまでで止める。キーボックスは必ず残すフォールバックとし、障害時に切り替えられる形にする。中村さんの現地確認結果が出るまで、設備購入を要する案は選ばない。",
+      "phase": "discovery",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "今回の鍵の渡し方は「マイページ表示 + メールはリンクのみ」にする。理由: 鍵情報を第三者が見られるメール本文に載せない、という小林さんとオーナーの制約を守りつつ、到着前に手元へ置けるため。トレードオフ: メールだけで完結せず、ログインが一手間増える。実機で SESAME アプリが要るかは未確認なので、アプリ不要の Web 解錠は次回以降に判断する。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "プロバイダが失敗したときは、予約の確定・キャンセルを止めない。鍵の状態を「失敗」にしてキーボックス案内を出す。理由: 予約が鍵に引きずられて止まるほうが、オーナーとゲストの損失が大きいため。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "失敗した鍵の自動再試行は今回入れず、別タスクにする。理由: cron が絡んで範囲が広がるため。トレードオフ: 失敗した予約は、オーナーがキーボックスで対応する必要がある。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "前日メールが既存の送信の仕組みに載らない場合は、メール部分を次イテレーションに回し、マイページの鍵ページを先に出す。理由: ゲストの主な困りごとは、到着時にマイページで鍵情報をすぐ見つけられることだから。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "ゲストに鍵ページを見せる期間は、チェックイン前日 0:00 JST からチェックアウト 11:00 JST までとする (キーボックスのみの今回の範囲)。鍵の有効期間 (15:00〜11:00 JST) とは別に持つ。理由: 小林さんが前の晩にスクショできるようにするため。トレードオフ: 番号が見える時間が延びる。キャンセル済み・他人の予約・表示期間外は引き続き表示しない。SESAME 実機を使うときは、見せる期間を改めて判断する。前日メールのリンク先は鍵ページとし、メールに鍵本文は載せない。",
+      "phase": "planning",
+      "iteration": 1
+    }
+  ],
+  "verdicts": [],
+  "notes": {
+    "pm": [
+      "Discovery round 1: ゲスト小林さんには直近の到着体験 (キーボックス番号の確認方法・詰まった点)、オーナー中村さんには初回対面対応の工数・番号管理・SESAME/Hub 設置有無を質問済み。",
+      "Discovery の結論。ジョブは次の2つ。(1) ゲスト: 電波が悪くても、到着してすぐ迷わず入れる。(2) オーナー: 立ち会いなしで受け渡しでき、滞在期間外の人は入れないと言い切れる。引用: 「駐車場で子ども2人を待たせたまま、メールを探した」「ない、と言い切れる仕組みではありません」。未確認事項は SESAME 本体と Hub の設置有無で、中村さんが現地確認する。これが分かるまでは実機前提にしない。制約は iPhone のみ、鍵情報が第三者に見えないこと、費用は金額を見て判断すること。",
+      "planning 1 で 3 タスクを切った。backend 2 (抽象化+spec、ライフサイクル+監査)、frontend 1 (マイページ鍵カード、メールのリンク、管理画面状態)。範囲外は実 API、QR、Web 解錠、機器購入。次の判断材料は中村さんの現地確認 (SESAME 本体と Hub の有無、金額)。",
+      "planning 1 の論点。鍵の平文は D1 に保存せず、キーボックス番号は Worker secret の `KEYBOX_CODE` から読む。ゲスト画面は鍵専用ページ (`/mypage/reservations/:id/key`) に分ける。中村さんに確認待ちが3つある。(1) SESAME 本体と Hub の有無と金額、(2) キーボックスの誤入力時の挙動、(3) ゲストに見せてよい連絡先。キーボックスのままでは、元ゲストが入れてしまうリスクは残り、spec に明記する。",
+      "planning 1 round 2: 鍵ページ表示期間は前日 0:00 JST〜チェックアウト 11:00 JST に決定 (有効期間 15:00〜11:00 とは別)。メールのリンク先は /mypage/reservations/:id/key。中村さんの確認待ちは引き続き、設備の有無と金額、誤入力時の挙動、ゲストへ見せる連絡先、キーボックス番号の変更手順の4つ。T3 の受け入れ条件「滞在期間のみ表示」は、この表示期間に読み替える。"
+    ],
+    "user-owner": [
+      "中村さん: 初回対面は毎回で、渋滞で最大1時間ほど遅れることがある。キーボックスの番号は頻繁には変えていない。SESAME 設置と Hub の有無は未確認で、現地確認後に回答する。費用が発生する話は金額を見て判断したい。"
+    ],
+    "eng-backend": [
+      "田中の設計方針: 鍵の秘匿値は D1 に保存しない。キーボックス番号は Worker secret の `KEYBOX_CODE`。有効期間は JST 15:00〜11:00 を UTC epoch で固定。表示可否の判定は `getKeyViewForReservation` に集約。キーボックスの静的番号リスクは spec に未解決として残す。",
+      "getKeyViewForReservation の最終シグネチャは `(db, env, { reservationId, guestId, now })`。所有者でなければ `none` で `display` なし。プロバイダのタイムアウトは 2 秒で、超えたら `failed`。`KEYBOX_CODE` 未設定は `failed`。`listKeyAuditByReservation` は `{ at, action, result, actorId }` だけを返す。"
+    ],
+    "eng-frontend": [
+      "T3 の方針: 鍵は専用の短いページ。ゲスト画面では none/failed/pending/revoked を同じキーボックス案内に統一し、内部状態の言葉は出さない。キーボックスの挙動（ロック有無）と、ゲストに見せてよい連絡先は中村さんの確認待ちで、確認できるまでは書かない。到着前日メールは既存の送信の仕組みに載るか未確認で、実装の最初に確認する。",
+      "T3 の未決事項: 鍵の表示開始をチェックイン前日 0:00 JST にするか（前の晩のスクショ対応）。田中さんと佐藤さんの回答待ち。キーボックスの挙動と連絡先は中村さんの確認待ち。"
+    ]
+  },
+  "historyWindow": 40
+}
