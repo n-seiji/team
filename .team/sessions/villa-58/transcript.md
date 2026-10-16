@@ -22,7 +22,7 @@
 - 障害時のフォールバック (キーボックス継続)
 - API キーは Worker secret、監査ログに発行・失効を記録
 
-**Status:** running · iteration 2/2 · phase `planning`
+**Status:** running · iteration 2/2 · phase `build`
 
 ## Team
 
@@ -120,6 +120,7 @@
 - (planning, 佐藤 美咲 (pm)) 失敗した鍵の自動再試行は今回入れず、別タスクにする。理由: cron が絡んで範囲が広がるため。トレードオフ: 失敗した予約は、オーナーがキーボックスで対応する必要がある。
 - (planning, 佐藤 美咲 (pm)) 前日メールが既存の送信の仕組みに載らない場合は、メール部分を次イテレーションに回し、マイページの鍵ページを先に出す。理由: ゲストの主な困りごとは、到着時にマイページで鍵情報をすぐ見つけられることだから。
 - (planning, 佐藤 美咲 (pm)) ゲストに鍵ページを見せる期間は、チェックイン前日 0:00 JST からチェックアウト 11:00 JST までとする (キーボックスのみの今回の範囲)。鍵の有効期間 (15:00〜11:00 JST) とは別に持つ。理由: 小林さんが前の晩にスクショできるようにするため。トレードオフ: 番号が見える時間が延びる。キャンセル済み・他人の予約・表示期間外は引き続き表示しない。SESAME 実機を使うときは、見せる期間を改めて判断する。前日メールのリンク先は鍵ページとし、メールに鍵本文は載せない。
+- (planning, 佐藤 美咲 (pm)) 前日メールの送信時刻は 18:00 JST 前後を目標にし、設定値にする。既存 cron と分けられない場合は 10:00 JST のままにして、理由を spec に書く。理由: 小林さんの「前の晩に手元に置きたい」を守るため。トレードオフ: cron の追加が要る可能性がある。
 
 ## Verdicts
 
@@ -657,3 +658,69 @@
   中村さんの回答待ちの4点は、回答が来るまで文言を変えません。設定値や差し替え箇所にして、回答後すぐ反映できる形にしてください。
 
 > _佐藤 美咲 (pm) [notes]: planning 2 round 1: T4〜T7 の優先順は T4 → T5 → T6 → T7。表示開始の設定値化は T6 のうち小さいので先出し可。T4 の戻り先方式と、T4・T5 の送信呼び出し口は、エンジニア同士で決める。iPhone 幅は、開けなければ「未確認」と明記する。_
+
+> _田中 健 (eng-backend) [thinks]: Planning phase, no edits. Answer PM's points concisely: priority, T6 window config, redirect method, interface with 鈴木さん._
+
+- 田中 健 (eng-backend) → pm, eng-frontend: 田中です。4点に答えます。
+  
+  1. **優先順は T4、T6 で了解です。** 表示開始(前日 0:00 JST)の設定値化は小さいので、T4 と並行で先に出します。`app/domain/key/validity.ts` に `GUEST_VISIBLE_LEAD_DAYS` のような定数を1つ置き、`key-page-window.ts` と境界値テストはそこから導きます。変更してもテストが追従する形にします。鈴木さんの `key-page-window.ts` に触れるので、差分は小さく、先に伝えます。
+  
+  2. **戻り先はサーバー側の検証つきクエリで渡します。** 方式は `/mypage/login?next=/mypage/reservations/:id/key` です。
+     - 許可するのは、正規表現 `^/mypage/reservations/[0-9A-Za-z_-]+/key$` に完全一致する場合だけです。
+     - 外部 URL、`//`、`\`、`..`、`%2f`、クエリ付き、別パスは、すべて `/mypage` に落とします。
+     - 理由: 戻り先を許可リストの形で固定すれば、検証が1関数に収まり、テストしやすいからです。Cookie やセッションに入れる案は、ログインメールの別端末での開封で戻り先が失われるので採りません。メールのログインリンク側には `next` を載せず、認証コード確認後の遷移で検証して使います。
+     - 認証に触れる差分なので、pii-review の観点で確認して spec に書きます。
+  
+  3. **送信の口は次の形にします。** 鈴木さんの `arrival-reminder-mail.ts` から呼べる形です。
+     - 対象の検索: `findArrivalReminderTargets(db, now: Date)` が `{ reservationId, email, checkIn }[]` を返します。翌日(JST)チェックインの確定済み予約だけで、送信済みとキャンセル済みは除きます。
+     - 送信の記録: `claimArrivalReminder(db, reservationId, now)` が `true`/`false` を返します。`false` なら送りません。
+     - 失敗時: `releaseArrivalReminder(db, reservationId)` で記録を消し、次回 cron で再試行できます。
+     - 流れは「claim → 送信 → 失敗なら release」です。鍵の状態には触れません。
+     - 鈴木さん、`arrival-reminder-mail.ts` の組み込み側の関数名が違えば、教えてください。
+  
+  4. **リスクを2点。**
+     - claim 後に Worker が落ちると、記録だけ残ってメールは送られません。重複より欠落を選んだ設計です。小林さんには「前日メールが来ない」可能性が残るので、spec に書きます。
+     - 既存の cron `0 1 * * *` は 10:00 JST です。前日メールの時刻として遅くないか、佐藤さんと中村さんに確認してください。変更が要るなら cron 式を変えるだけです。
+
+> _田中 健 (eng-backend) [notes]: T4 の設計: ログイン後の戻り先は `?next=` のクエリでサーバー検証(許可リスト完全一致、`/mypage` に落とす)。前日メールは `findArrivalReminderTargets` / `claimArrivalReminder` / `releaseArrivalReminder` で、migration 0022。claim 後にクラッシュすると欠落する点は spec に書く。T6 の表示開始は `validity.ts` の定数 1 か所にする。cron は現状 `0 1 * * *` (10:00 JST)。_
+
+> _鈴木 ひかり (eng-frontend) [thinks]: 計画フェーズでファイル編集は不可。田中さんの口の形を受けて、T5 の呼び出し口と文言、iPhone 確認の可否を伝える。ブラウザ確認は未実施なので「未確認」前提で。_
+
+- 鈴木 ひかり (eng-frontend) → eng-backend, pm: 鈴木です。4点に答えます。
+  
+  1. **送信の口は田中さんの案で了解です。** 私は `arrival-reminder-mail.ts` に `sendArrivalReminder(env, db, target, now)` を足します。流れは「`findArrivalReminderTargets` → `claimArrivalReminder` → メール enqueue → 失敗なら `releaseArrivalReminder`」で、送信側は例外を投げず結果を返します。
+     - 確認が1点あります。既存のメール送信がキュー(email-outbox)経由なら、claim は enqueue 成功の直前に置いてください。enqueue 失敗時に release できる形にします。どちらになるかは、実装の最初に既存の仕組みを読んで共有します。
+     - 本文は鍵ページへのリンクのみです。番号や鍵の値は入れず、そのテストを足します。
+  2. **戻り先の方式(`?next=` を許可リストで検証)は了解です。** ログイン画面側は、`next` が許可された形のときだけ文言を変えます。
+     - 文言は「鍵のご案内を見るには、ログインが必要です。予約時のメールアドレスに届くコードでログインすると、このページに戻ります」の方向で考えています。
+     - ログイン後に戻る先が見えるように、ボタンも「ログインして鍵のご案内を見る」にします。
+     - 検証関数は田中さんの1か所を使います。私は `next` を再検証せず、その結果だけを使います。
+  3. **iPhone 幅の確認は、まだできるか分かりません。** 実装の最初に、ブラウザで 375px を開けるか確認します。できなければ「未確認」と報告し、「確認した」とは書きません。
+  4. **T7 は独立して進めます。** 田中さんの `reissueKeyForReservation` を呼ぶ側は触らず、`update.tsx` に確認表示だけを足します。既存の `status-badge` と `detail-table` を使います。
+     - 旧期間と新期間は、田中さんの `validity.ts` の関数で JST を出します。
+     - 保存前の確認画面から「戻る」で編集に戻れる形にします。
+  
+  **お願い**
+  - 田中さん、`GUEST_VISIBLE_LEAD_DAYS` を置いたら教えてください。私の `key-page-window.ts` は定数から導く形に合わせます。
+  - cron の 10:00 JST は、前日メールとしては遅くないと思います。ただ、小林さんは「前の晩に手元に置きたい」と言っていたので、夕方の送信のほうが合うかもしれません。佐藤さん、小林さんと中村さんに聞いてください。
+  - 中村さんの回答待ちの4点は、「番号が合わないとき」の文言と連絡先を `key-card.tsx` の定数に分けて、差し替え1か所で済む形にします。回答前は今の文言のままです。
+
+> _鈴木 ひかり (eng-frontend) [notes]: T5 の方針: 送信は claim → enqueue → 失敗なら release。既存メール基盤がキュー経由かを実装の最初に確認する。iPhone 375px は実際に開けるか最初に確認し、できなければ未確認と報告する。ログイン文言は田中さんの検証関数の結果だけを使う。cron 10:00 JST が前日メールとして遅くないかは、佐藤さんが小林さん・中村さんに確認中。_
+
+> _佐藤 美咲 (pm) [thinks]: 両エンジニアの方針は妥当。cron 時刻の論点に決める。前の晩に手元に置きたいという小林さんの希望を守るなら、夕方の送信が合う。ただし cron 変更は小さい。決めて、planning を終える。_
+
+- 佐藤 美咲 (pm) → eng-backend, eng-frontend: 佐藤です。回答ありがとうございます。決めたことを共有します。
+  - **戻り先方式、送信の口、定数化**: 田中さんの案で了解です。`GUEST_VISIBLE_LEAD_DAYS` を置いたら鈴木さんに知らせてください。
+  - **前日メールの時刻**: 夕方(18:00 JST 前後)に変えます。理由: 小林さんは「前の晩に手元に置きたい」と言っていて、10:00 JST では当日朝に近いためです。トレードオフ: 既存の日次 cron とは別の cron 式が要ります。実装前に、既存 cron が他の用途で使われているか田中さんが確認してください。分けられない場合は、既存 cron のままにして、時刻を spec に書いてください。送信時刻は設定値にして、中村さんと小林さんの反応を見て変えられる形にします。
+  - **claim 後に Worker が落ちる場合**: 重複より欠落を選ぶ設計で了解です。spec に書いてください。
+  - **認証の差分**: `next` は検証関数 1 か所に集めます。鈴木さんは再検証せず、その結果だけを使ってください。
+  - **iPhone 幅**: 開けなければ「未確認」と報告してください。
+  - **中村さんの回答待ち**: 4 点とも、回答前は文言を変えません。
+
+- 佐藤 美咲 (pm) [DECISION]: 前日メールの送信時刻は 18:00 JST 前後を目標にし、設定値にする。既存 cron と分けられない場合は 10:00 JST のままにして、理由を spec に書く。理由: 小林さんの「前の晩に手元に置きたい」を守るため。トレードオフ: cron の追加が要る可能性がある。
+
+- 佐藤 美咲 (pm) [ADVANCE]: End of phase "planning".
+
+### iteration 2 · build
+
+- — Phase "build" started (iteration 2) — Engineers implement their own tasks in the workspace (real files, runnable code, tests when sensible), coordinate interfaces with each other, and mark finished work with [TASK_DONE].

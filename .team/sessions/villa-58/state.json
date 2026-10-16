@@ -289,16 +289,15 @@
       "maxRounds": 1
     }
   ],
-  "phaseIndex": 1,
+  "phaseIndex": 2,
   "iteration": 2,
   "maxIterations": 2,
   "round": 1,
-  "turn": 22,
-  "queue": [
-    "eng-frontend"
-  ],
+  "turn": 25,
+  "queue": [],
   "pending": [
-    "eng-backend"
+    "eng-backend",
+    "eng-frontend"
   ],
   "insertions": 0,
   "tasks": [
@@ -398,6 +397,12 @@
       "text": "ゲストに鍵ページを見せる期間は、チェックイン前日 0:00 JST からチェックアウト 11:00 JST までとする (キーボックスのみの今回の範囲)。鍵の有効期間 (15:00〜11:00 JST) とは別に持つ。理由: 小林さんが前の晩にスクショできるようにするため。トレードオフ: 番号が見える時間が延びる。キャンセル済み・他人の予約・表示期間外は引き続き表示しない。SESAME 実機を使うときは、見せる期間を改めて判断する。前日メールのリンク先は鍵ページとし、メールに鍵本文は載せない。",
       "phase": "planning",
       "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "前日メールの送信時刻は 18:00 JST 前後を目標にし、設定値にする。既存 cron と分けられない場合は 10:00 JST のままにして、理由を spec に書く。理由: 小林さんの「前の晩に手元に置きたい」を守るため。トレードオフ: cron の追加が要る可能性がある。",
+      "phase": "planning",
+      "iteration": 2
     }
   ],
   "verdicts": [
@@ -432,12 +437,14 @@
       "田中の設計方針: 鍵の秘匿値は D1 に保存しない。キーボックス番号は Worker secret の `KEYBOX_CODE`。有効期間は JST 15:00〜11:00 を UTC epoch で固定。表示可否の判定は `getKeyViewForReservation` に集約。キーボックスの静的番号リスクは spec に未解決として残す。",
       "getKeyViewForReservation の最終シグネチャは `(db, env, { reservationId, guestId, now })`。所有者でなければ `none` で `display` なし。プロバイダのタイムアウトは 2 秒で、超えたら `failed`。`KEYBOX_CODE` 未設定は `failed`。`listKeyAuditByReservation` は `{ at, action, result, actorId }` だけを返す。",
       "T1・T2 完了。コードは app/domain/key/、app/lib/reservation-key.ts、app/lib/reservation-key-view.ts、app/db/repositories/reservation-key.ts、migrations/0021。spec は docs/specs/villa-58-sesame-key.md。`getKeyViewForReservation` の `guestId` はセッションのメールアドレス、`now` は Date。`failed` でも `KEYBOX_CODE` があれば display を付ける。tsc の 1 件(dist/.vite/manifest.json 不在)は既存で、今回の変更とは無関係。次回以降の宿題:失敗した鍵の自動再試行(cron)、SESAME 実クライアント、失効失敗時のオーナー手動運用。",
-      "最終確認(iteration 1 build): `pnpm test:run` は 166 ファイル / 1553 件が全部通り、lint とフォーマットも通る。`tsc` は `dist/.vite/manifest.json` 不在の 1 件のみ(既存)。鈴木さんが報告した 5 件の失敗は再現せず。次イテレーションの宿題: 前日メールの二重送信防止テーブルと検索クエリ(0022 想定)、ログイン後の戻り先(`/mypage/reservations/:id/key` の形だけ許可)、失敗した鍵の再試行(cron)。"
+      "最終確認(iteration 1 build): `pnpm test:run` は 166 ファイル / 1553 件が全部通り、lint とフォーマットも通る。`tsc` は `dist/.vite/manifest.json` 不在の 1 件のみ(既存)。鈴木さんが報告した 5 件の失敗は再現せず。次イテレーションの宿題: 前日メールの二重送信防止テーブルと検索クエリ(0022 想定)、ログイン後の戻り先(`/mypage/reservations/:id/key` の形だけ許可)、失敗した鍵の再試行(cron)。",
+      "T4 の設計: ログイン後の戻り先は `?next=` のクエリでサーバー検証(許可リスト完全一致、`/mypage` に落とす)。前日メールは `findArrivalReminderTargets` / `claimArrivalReminder` / `releaseArrivalReminder` で、migration 0022。claim 後にクラッシュすると欠落する点は spec に書く。T6 の表示開始は `validity.ts` の定数 1 か所にする。cron は現状 `0 1 * * *` (10:00 JST)。"
     ],
     "eng-frontend": [
       "T3 の方針: 鍵は専用の短いページ。ゲスト画面では none/failed/pending/revoked を同じキーボックス案内に統一し、内部状態の言葉は出さない。キーボックスの挙動（ロック有無）と、ゲストに見せてよい連絡先は中村さんの確認待ちで、確認できるまでは書かない。到着前日メールは既存の送信の仕組みに載るか未確認で、実装の最初に確認する。",
       "T3 の未決事項: 鍵の表示開始をチェックイン前日 0:00 JST にするか（前の晩のスクショ対応）。田中さんと佐藤さんの回答待ち。キーボックスの挙動と連絡先は中村さんの確認待ち。",
-      "T3 の現状: 画面側 (鍵ページ、予約詳細のリンク、管理パネル、メール本文ビルダー) は実装済み。前日メールの送信 (重複防止テーブルと cron)、ログイン後の戻り先、キーボックスの挙動、電話の連絡先は未着手または回答待ち。mail は次イテレーション。田中さんの T2 側でテスト 5 件が落ちている (私の差分ではない)。"
+      "T3 の現状: 画面側 (鍵ページ、予約詳細のリンク、管理パネル、メール本文ビルダー) は実装済み。前日メールの送信 (重複防止テーブルと cron)、ログイン後の戻り先、キーボックスの挙動、電話の連絡先は未着手または回答待ち。mail は次イテレーション。田中さんの T2 側でテスト 5 件が落ちている (私の差分ではない)。",
+      "T5 の方針: 送信は claim → enqueue → 失敗なら release。既存メール基盤がキュー経由かを実装の最初に確認する。iPhone 375px は実際に開けるか最初に確認し、できなければ未確認と報告する。ログイン文言は田中さんの検証関数の結果だけを使う。cron 10:00 JST が前日メールとして遅くないかは、佐藤さんが小林さん・中村さんに確認中。"
     ]
   },
   "historyWindow": 40
