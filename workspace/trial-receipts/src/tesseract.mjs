@@ -105,21 +105,9 @@ export function findPayee(lines) {
   return l ? { value: l.text.slice(0, 40), confidence: l.conf } : blank('見つかりません');
 }
 
-// カテゴリはキーワードで1つに決まるときだけ。決まらなければ空欄（→「その他」＋要確認）。
-const CATEGORY_WORDS = [
-  ['交通費', /タクシー|交通|乗車|運賃|迎車|JR|Suica|PASMO|駐車/i],
-  ['会議費', /カフェ|珈琲|コーヒー|喫茶|COFFEE|CAFE|スターバックス|ドトール|タリーズ/i],
-  ['通信費', /通信|携帯|インターネット|月額|プラン|サブスク|ソフトバンク|docomo|\bau\b/i],
-  ['消耗品費', /文具|事務用品|コピー用紙|ボールペン|乾電池|ホームセンター/i],
-];
-export function findCategory(lines) {
-  const text = lines.map((l) => l.text).join('\n');
-  const hits = CATEGORY_WORDS.filter(([, re]) => re.test(text)).map(([c]) => c);
-  if (hits.length !== 1) return blank(hits.length ? '1つに決まりません（候補が複数）' : '決まりません');
-  return { value: hits[0], confidence: 0.85 }; // 仮の値。実サンプルで誤りが出たら下げる
-}
-
+// カテゴリは読まない。支払先の語から候補を出すのは normalize()（src/category-words.json）。
+// 本文全体の語で決めると、支払先を誤読した行でもカテゴリが確定に見えるため。
 export function extract(lines) {
-  return { date: findDate(lines), amount: findAmount(lines), payee: findPayee(lines), category: findCategory(lines) };
+  return { date: findDate(lines), amount: findAmount(lines), payee: findPayee(lines), category: blank('決まりません') };
 }
 

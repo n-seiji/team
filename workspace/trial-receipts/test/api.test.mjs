@@ -138,7 +138,7 @@ test('normalize: 閾値未満・形式NG・カテゴリ外は要確認。推測�
   const n = normalize({
     date: { value: '2026-13-01', confidence: 0.99 },
     amount: { value: 1200, confidence: 0.5, reason: '薄くて読めない' },
-    payee: { value: 'カフェ', confidence: 0.95 },
+    payee: { value: '山田商店', confidence: 0.95 }, // 語が当たらない支払先
     category: { value: '食費', confidence: 0.9 },
   });
   assert.deepEqual([n.date.value, n.date.needs_review, n.date.reason], ['', true, '不正な形式です']);

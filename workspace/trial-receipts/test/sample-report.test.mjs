@@ -16,7 +16,7 @@ test('サンプル一覧: 画像ごとに4項目と要確認の件数が出る�
     return {
       date: { value: '2026-10-03', confidence: 0.95 },
       amount: { value: 480, confidence: 0.6 },
-      payee: { value: 'カフェ', confidence: 0.9 },
+      payee: { value: '山田商店', confidence: 0.9 }, // 語が当たらない支払先
       category: { value: '飲食', confidence: 0.9 },
     };
   };

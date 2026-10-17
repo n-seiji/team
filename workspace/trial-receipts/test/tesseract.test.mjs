@@ -42,10 +42,24 @@ test('令和の日付、存在しない日付', () => {
   assert.equal(extract([L('2026/02/30')]).date.value, '');
 });
 
-test('カテゴリはキーワードで1つに決まるときだけ', () => {
-  assert.equal(extract([L('〇〇交通 タクシー'), L('運賃 ¥1,500')]).category.value, '交通費');
-  assert.equal(normalize(extract([L('Restaurant'), L('Coffee')])).category.value, '会議費');
-  assert.equal(normalize(extract([L('文具とカフェ'), L('コーヒー')])).category.needs_review, true);
+test('カテゴリは支払先の語から候補を出す（T12）', () => {
+  const cat = (lines) => normalize(extract(lines)).category;
+  assert.deepEqual([cat([L('〇〇交通タクシー'), L('運賃 ¥1,500')]).value, cat([L('〇〇交通タクシー')]).needs_review], ['交通費', false]);
+  assert.equal(cat([L('珈琲館 渋谷店')]).value, '会議費');
+  assert.equal(cat([L('ローソン新宿店')]).value, '消耗品費');
+  assert.equal(cat([L('ＣＯＦＦＥＥ ＳＴＡＮＤ')]).value, '会議費'); // 全角も当たる
+  // 支払先が要確認（誤読の疑い）なら、本文に「コーヒー」があっても候補は出さない
+  assert.deepEqual(cat([L('珈下館渋谷店', 0.6), L('ブレンドコーヒー')]), { value: 'その他', confidence: 0, needs_review: true, reason: '決まりません（支払先が要確認です）' });
+  assert.deepEqual([cat([L('山田商店')]).value, cat([L('山田商店')]).needs_review], ['その他', true]);
+  assert.equal(cat([L('交通会館カフェ')]).reason, '1つに決まりません（候補が複数）');
+});
+
+test('読み取り側が確定したカテゴリは残す。支払先が要確認なら残さない', async () => {
+  const { suggestCategory } = await import('../src/reader.mjs');
+  const ok = { value: 'X社', confidence: 0.9 };
+  assert.equal(normalize({ payee: ok, category: { value: '通信費', confidence: 0.9 } }).category.value, '通信費');
+  assert.equal(normalize({ payee: { value: 'X社', confidence: 0.5 }, category: { value: '通信費', confidence: 0.9 } }).category.needs_review, true);
+  assert.equal(suggestCategory(undefined).needs_review, true);
 });
 
 test('HEIC は読み取らず、理由つきで失敗する', async () => {

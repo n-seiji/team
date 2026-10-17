@@ -69,6 +69,8 @@ export function format(rows, answers = null) {
   }
   const review = Object.fromEntries(FIELDS.map((f) => [LABELS[f], rows.filter((r) => r.fields[f].needs_review).length]));
   lines.push('', `画像 ${rows.length} 枚 / 要確認の件数: ${JSON.stringify(review)}`);
+  const cat = rows.filter((r) => !r.fields.category.needs_review).length;
+  lines.push(`カテゴリ：候補あり（要確認なし）${cat}／要確認${rows.length - cat}（${rows.length}枚中）`);
   const secs = rows.map((r) => r.seconds).filter((x) => x !== undefined);
   if (secs.length) lines.push(`1枚の秒数（実測）: 最短 ${Math.min(...secs).toFixed(1)} / 最長 ${Math.max(...secs).toFixed(1)}`);
   if (answers) {

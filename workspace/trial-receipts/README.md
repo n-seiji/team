@@ -82,10 +82,11 @@ READER=tesseract node src/server.mjs   # ローカルの tesseract で読む（�
 - 外部 API には画像を送らない。`src/` に外へ通信するコードはない（tesseract はこのマシンの CLI を `child_process` で呼ぶ）。
 - 読み取りエンジンは `createApp({ reader })` で差し替える。`reader(buffer, {id})` は `{date, amount, payee, category}` を返し、各項目は `{value, confidence, reason?}`。
 - 要確認の規則は `src/reader.mjs` の `normalize()` にあり、エンジンに依存しない。空欄、確からしさ 0.8 未満、日付・金額の形式 NG、カテゴリが5候補外（→「その他」）は要確認。推測で埋めない。
+- カテゴリの候補（T12）: 支払先に `src/category-words.json` の語が入っていると、そのカテゴリを候補にする（例: 珈琲・カフェ → 会議費、タクシー・交通 → 交通費、ローソン → 消耗品費）。語を足すときはこのファイルだけ直す。支払先が要確認の行、語が当たらない行、2つ以上のカテゴリに当たる行は「その他」＋要確認のまま。sample-report は「カテゴリ：候補あり（要確認なし）○／要確認○（○枚中）」を出す。支払先を手で直しても、カテゴリの候補は出し直さない。
 
 ### tesseract（T5）
 - 入れ方（Ubuntu）: `sudo apt-get install tesseract-ocr tesseract-ocr-jpn`。`READER=tesseract` でも tesseract か jpn がなければ、警告を出して読み取りなしに戻る。
-- `src/tesseract.mjs`: 確からしさは、その行の単語の conf の最小値。金額は「合計・お買上・領収金額・運賃」などの行の金額だけを見る（小計・税・お預り・お釣りは見ない）。候補が食い違う、`1,2O0` や `1.500` のような形は空欄＋要確認。日付は西暦と令和。カテゴリはキーワードで1つに決まるときだけ。
+- `src/tesseract.mjs`: 確からしさは、その行の単語の conf の最小値。金額は「合計・お買上・領収金額・運賃」などの行の金額だけを見る（小計・税・お預り・お釣りは見ない）。候補が食い違う、`1,2O0` や `1.500` のような形は空欄＋要確認。日付は西暦と令和。カテゴリは読まない（下の「カテゴリの候補」）。
 - HEIC は読めない（failed になり、写真を見て入力する）。画面は送信前に JPEG へ縮小するので、通常は届かない。
 - サンプルの一覧: `samples/` に画像と `answers.json`（正解。コミットしない）を置いて、`READER=tesseract node scripts/sample-report.mjs` を実行する。
   - `answers.json` の形: `{"cafe-1.jpg": {"kind": "カフェ", "date": "2026-10-03", "amount": 480}}`
