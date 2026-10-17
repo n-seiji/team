@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  fitSize, needsReview, visibleReceipts, flagText, countText, validateInput,
+  fitSize, maxSideFrom, needsReview, visibleReceipts, flagText, countText, validateInput,
   fieldsFor, orderForScreen, monthOptions, totalText,
 } from '../web/logic.js';
 
@@ -68,4 +68,14 @@ test('合計: 未確認があれば「確定ではありません」を併記す
   assert.equal(totalText({ month: '2026-10', total: 12345, total_note: '' }), '2026年10月の合計 12,345円');
   assert.equal(totalText({ month: '', total: 1200, total_note: '未確認が2件あり、合計は確定ではありません' }),
     'すべての合計 1,200円（未確認が2件あり、合計は確定ではありません）');
+});
+
+test('maxSideFrom: ?maxside で縮小の上限を切り替える（受け入れテストの比較用）', () => {
+  assert.equal(maxSideFrom(null), 2000);
+  assert.equal(maxSideFrom(''), 2000);
+  assert.equal(maxSideFrom('0'), Infinity);
+  assert.equal(maxSideFrom('3000'), 3000);
+  assert.equal(maxSideFrom('abc'), 2000);
+  assert.equal(maxSideFrom('100'), 2000);
+  assert.deepEqual(fitSize(3000, 4000, maxSideFrom('0')), { width: 3000, height: 4000, scaled: false });
 });

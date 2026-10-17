@@ -1,7 +1,7 @@
 import { createApi } from './api.js';
 import { createMockApi } from './mock-api.js';
 import {
-  FIELD_KEYS, FIELD_LABELS, CATEGORIES, MAX_SIDE,
+  FIELD_KEYS, FIELD_LABELS, CATEGORIES, maxSideFrom,
   fitSize, needsReview, visibleReceipts, flagText, countText, validateInput,
   fieldsFor, orderForScreen, monthOptions, monthLabel, totalText,
 } from './logic.js';
@@ -13,12 +13,13 @@ const els = { list: $('#list'), empty: $('#empty'), bar: $('#bar'), count: $('#c
 
 const state = { api: null, receipts: [], count: 0, table: null, months: [], month: '', onlyReview: false, pending: [], rowSig: new Map() };
 let shotNo = 0;
+const maxSide = maxSideFrom(new URLSearchParams(location.search).get('maxside'));
 
-// ---- 縮小（長辺 MAX_SIDE px）。失敗したら元画像をそのまま送る ----
+// ---- 縮小（長辺 maxSide px。既定 2000）。失敗したら元画像をそのまま送る ----
 async function shrink(file) {
   try {
     const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
-    const { width, height, scaled } = fitSize(bmp.width, bmp.height, MAX_SIDE);
+    const { width, height, scaled } = fitSize(bmp.width, bmp.height, maxSide);
     if (!scaled) return file;
     const cv = document.createElement('canvas');
     cv.width = width; cv.height = height;

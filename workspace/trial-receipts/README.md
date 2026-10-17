@@ -8,6 +8,7 @@ node serve.mjs 8080          # web/ を配る
 node --test test/*.test.mjs  # ロジックのテスト
 ```
 - モックで見る: `http://localhost:8080/?mock=1`（スマホからは `http://<PCのIP>:8080/?mock=1`）
+- 縮小の比較（受け入れテスト用）: `?maxside=0` で縮小せずに送る。`?maxside=3000` のように上限も変えられる（既定 2000、500 未満や数字以外は既定に戻す）
 - 実 API に向ける: `?api=http://<API のホスト>:<ポート>`（省略時は同じオリジンの `/receipts`）
 - 実 API につながらないときは自動でモックになり、画面上部に黄色の「デモ表示」バナーが出る。
 - LAN の http でも動く（`input[capture]` を使うので HTTPS 必須ではない）。外部公開するなら HTTPS にすること。

@@ -12,6 +12,15 @@ export function fitSize(w, h, max = MAX_SIDE) {
   return { width: Math.round(w * r), height: Math.round(h * r), scaled: true };
 }
 
+// 受け入れテストで縮小前後を比べるための切り替え（?maxside=0 で縮小しない、?maxside=3000 など）。
+// 数字でない・小さすぎる値は既定の MAX_SIDE に戻す。0 は「縮小しない」= Infinity。
+export function maxSideFrom(param) {
+  if (param == null || param === '') return MAX_SIDE;
+  const n = Number(param);
+  if (n === 0) return Infinity;
+  return Number.isInteger(n) && n >= 500 ? n : MAX_SIDE;
+}
+
 // 失敗した行も、写真を見てその場で入力できるように空欄の4項目を用意する。
 export const FAILED_REASON = '読み取り失敗';
 // サーバーが空欄の fields を付けて返す場合も、未修正の項目は「読み取れなかった」と伝える。
