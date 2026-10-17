@@ -1,7 +1,9 @@
 // 月ごとの表・合計・CSV。
-import { FIELDS } from './reader.mjs';
+import { FIELDS, LABELS } from './reader.mjs';
 
-export const rowNeedsReview = (r) => r.status !== 'done' || FIELDS.some((f) => r.fields?.[f]?.needs_review);
+// 読み取り中はまだ数えない。失敗は手入力が要るので数える。
+export const rowNeedsReview = (r) => r.status === 'failed' || (r.status === 'done' && FIELDS.some((f) => r.fields?.[f]?.needs_review));
+const rowUnconfirmed = (r) => r.status !== 'done' || rowNeedsReview(r);
 const dateOf = (r) => r.fields?.date?.value || '';
 
 export function buildTable(records, month) {
@@ -15,7 +17,7 @@ export function buildTable(records, month) {
     return a.created_at < b.created_at ? -1 : 1;
   });
   const total = rows.reduce((s, r) => s + (Number.isInteger(r.fields?.amount?.value) ? r.fields.amount.value : 0), 0);
-  const unconfirmed = rows.filter(rowNeedsReview).length;
+  const unconfirmed = rows.filter(rowUnconfirmed).length; // 合計に読み取り中が混ざっても確定扱いにしない
   return {
     month: month ?? null,
     rows,
@@ -38,9 +40,9 @@ export function toCsv(rows) {
   const lines = [head.map(q).join(',')];
   for (const r of rows) {
     const f = r.fields ?? {};
-    const reasons = FIELDS.filter((k) => f[k]?.needs_review).map((k) => f[k].reason).join(' / ');
-    const flag = rowNeedsReview(r) ? `要確認${reasons ? '：' + reasons : ''}` : '';
-    lines.push([f.date?.value ?? '', f.amount?.value ?? '', f.vendor?.value ?? '', f.category?.value ?? '', flag, r.id, `/receipts/${r.id}/image`].map(q).join(','));
+    const reasons = FIELDS.filter((k) => f[k]?.needs_review).map((k) => `${LABELS[k]}が${f[k].reason}`).join(' / ');
+    const flag = rowUnconfirmed(r) ? `要確認${reasons ? '：' + reasons : ''}` : '';
+    lines.push([f.date?.value ?? '', f.amount?.value ?? '', f.payee?.value ?? '', f.category?.value ?? '', flag, r.id, `/receipts/${r.id}/image`].map(q).join(','));
   }
   return '﻿' + lines.join('\r\n') + '\r\n'; // UTF-8 BOM（Excel向け）
 }

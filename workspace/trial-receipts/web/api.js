@@ -13,11 +13,13 @@ export function createApi(base = '') {
     kind: 'real',
     base,
     list: () => fetch(`${base}/receipts`).then(j), // { receipts, needs_review_count }
-    upload: (blob, name) => {
-      const fd = new FormData();
-      fd.append('image', blob, name);
-      return fetch(`${base}/receipts`, { method: 'POST', body: fd }).then(j); // { id, status }
-    },
+    // body は画像のバイト列そのもの（multipart ではない）。Content-Type で形式を伝える
+    upload: (blob) =>
+      fetch(`${base}/receipts`, {
+        method: 'POST',
+        headers: { 'content-type': blob.type || 'image/jpeg' },
+        body: blob,
+      }).then(j), // { id, status }
     // fields 例: { amount: '1200' }。直した項目は要確認が消え、edited: true になる
     patch: (id, fields) =>
       fetch(`${base}/receipts/${id}`, {

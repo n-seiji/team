@@ -28,7 +28,7 @@ export function createMockApi({ delay = 1500 } = {}) {
     upload: async (blob) => {
       const n = seq++;
       const r = { id: `mock-${n + 1}`, status: 'reading', fields: null, edited: false, image_url: URL.createObjectURL(blob) };
-      items.push(r);
+      items.unshift(r);
       setTimeout(() => { r.fields = SAMPLES[n % SAMPLES.length](); r.status = 'done'; }, delay);
       return { id: r.id, status: r.status };
     },

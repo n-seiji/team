@@ -29,7 +29,7 @@ test('登録するとすぐ id と reading が返り、全項目が空欄＋要�
   await settle();
   const got = await (await fetch(`${s.base}/receipts/${rec.id}`)).json();
   assert.equal(got.status, 'done');
-  for (const f of ['date', 'amount', 'vendor', 'category']) {
+  for (const f of ['date', 'amount', 'payee', 'category']) {
     assert.equal(got.fields[f].needs_review, true);
     assert.equal(got.fields[f].reason, '未読み取り');
   }
@@ -71,12 +71,12 @@ test('月の表: 日付順・合計・未確認件数・全体の needs_review_c
   for (let i = 0; i < 3; i++) { ids.push((await (await post(s.base)).json()).id); }
   await settle();
   const patch = (id, b) => fetch(`${s.base}/receipts/${id}`, { method: 'PATCH', body: JSON.stringify(b) });
-  const full = { vendor: 'ローソン', category: '消耗品費' };
+  const full = { payee: 'ローソン', category: '消耗品費' };
   await patch(ids[0], { ...full, date: '2026-03-10', amount: 500 });
   await patch(ids[1], { ...full, date: '2026-03-02', amount: 300 });
   await patch(ids[2], { ...full, date: '2026-04-01', amount: 999 });
   let t = await (await fetch(s.base + '/receipts?month=2026-03')).json();
-  assert.deepEqual(t.rows.map((r) => r.fields.date.value), ['2026-03-02', '2026-03-10']);
+  assert.deepEqual(t.receipts.map((r) => r.fields.date.value), ['2026-03-02', '2026-03-10']);
   assert.equal(t.total, 800);
   assert.equal(t.total_note, '');
   assert.equal(t.needs_review_count, 0);
@@ -86,7 +86,7 @@ test('月の表: 日付順・合計・未確認件数・全体の needs_review_c
   assert.equal(t.needs_review_count, 1); // 月が違っても全体の件数
   assert.equal(t.undated_count, 1);
   const all = await (await fetch(s.base + '/receipts')).json();
-  assert.equal(all.rows.at(-1).fields.date.value, ''); // 日付なしは末尾
+  assert.equal(all.receipts.at(-1).fields.date.value, ''); // 日付なしは末尾
   assert.equal(all.total_note, '未確認が1件あり、合計は確定ではありません');
   const csv = await fetch(s.base + '/export.csv?month=2026-03');
   const buf = Buffer.from(await csv.arrayBuffer());
@@ -121,18 +121,18 @@ test('normalize: 閾値未満・形式NG・カテゴリ外は要確認。推測�
   const n = normalize({
     date: { value: '2026-13-01', confidence: 0.99 },
     amount: { value: 1200, confidence: 0.5, reason: '薄くて読めない' },
-    vendor: { value: 'カフェ', confidence: 0.95 },
+    payee: { value: 'カフェ', confidence: 0.95 },
     category: { value: '食費', confidence: 0.9 },
   });
-  assert.deepEqual([n.date.value, n.date.needs_review], ['', true]);
+  assert.deepEqual([n.date.value, n.date.needs_review, n.date.reason], ['', true, '不正な形式です']);
   assert.equal(n.amount.needs_review, true);
   assert.equal(n.amount.reason, '薄くて読めない');
-  assert.equal(n.vendor.needs_review, false);
+  assert.equal(n.payee.needs_review, false);
   assert.deepEqual([n.category.value, n.category.needs_review], ['その他', true]);
-  assert.throws(() => editedField('amount', '-5'));
+  assert.throws(() => editedField('amount', '-5'), { message: '金額が不正な形式です' });
 });
 
 test('CSV は数式に見える支払先を無害化する', () => {
-  const rec = { id: 'x', status: 'done', fields: { date: { value: '2026-01-01' }, amount: { value: 1 }, vendor: { value: '=HYPERLINK("x")' }, category: { value: 'その他' } } };
+  const rec = { id: 'x', status: 'done', fields: { date: { value: '2026-01-01' }, amount: { value: 1 }, payee: { value: '=HYPERLINK("x")' }, category: { value: 'その他' } } };
   assert.match(toCsv([rec]), /"'=HYPERLINK\(""x""\)"/);
 });

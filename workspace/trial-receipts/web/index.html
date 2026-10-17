@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>領収書</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="demo-banner" class="demo" hidden>デモ表示：サーバーにつながっていないため、見本のデータです</div>
+<header class="top">
+  <p id="count" class="count" role="status" aria-live="polite">要確認 0件</p>
+  <button id="filter" class="btn ghost" type="button" aria-pressed="false">要確認だけ見る</button>
+</header>
+<main>
+  <section id="empty" class="empty" hidden>
+    <button class="btn big shoot" type="button">📷 領収書を撮る</button>
+    <p>領収書を撮ると、ここに表ができます</p>
+  </section>
+  <ul id="list" class="list" aria-label="領収書の一覧"></ul>
+  <p id="no-match" class="note" hidden>要確認の行はありません</p>
+</main>
+<footer class="bar" id="bar">
+  <button class="btn primary shoot" type="button">📷 撮影</button>
+</footer>
+<input id="camera" type="file" accept="image/*" capture="environment" hidden>
+<p id="toast" class="sr-only" role="status" aria-live="polite"></p>
+<script type="module" src="app.js"></script>
+</body>
+</html>

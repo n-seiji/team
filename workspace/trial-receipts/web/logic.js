@@ -21,10 +21,14 @@ export function visibleReceipts(list, onlyReview) {
   return onlyReview ? list.filter(needsReview) : list;
 }
 
-// 「要確認：金額が薄くて読めません」のように、項目名と理由を文言にする
+// 「要確認：金額が薄くて読めません」。reason は述語の形（「薄くて読めません」「形式が不正です」）で受け取る。
+// 「未読み取り」だけは最初のアダプタが返す固定語なので、自然な文にする。
 export function flagText(key, field) {
-  const reason = field?.reason ? `${FIELD_LABELS[key]}：${field.reason}` : `${FIELD_LABELS[key]}を確認してください`;
-  return `要確認：${reason}`;
+  const label = FIELD_LABELS[key];
+  const reason = field?.reason;
+  if (!reason) return `要確認：${label}を確認してください`;
+  if (reason === '未読み取り') return `要確認：${label}はまだ読み取られていません`;
+  return `要確認：${label}が${reason}`;
 }
 
 export function countText(n) {

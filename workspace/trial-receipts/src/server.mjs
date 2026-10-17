@@ -10,7 +10,7 @@ import { buildTable, toCsv, rowNeedsReview } from './table.mjs';
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const STATIC = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
 
-export function createApp({ dataDir = path.join(root, 'data'), reader = nullReader, publicDir = path.join(root, 'public') } = {}) {
+export function createApp({ dataDir = path.join(root, 'data'), reader = nullReader, publicDir = path.join(root, 'web') } = {}) {
   const store = createStore(dataDir);
 
   async function readReceipt(rec) {
@@ -57,8 +57,8 @@ export function createApp({ dataDir = path.join(root, 'data'), reader = nullRead
         return json(res, 201, view(rec));
       }
       if (req.method === 'GET' && p === '/receipts') {
-        const t = buildTable(await store.list(), url.searchParams.get('month') ?? undefined);
-        return json(res, 200, { ...t, rows: t.rows.map(view) });
+        const { rows, ...t } = buildTable(await store.list(), url.searchParams.get('month') ?? undefined);
+        return json(res, 200, { ...t, receipts: rows.map(view) });
       }
       if ((m = p.match(/^\/receipts\/([^/]+)(\/image)?$/))) {
         const rec = await store.get(m[1]);
@@ -89,7 +89,7 @@ export function createApp({ dataDir = path.join(root, 'data'), reader = nullRead
         });
         return res.end(toCsv(t.rows));
       }
-      if (req.method === 'GET') { // フロントの静的ファイル（public/）
+      if (req.method === 'GET') { // フロントの静的ファイル（web/）
         const rel = p === '/' ? 'index.html' : p.slice(1);
         const file = path.join(publicDir, rel);
         if (file.startsWith(publicDir + path.sep) && STATIC[path.extname(file)]) {
