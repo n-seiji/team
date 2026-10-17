@@ -28,7 +28,7 @@ export function createStore(dir) {
       const id = randomUUID();
       const image_path = `images/${id}.${ext}`;
       await writeFile(path.join(dir, image_path), buffer);
-      const rec = { id, status: 'reading', created_at: new Date().toISOString(), edited: false, image_path, fields: null };
+      const rec = { id, status: 'queued', created_at: new Date().toISOString(), edited: false, image_path, fields: null };
       await this.save(rec);
       return rec;
     },

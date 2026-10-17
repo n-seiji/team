@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { report, format } from '../scripts/sample-report.mjs';
+import { report, format, tally } from '../scripts/sample-report.mjs';
 
 test('サンプル一覧: 画像ごとに4項目と要確認の件数が出る。例外の画像も一覧に残る', async (t) => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'samples-'));
@@ -30,4 +30,20 @@ test('サンプル一覧: 画像ごとに4項目と要確認の件数が出る�
   assert.match(out, /画像 2 枚/);
   assert.match(out, /"金額":2/);
   assert.match(out, /"日付":1/);
+});
+
+test('正解と比べて、金額と日付を「通過／誤読／要確認」の件数と母数で出す', () => {
+  const f = (value, needs_review) => ({ value, needs_review, reason: needs_review ? '不確かです' : '' });
+  const fields = (date, amount) => ({ date, amount, payee: f('x', false), category: f('その他', true) });
+  const rows = [
+    { file: 'cafe.jpg', fields: fields(f('2026-10-03', false), f(480, false)), seconds: 2.04 },
+    { file: 'taxi.jpg', fields: fields(f('2026-10-09', false), f('', true)), seconds: 3.5 },
+  ];
+  const answers = { 'cafe.jpg': { kind: 'カフェ', date: '2026-10-03', amount: 480 }, 'taxi.jpg': { kind: 'タクシー', date: '2026-10-08', amount: 1500 } };
+  assert.deepEqual(tally(rows, answers, 'date'), { 通過: 1, 誤読: 1, 要確認: 0, n: 2 });
+  const out = format(rows, answers);
+  assert.match(out, /金額：通過1／誤読0／要確認1（2枚中）/);
+  assert.match(out, /\[カフェ\] 金額：通過1／誤読0／要確認0（1枚中） \/ 日付：通過1／誤読0／要確認0（1枚中）/);
+  assert.match(out, /最短 2\.0 \/ 最長 3\.5/);
+  assert.match(out, /2026-10-09 \[誤読\]/);
 });

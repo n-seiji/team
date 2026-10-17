@@ -59,5 +59,5 @@ export function editedField(name, value) {
   if (typeof value === 'string') value = value.trim();
   const bad = checks[name](value);
   if (bad) throw new Error(`${LABELS[name]}が${bad}`);
-  return { value, confidence: 1, needs_review: false, reason: '' };
+  return { value, confidence: 1, needs_review: false, reason: '', edited: true };
 }

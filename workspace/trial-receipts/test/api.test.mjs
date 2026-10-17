@@ -22,13 +22,14 @@ async function start(t, opts = {}) {
 const post = (base, buf = JPG, type = 'image/jpeg') => fetch(base + '/receipts', { method: 'POST', headers: { 'content-type': type }, body: buf });
 const settle = () => new Promise((r) => setTimeout(r, 50));
 
-test('登録するとすぐ id と reading が返り、全項目が空欄＋要確認（未読み取り）になる', async (t) => {
+test('登録するとすぐ id と queued が返り、全項目が空欄＋要確認（未読み取り）になる', async (t) => {
   const s = await start(t);
   const res = await post(s.base);
   assert.equal(res.status, 201);
   const rec = await res.json();
   assert.ok(rec.id);
-  assert.equal(rec.status, 'reading');
+  assert.equal(rec.status, 'queued');
+  assert.equal(rec.queue_position, 0);
   await settle();
   const got = await (await fetch(`${s.base}/receipts/${rec.id}`)).json();
   assert.equal(got.status, 'done');
@@ -151,4 +152,84 @@ test('normalize: 閾値未満・形式NG・カテゴリ外は要確認。推測�
 test('CSV は数式に見える支払先を無害化する', () => {
   const rec = { id: 'x', status: 'done', fields: { date: { value: '2026-01-01' }, amount: { value: 1 }, payee: { value: '=HYPERLINK("x")' }, category: { value: 'その他' } } };
   assert.match(toCsv([rec]), /"'=HYPERLINK\(""x""\)"/);
+});
+
+// 読み取りを外から1件ずつ進められるリーダー
+function gatedReader() {
+  const waiting = [];
+  let active = 0, maxActive = 0;
+  const reader = () => new Promise((resolve) => {
+    active++; maxActive = Math.max(maxActive, active);
+    waiting.push(() => { active--; resolve({
+      date: { value: '2026-10-03', confidence: 0.95 }, amount: { value: 999, confidence: 0.95 },
+      payee: { value: 'OCRの店', confidence: 0.95 }, category: { value: '会議費', confidence: 0.95 },
+    }); });
+  });
+  return { reader, next: () => waiting.shift()?.(), max: () => maxActive };
+}
+
+test('読み取りは1件ずつ。後ろの行は queued で、前に何枚あるかが出る', async (t) => {
+  const g = gatedReader();
+  const s = await start(t, { reader: g.reader });
+  const ids = [];
+  for (let i = 0; i < 3; i++) ids.push((await (await post(s.base)).json()).id);
+  await settle();
+  const get = async (id) => (await fetch(`${s.base}/receipts/${id}`)).json();
+  let rows = await Promise.all(ids.map(get));
+  assert.deepEqual(rows.map((r) => r.status), ['reading', 'queued', 'queued']);
+  assert.deepEqual(rows.slice(1).map((r) => r.queue_position), [1, 2]);
+  assert.equal((await (await fetch(s.base + '/receipts')).json()).needs_review_count, 0);
+  g.next(); await settle();
+  rows = await Promise.all(ids.map(get));
+  assert.deepEqual(rows.map((r) => r.status), ['done', 'reading', 'queued']);
+  assert.equal(rows[2].queue_position, 1);
+  g.next(); await settle(); g.next(); await settle();
+  assert.deepEqual((await Promise.all(ids.map(get))).map((r) => r.status), ['done', 'done', 'done']);
+  assert.equal(g.max(), 1);
+});
+
+test('順番待ち・読み取り中に手で直した欄は、あとから届いた読み取り結果で上書きされない', async (t) => {
+  const g = gatedReader();
+  const s = await start(t, { reader: g.reader });
+  const a = (await (await post(s.base)).json()).id; // 読み取り中になる
+  const b = (await (await post(s.base)).json()).id; // 順番待ち
+  await settle();
+  const patch = (id, body) => fetch(`${s.base}/receipts/${id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  let r = await patch(a, { amount: '1200' });
+  assert.equal(r.status, 200);
+  r = await patch(b, { payee: 'ローソン', date: '2026-10-01' });
+  assert.equal(r.status, 200);
+  assert.equal((await r.json()).status, 'queued');
+  g.next(); await settle(); g.next(); await settle();
+  const A = await (await fetch(`${s.base}/receipts/${a}`)).json();
+  const B = await (await fetch(`${s.base}/receipts/${b}`)).json();
+  assert.equal(A.status, 'done');
+  assert.deepEqual([A.fields.amount.value, A.fields.amount.edited], [1200, true]);
+  assert.equal(A.fields.payee.value, 'OCRの店'); // 直していない欄は読み取り結果が入る
+  assert.deepEqual([B.fields.payee.value, B.fields.date.value, B.fields.amount.value], ['ローソン', '2026-10-01', 999]);
+});
+
+test('再起動で queued / reading のまま残った行は、撮った順に読み直される', async (t) => {
+  const g = gatedReader();
+  const a = await start(t, { reader: g.reader });
+  const ids = [];
+  for (let i = 0; i < 2; i++) ids.push((await (await post(a.base)).json()).id);
+  await settle();
+  a.close();
+  const b = await start(t, { dataDir: a.dataDir });
+  await b.ready; await settle();
+  for (const id of ids) assert.equal((await (await fetch(`${b.base}/receipts/${id}`)).json()).status, 'done');
+});
+
+test('/api/info は、同じ Wi-Fi のスマホから開ける URL を返す', async (t) => {
+  const { lanUrls } = await import('../src/server.mjs');
+  const ifaces = {
+    lo: [{ address: '127.0.0.1', family: 'IPv4', internal: true }],
+    wlan0: [{ address: '192.168.1.23', family: 'IPv4', internal: false }, { address: 'fe80::1', family: 'IPv6', internal: false }],
+  };
+  assert.deepEqual(lanUrls(3000, ifaces), ['http://192.168.1.23:3000/']);
+  const s = await start(t);
+  const info = await (await fetch(s.base + '/api/info')).json();
+  assert.ok(Array.isArray(info.urls));
+  assert.equal(info.reader, 'none');
 });

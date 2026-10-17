@@ -27,24 +27,43 @@ node --test test/*.test.mjs  # ロジックのテスト
 ## API（eng-backend と合意済み。実装は `src/server.mjs`）
 | 操作 | 形 |
 |---|---|
-| `POST /receipts` | body は画像のバイト列そのもの（`Content-Type: image/jpeg` など）。すぐ `{id, status}` |
+| `POST /receipts` | body は画像のバイト列そのもの（`Content-Type: image/jpeg` など）。すぐ `{id, status:"queued", queue_position}` |
 | `GET /receipts?month=YYYY-MM` | `{receipts:[{id,status,fields,edited,image_url}], needs_review_count, total, total_note, undated_count}`。`needs_review_count` は月に関係なく全体の枚数。`fields.{date,amount,payee,category}` は `{value,confidence,needs_review,reason}` |
 | `GET /export.csv?month=YYYY-MM` | BOM 付き UTF-8 の CSV |
 | `PATCH /receipts/:id` | `{ "amount": "1200" }`（直す項目だけ）。更新後の領収書を返す |
 | `GET /receipts/:id/image` | 元の写真 |
+| `GET /api/info` | `{urls:["http://192.168.x.x:3000/"], reader}`。`/start` の QR 用 |
+- 読み取りは1件ずつ順番。`status` は queued → reading → done / failed。queued の行には `queue_position`（前に何枚あるか。読み取り中の1枚を含む）が付く。
+- queued / reading の間も `PATCH` できる。直した欄には `edited:true` が付き、あとから届いた読み取り結果で上書きされない。
 - `reason` は述語の形（「薄くて読めません」「不正な形式です」）。「未読み取り」だけは画面側で文にする。
 - エラーは `{error: "理由"}` を日本語で。
 
-## サーバーと読み取りアダプタ（T4・T5）
+## サーバーと読み取りアダプタ（T4・T5・T7）
 ```
-node src/server.mjs          # API と web/ を http://<IP>:3000/ で配る。データは data/ に保存
+node src/server.mjs                    # 読み取りなし（全項目を要確認で返す）
+READER=tesseract node src/server.mjs   # ローカルの tesseract で読む（受け入れテスト機）
 ```
-- 保存: 画像は `data/images/<id>.<ext>`、記録は `data/records/<id>.json`。DB なし。
+起動すると、スマホで開く LAN の URL が表示される。
+```
+読み取り: tesseract（ローカル）
+写真の保存先: …/data/images（このマシンの外には送りません）
+スマホで開く URL:
+  http://192.168.x.x:3000/
+```
+- 受け入れテストは、端末同士がつながる Wi-Fi か、テスト機のテザリングで行う（会議室・カフェの Wi-Fi はクライアント分離で開けないことがある）。
+- 保存: 画像は `data/images/<id>.<ext>`、記録は `data/records/<id>.json`。DB なし。`data/` と `samples/` は `.gitignore` 済み。
+- 外部 API には画像を送らない。`src/` に外へ通信するコードはない（tesseract はこのマシンの CLI を `child_process` で呼ぶ）。
 - 読み取りエンジンは `createApp({ reader })` で差し替える。`reader(buffer, {id})` は `{date, amount, payee, category}` を返し、各項目は `{value, confidence, reason?}`。
 - 要確認の規則は `src/reader.mjs` の `normalize()` にあり、エンジンに依存しない。空欄、確からしさ 0.8 未満、日付・金額の形式 NG、カテゴリが5候補外（→「その他」）は要確認。推測で埋めない。
-- 今のエンジンは `nullReader`（全項目を空欄＋要確認「未読み取り」）。ローカル OCR の試行と実測はまだしていない（本物のサンプル5枚と tesseract の導入許可待ち）。精度の数字は測るまで書かない。
-- 外部 API には画像を送らない。
-- サンプルの一覧（T5 の報告用）: `samples/` に画像を置いて `node scripts/sample-report.mjs` を実行する。画像ごとに4項目の値と要確認の理由、項目ごとの要確認件数が出る。読み取りで例外が出た画像も一覧に残す。精度の割合は出さない。
+
+### tesseract（T5）
+- 入れ方（Ubuntu）: `sudo apt-get install tesseract-ocr tesseract-ocr-jpn`。`READER=tesseract` でも tesseract か jpn がなければ、警告を出して読み取りなしに戻る。
+- `src/tesseract.mjs`: 確からしさは、その行の単語の conf の最小値。金額は「合計・お買上・領収金額・運賃」などの行の金額だけを見る（小計・税・お預り・お釣りは見ない）。候補が食い違う、`1,2O0` や `1.500` のような形は空欄＋要確認。日付は西暦と令和。カテゴリはキーワードで1つに決まるときだけ。
+- HEIC は読めない（failed になり、写真を見て入力する）。画面は送信前に JPEG へ縮小するので、通常は届かない。
+- サンプルの一覧: `samples/` に画像と `answers.json`（正解。コミットしない）を置いて、`READER=tesseract node scripts/sample-report.mjs` を実行する。
+  - `answers.json` の形: `{"cafe-1.jpg": {"kind": "カフェ", "date": "2026-10-03", "amount": 480}}`
+  - 出るもの: 画像ごとの4項目と秒数、金額・日付の「通過（要確認なしで正解）／誤読（要確認なしで不正解）／要確認」の件数と母数、kind ごとの行。％は出さない。
+- 実サンプルでの結果はまだない（受け入れテストで撮ってから測る）。
 
 ## 未確認・既知の制限
 - 実ブラウザ（iOS Safari / Android Chrome）での動作はまだ確認していない。ここで確認できたのはロジックのテストのみ。

@@ -1,9 +1,10 @@
 // 月ごとの表・合計・CSV。
 import { FIELDS, LABELS } from './reader.mjs';
 
-// 読み取り中はまだ数えない。失敗も項目で判定する（失敗時は4項目とも要確認で入るので、手で直すまで数える）。
-export const rowNeedsReview = (r) => r.status !== 'reading' && (!r.fields || FIELDS.some((f) => r.fields[f]?.needs_review));
-const rowUnconfirmed = (r) => r.status === 'reading' || rowNeedsReview(r);
+// 順番待ち・読み取り中はまだ数えない。失敗も項目で判定する（失敗時は4項目とも要確認で入るので、手で直すまで数える）。
+export const isPending = (r) => r.status === 'queued' || r.status === 'reading';
+export const rowNeedsReview = (r) => !isPending(r) && (!r.fields || FIELDS.some((f) => r.fields[f]?.needs_review));
+const rowUnconfirmed = (r) => isPending(r) || rowNeedsReview(r);
 const dateOf = (r) => r.fields?.date?.value || '';
 
 export function buildTable(records, month) {
