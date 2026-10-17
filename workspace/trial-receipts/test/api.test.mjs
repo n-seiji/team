@@ -9,18 +9,21 @@ import { toCsv } from '../src/table.mjs';
 
 const JPG = Buffer.from([0xff, 0xd8, 0xff, 0xd9]);
 
-async function start(opts = {}) {
+// 落ちた assert のあとも必ず閉じるよう、t.after に登録する
+async function start(t, opts = {}) {
   const dataDir = opts.dataDir ?? (await mkdtemp(path.join(tmpdir(), 'rcpt-')));
   const app = createApp({ dataDir, ...opts });
   await new Promise((r) => app.server.listen(0, r));
   const base = `http://127.0.0.1:${app.server.address().port}`;
-  return { base, dataDir, close: () => app.server.close(), ready: app.ready };
+  const close = () => { app.server.closeAllConnections(); app.server.close(); };
+  t.after(close);
+  return { base, dataDir, close, ready: app.ready };
 }
 const post = (base, buf = JPG, type = 'image/jpeg') => fetch(base + '/receipts', { method: 'POST', headers: { 'content-type': type }, body: buf });
 const settle = () => new Promise((r) => setTimeout(r, 50));
 
-test('登録するとすぐ id と reading が返り、全項目が空欄＋要確認（未読み取り）になる', async () => {
-  const s = await start();
+test('登録するとすぐ id と reading が返り、全項目が空欄＋要確認（未読み取り）になる', async (t) => {
+  const s = await start(t);
   const res = await post(s.base);
   assert.equal(res.status, 201);
   const rec = await res.json();
@@ -38,20 +41,18 @@ test('登録するとすぐ id と reading が返り、全項目が空欄＋要�
   assert.equal(got.edited, false);
   const img = await fetch(s.base + got.image_url);
   assert.deepEqual(Buffer.from(await img.arrayBuffer()), JPG);
-  s.close();
 });
 
-test('10MB超は理由つきで413、画像以外は400', async () => {
-  const s = await start();
+test('10MB超は理由つきで413、画像以外は400', async (t) => {
+  const s = await start(t);
   const big = await post(s.base, Buffer.alloc(10 * 1024 * 1024 + 1));
   assert.equal(big.status, 413);
   assert.match((await big.json()).error, /10MB/);
   assert.equal((await post(s.base, JPG, 'text/plain')).status, 400);
-  s.close();
 });
 
-test('PATCH で直した項目だけ要確認が消え、edited になる。不正な値は400', async () => {
-  const s = await start();
+test('PATCH で直した項目だけ要確認が消え、edited になる。不正な値は400', async (t) => {
+  const s = await start(t);
   const rec = await (await post(s.base)).json();
   await settle();
   const patch = (b) => fetch(`${s.base}/receipts/${rec.id}`, { method: 'PATCH', body: JSON.stringify(b) });
@@ -62,11 +63,10 @@ test('PATCH で直した項目だけ要確認が消え、edited になる。不�
   assert.equal(ok.edited, true);
   assert.equal((await patch({ date: '2026-02-30' })).status, 400);
   assert.equal((await patch({ category: '食費' })).status, 400);
-  s.close();
 });
 
-test('月の表: 日付順・合計・未確認件数・全体の needs_review_count・CSV', async () => {
-  const s = await start();
+test('月の表: 日付順・合計・未確認件数・全体の needs_review_count・CSV', async (t) => {
+  const s = await start(t);
   const ids = [];
   for (let i = 0; i < 3; i++) { ids.push((await (await post(s.base)).json()).id); }
   await settle();
@@ -75,16 +75,16 @@ test('月の表: 日付順・合計・未確認件数・全体の needs_review_c
   await patch(ids[0], { ...full, date: '2026-03-10', amount: 500 });
   await patch(ids[1], { ...full, date: '2026-03-02', amount: 300 });
   await patch(ids[2], { ...full, date: '2026-04-01', amount: 999 });
-  let t = await (await fetch(s.base + '/receipts?month=2026-03')).json();
-  assert.deepEqual(t.receipts.map((r) => r.fields.date.value), ['2026-03-02', '2026-03-10']);
-  assert.equal(t.total, 800);
-  assert.equal(t.total_note, '');
-  assert.equal(t.needs_review_count, 0);
+  let tbl = await (await fetch(s.base + '/receipts?month=2026-03')).json();
+  assert.deepEqual(tbl.receipts.map((r) => r.fields.date.value), ['2026-03-02', '2026-03-10']);
+  assert.equal(tbl.total, 800);
+  assert.equal(tbl.total_note, '');
+  assert.equal(tbl.needs_review_count, 0);
   // 1件を要確認に戻す代わりに、未編集の4件目を追加
   await post(s.base); await settle();
-  t = await (await fetch(s.base + '/receipts?month=2026-03')).json();
-  assert.equal(t.needs_review_count, 1); // 月が違っても全体の件数
-  assert.equal(t.undated_count, 1);
+  tbl = await (await fetch(s.base + '/receipts?month=2026-03')).json();
+  assert.equal(tbl.needs_review_count, 1); // 月が違っても全体の件数
+  assert.equal(tbl.undated_count, 1);
   const all = await (await fetch(s.base + '/receipts')).json();
   assert.equal(all.receipts.at(-1).fields.date.value, ''); // 日付なしは末尾
   assert.equal(all.total_note, '未確認が1件あり、合計は確定ではありません');
@@ -93,32 +93,29 @@ test('月の表: 日付順・合計・未確認件数・全体の needs_review_c
   assert.deepEqual([...buf.subarray(0, 3)], [0xef, 0xbb, 0xbf]);
   assert.match(buf.toString('utf8'), /2026-03-02","300","ローソン","消耗品費","","/);
   assert.equal((await fetch(s.base + '/receipts?month=2026-3')).status, 400);
-  s.close();
 });
 
-test('再起動しても残り、reading のまま残ったものは読み直される', async () => {
-  const a = await start();
+test('再起動しても残り、reading のまま残ったものは読み直される', async (t) => {
+  const a = await start(t);
   const rec = await (await post(a.base)).json();
   await settle();
   a.close();
-  const b = await start({ dataDir: a.dataDir });
+  const b = await start(t, { dataDir: a.dataDir });
   const got = await (await fetch(`${b.base}/receipts/${rec.id}`)).json();
   assert.equal(got.id, rec.id);
-  b.close();
 });
 
-test('リーダーが例外を投げると failed になり、項目は要確認の空欄', async () => {
-  const s = await start({ reader: async () => { throw new Error('boom'); } });
+test('リーダーが例外を投げると failed になり、項目は要確認の空欄', async (t) => {
+  const s = await start(t, { reader: async () => { throw new Error('boom'); } });
   const rec = await (await post(s.base)).json();
   await settle();
   const got = await (await fetch(`${s.base}/receipts/${rec.id}`)).json();
   assert.equal(got.status, 'failed');
   assert.equal(got.fields.amount.needs_review, true);
-  s.close();
 });
 
-test('failed の行も4項目を直せば要確認が消え、件数から外れる（status は failed のまま残す）', async () => {
-  const s = await start({ reader: async () => { throw new Error('boom'); } });
+test('failed の行も4項目を直せば要確認が消え、件数から外れる（status は failed のまま残す）', async (t) => {
+  const s = await start(t, { reader: async () => { throw new Error('boom'); } });
   const rec = await (await post(s.base)).json();
   await settle();
   assert.equal((await (await fetch(`${s.base}/receipts`)).json()).needs_review_count, 1);
@@ -134,7 +131,6 @@ test('failed の行も4項目を直せば要確認が消え、件数から外れ
   assert.equal(list.needs_review_count, 0);
   assert.equal(list.unconfirmed_count, 0);
   assert.equal(list.total, 880);
-  s.close();
 });
 
 test('normalize: 閾値未満・形式NG・カテゴリ外は要確認。推測で埋めない', () => {
