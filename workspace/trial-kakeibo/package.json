@@ -1,0 +1,12 @@
+{
+  "name": "trial-kakeibo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "立て替え記録と家庭の精算（実行時依存なし）",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": { "node": ">=22" }
+}

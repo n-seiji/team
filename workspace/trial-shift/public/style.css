@@ -1,0 +1,60 @@
+:root { --fg:#222; --bg:#fff; --mut:#666; --line:#ddd; --acc:#1a6b4f; --ok:#e6f4ec; --ng:#fde8e8; --warn:#fff3cd; --bad:#c62828; }
+* { box-sizing: border-box; }
+body { margin:0; font: 16px/1.5 system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif; color:var(--fg); background:var(--bg); }
+.wrap { max-width: 480px; margin: 0 auto; padding: 12px 16px 96px; }
+h1 { font-size: 1.25rem; margin: 8px 0 12px; }
+.field { display:block; margin: 0 0 12px; font-weight:600; }
+.field select, .field input { display:block; width:100%; min-height:44px; margin-top:4px; font:inherit; padding:6px 8px; }
+.hint { color:var(--mut); font-size:.9rem; margin: 6px 0; }
+.small { font-size:.8rem; }
+.days { list-style:none; margin:0; padding:0; }
+.day { border-bottom:1px solid var(--line); padding:8px 0; }
+.day.wd0 .date { color:#c62828; } .day.wd6 .date { color:#1565c0; }
+.dayhead { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.date { font-weight:600; min-width: 5.5em; }
+.seg { display:flex; gap:6px; }
+.seg button { min-width:84px; min-height:44px; font:inherit; border:2px solid var(--line); background:#fff; border-radius:8px; }
+.seg button[data-v=ok][aria-pressed=true] { background:var(--ok); border-color:var(--acc); font-weight:700; }
+.seg button[data-v=ng][aria-pressed=true] { background:var(--ng); border-color:var(--bad); font-weight:700; }
+.note { width:100%; min-height:40px; margin-top:6px; font:inherit; padding:4px 8px; border:1px solid var(--line); border-radius:6px; }
+:focus-visible { outline:3px solid #1976d2; outline-offset:1px; }
+.submitbar { position:fixed; left:0; right:0; bottom:0; padding:10px 16px; background:#fff; border-top:1px solid var(--line); display:flex; justify-content:center; }
+.primary { min-height:48px; padding:0 24px; font:inherit; font-weight:700; color:#fff; background:var(--acc); border:0; border-radius:8px; width:100%; max-width:448px; }
+.primary:disabled { opacity:.6; }
+#result:empty { display:none; }
+.result { margin: 12px 0 0; padding: 12px; border-radius:8px; font-weight:700; }
+.result.ok { background:var(--ok); color:#0b4a33; }
+.result.err { background:var(--ng); color:#8e1b1b; }
+.err { color:var(--bad); }
+/* owner */
+body.owner { font-size:14px; }
+.top { position:sticky; top:0; z-index:5; background:#fff; border-bottom:2px solid var(--line); padding:8px 12px; }
+.controls { display:flex; flex-wrap:wrap; gap:12px; align-items:end; }
+.controls label { display:flex; flex-direction:column; font-weight:600; font-size:.8rem; }
+.controls input { min-height:36px; font:inherit; padding:2px 6px; width:11em; }
+.summary { display:flex; gap:24px; margin-top:8px; padding:8px 12px; border-radius:8px; background:#f1f5f3; flex-wrap:wrap; }
+.summary .k { display:block; font-size:.75rem; color:var(--mut); }
+.summary b { font-size:1.4rem; }
+.summary.over { background:#fdecea; color:#8e1b1b; }
+.warns { margin:6px 0 0; padding:0; list-style:none; max-height:7.5em; overflow:auto; }
+.warns li { padding:2px 8px; margin-bottom:2px; border-radius:4px; background:var(--warn); }
+.warns li.limit, .warns li.ng { background:#fdecea; color:#8e1b1b; font-weight:600; }
+.tablewrap { overflow:auto; padding:8px 12px; }
+table { border-collapse:collapse; }
+th, td { border:1px solid var(--line); padding:3px 4px; vertical-align:top; min-width:7.5em; }
+thead th { position:sticky; top:0; background:#fafafa; }
+th.missing { background:#fff3cd; }
+.datecol { position:sticky; left:0; background:#fafafa; min-width:5.5em; white-space:nowrap; z-index:1; }
+thead .datecol { z-index:2; }
+tr.wd0 .datecol { color:#c62828; } tr.wd6 .datecol { color:#1565c0; }
+.badge { display:block; font-size:.7rem; font-weight:700; }
+.badge.none { color:#8a5a00; } .badge.done { color:var(--acc); }
+.req { display:block; font-size:.75rem; font-weight:700; }
+.req.ok { color:var(--acc); } .req.ng { color:var(--bad); } .req.none { color:#999; font-weight:400; }
+.memo { display:block; font-size:.7rem; color:var(--mut); }
+input.shift { width:100%; min-height:32px; font:inherit; padding:2px 4px; border:1px solid var(--line); }
+input.shift.ngday { background:var(--ng); border-color:var(--bad); }
+input.shift.bad { border-color:var(--bad); border-width:2px; }
+.foot { padding:12px; }
+.foot textarea { display:block; width:100%; max-width:640px; margin-top:8px; font:inherit; }
+dialog { border:1px solid var(--line); border-radius:8px; padding:16px; }

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>回覧板 いまどこ</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>回覧板 いまどこ</h1>
+  <label class="pick">回覧を選ぶ
+    <select id="circular"></select>
+  </label>
+</header>
+<main>
+  <section id="summary" aria-live="polite"></section>
+  <section id="mine" aria-label="自分の班"></section>
+  <section aria-label="8班の現在地">
+    <h2>班ごとの現在地</h2>
+    <ul id="groups" class="groups"></ul>
+  </section>
+</main>
+<div id="toast" role="status" aria-live="polite"></div>
+<dialog id="setup">
+  <form method="dialog" id="setupForm">
+    <h2>班長さんの設定(最初の1回だけ)</h2>
+    <label>班 <select id="sGroup" required></select></label>
+    <label>お名前 <select id="sName" required></select></label>
+    <label>班の合言葉 <input id="sPass" type="password" autocomplete="off" required></label>
+    <p id="sErr" class="err" role="alert"></p>
+    <div class="row"><button value="ok">はじめる</button><button value="cancel" formnovalidate>閉じる(見るだけ)</button></div>
+  </form>
+</dialog>
+<script type="module" src="app.js"></script>
+</body>
+</html>

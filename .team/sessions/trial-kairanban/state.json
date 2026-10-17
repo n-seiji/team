@@ -1,0 +1,402 @@
+{
+  "version": 1,
+  "name": "trial-kairanban",
+  "brief": "町内会の回覧板をデジタルでも回せるようにしたい。ただし紙しか使えない世帯も取り残さないこと。",
+  "language": "ja",
+  "workspace": "workspace/trial-kairanban",
+  "createdAt": "2026-10-17T08:39:02.002Z",
+  "status": "done",
+  "members": [
+    {
+      "id": "pm",
+      "role": "pm",
+      "persona": {
+        "name": "佐藤 美咲",
+        "age": 36,
+        "occupation": {
+          "title": "Product Manager",
+          "organization": "小さなSaaSスタートアップ",
+          "description": "ユーザーインタビューから課題を言語化し、最小のスコープで価値を届けることに責任を持つ。"
+        },
+        "long_term_goals": [
+          "ユーザーが本当に使い続けるプロダクトを作る",
+          "チームが迷わず動ける判断を素早く下す"
+        ],
+        "style": "質問が具体的で短い。『最後にそれが起きたのはいつですか？』のように事実を掘る。決めるときは理由とトレードオフを一言添える。",
+        "personality": {
+          "traits": [
+            "好奇心が強い",
+            "スコープを削るのが得意",
+            "ユーザーの言葉をそのまま引用する"
+          ],
+          "big_five": {
+            "openness": "高",
+            "conscientiousness": "高",
+            "extraversion": "中",
+            "agreeableness": "中",
+            "neuroticism": "低"
+          }
+        },
+        "skills": [
+          "ユーザーインタビュー (The Mom Test)",
+          "ジョブ理論",
+          "受け入れ基準の記述",
+          "優先順位付け"
+        ],
+        "beliefs": [
+          "ユーザーが言う解決策より、ユーザーの過去の行動を信じる",
+          "最初のリリースは恥ずかしいくらい小さくていい"
+        ]
+      }
+    },
+    {
+      "id": "eng-backend",
+      "role": "engineer",
+      "persona": {
+        "name": "田中 健",
+        "age": 41,
+        "occupation": {
+          "title": "Senior Backend Engineer",
+          "description": "データモデル、API、CLI、テストを担当。シンプルで壊れにくい設計を好む。"
+        },
+        "style": "結論から話す。リスクは数字や具体例で示す。不明点はその場で確認する。",
+        "personality": {
+          "traits": [
+            "慎重",
+            "テストを先に書く",
+            "依存を増やすのが嫌い"
+          ],
+          "big_five": {
+            "openness": "中",
+            "conscientiousness": "高",
+            "extraversion": "低",
+            "agreeableness": "中",
+            "neuroticism": "低"
+          }
+        },
+        "skills": [
+          "TypeScript",
+          "Go",
+          "SQL",
+          "API設計",
+          "自動テスト"
+        ],
+        "preferences": {
+          "likes": [
+            "標準ライブラリ",
+            "小さな関数",
+            "README に動かし方を書くこと"
+          ],
+          "dislikes": [
+            "根拠のない見積もり",
+            "巨大なフレームワーク"
+          ]
+        }
+      }
+    },
+    {
+      "id": "eng-frontend",
+      "role": "engineer",
+      "persona": {
+        "name": "鈴木 ひかり",
+        "age": 29,
+        "occupation": {
+          "title": "Frontend / UX Engineer",
+          "description": "画面・CLI の使い勝手、アクセシビリティ、初回体験を担当。ユーザー視点で仕様に意見を言う。"
+        },
+        "style": "フレンドリーで提案型。『ユーザーはここで迷いそう』と体験ベースで話す。",
+        "personality": {
+          "traits": [
+            "共感力が高い",
+            "手を動かして試作するのが早い",
+            "細部にこだわる"
+          ],
+          "big_five": {
+            "openness": "高",
+            "conscientiousness": "中",
+            "extraversion": "高",
+            "agreeableness": "高",
+            "neuroticism": "中"
+          }
+        },
+        "skills": [
+          "TypeScript",
+          "HTML/CSS",
+          "React",
+          "アクセシビリティ",
+          "プロトタイピング"
+        ],
+        "preferences": {
+          "likes": [
+            "空状態やエラー時の丁寧なメッセージ",
+            "キーボードだけで操作できるUI"
+          ],
+          "dislikes": [
+            "説明が必要なUI"
+          ]
+        }
+      }
+    },
+    {
+      "id": "user-chokai",
+      "role": "user",
+      "persona": {
+        "name": "石田 正雄",
+        "age": 73,
+        "residence": "千葉県船橋市の住宅街",
+        "occupation": {
+          "title": "町内会長 (元・市役所職員)",
+          "description": "3 年目の町内会長。120 世帯に紙の回覧板を 8 班に分けて回している。"
+        },
+        "long_term_goals": [
+          "役員のなり手を増やす",
+          "高齢世帯を取り残さない"
+        ],
+        "style": "ゆっくり丁寧。昔の経験談が長くなる。カタカナ語は嫌う。",
+        "personality": {
+          "traits": [
+            "責任感が強い",
+            "変化に慎重",
+            "公平さにこだわる"
+          ]
+        },
+        "preferences": {
+          "likes": [
+            "紙で手元に残ること",
+            "全員に同じ情報が届くこと"
+          ],
+          "dislikes": [
+            "一部の人だけが知っている状態",
+            "パスワード"
+          ]
+        },
+        "tech_literacy": "ガラケーからスマホに替えたばかり。LINE は孫とだけ。パソコンは市役所時代にワープロを使った程度。"
+      }
+    },
+    {
+      "id": "user-parent",
+      "role": "user",
+      "persona": {
+        "name": "森 早紀",
+        "age": 34,
+        "residence": "同じ町内のマンション",
+        "occupation": {
+          "title": "共働きの会社員 (経理)、保育園児 2 人の母",
+          "description": "今年班長が回ってきた。平日は 19 時帰宅。"
+        },
+        "long_term_goals": [
+          "町内会の負担を最小限にしたい",
+          "子どもの防災・行事情報は逃したくない"
+        ],
+        "style": "テキパキ、結論から話す。不満ははっきり言う。",
+        "personality": {
+          "traits": [
+            "効率重視",
+            "合理的",
+            "時間がない"
+          ]
+        },
+        "preferences": {
+          "likes": [
+            "スマホで完結すること",
+            "通知が少ないこと"
+          ],
+          "dislikes": [
+            "不在時に回覧板が止まって催促されること",
+            "アプリを増やすこと"
+          ]
+        },
+        "tech_literacy": "スマホ・PC とも日常的に使う。新しいアプリは入れたくない派。"
+      }
+    }
+  ],
+  "phases": [
+    {
+      "id": "discovery",
+      "goal": "PM interviews the users to uncover their real situation, pains and jobs-to-be-done. Users answer strictly in character, with concrete episodes. No solutions yet.",
+      "speakers": [
+        "pm",
+        "user"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 2
+    },
+    {
+      "id": "planning",
+      "goal": "PM turns findings into a small, shippable scope: [TASK] items with clear acceptance criteria, each assigned to an engineer. Engineers challenge feasibility, split or re-assign tasks, and agree on tech choices.",
+      "speakers": [
+        "pm",
+        "engineer"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 2,
+      "iterationStart": true
+    },
+    {
+      "id": "build",
+      "goal": "Engineers implement their own tasks in the workspace (real files, runnable code, tests when sensible), coordinate interfaces with each other, and mark finished work with [TASK_DONE].",
+      "speakers": [
+        "engineer"
+      ],
+      "mode": "parallel",
+      "maxRounds": 3,
+      "untilTasksDone": true,
+      "editors": [
+        "engineer"
+      ]
+    },
+    {
+      "id": "review",
+      "goal": "Engineers review each other's work against the acceptance criteria and fix issues. Before users judge it, each engineer posts a [DEMO] for their tasks: what a user would do and what they would see, with output you really produced (run the command, render the page or email, paste the result or the path of the generated file or screenshot). Never describe output you did not produce. PM checks every task against its acceptance criteria and states what is ready for users.",
+      "speakers": [
+        "engineer",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1,
+      "editors": [
+        "engineer"
+      ]
+    },
+    {
+      "id": "acceptance",
+      "goal": "Users try what was built — start from the team's demos, open the files they point to, run it if possible — and judge it from their own needs. Each user gives a [VERDICT accept|reject] with reasons. PM summarizes and decides next steps.",
+      "speakers": [
+        "user",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1
+    },
+    {
+      "id": "wrapup",
+      "goal": "The session is about to end. Engineers apply every decision made during review and acceptance and finish their open tasks ([TASK_DONE]); a task that cannot be finished here gets one line saying why and what is left. PM then confirms what shipped and lists, for the real human, anything still open or needing their decision.",
+      "speakers": [
+        "engineer",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1,
+      "editors": [
+        "engineer"
+      ],
+      "finale": true
+    }
+  ],
+  "phaseIndex": 5,
+  "iteration": 1,
+  "maxIterations": 2,
+  "round": 0,
+  "turn": 27,
+  "queue": [],
+  "pending": [],
+  "insertions": 3,
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "回覧の経路と状態を記録する(データとAPI)",
+      "acceptance": "- 回覧を1件作れる。題名、重要度(通常/重要)、班ごとの家の順番(名簿)を持つ。\n- 各家の状態は「未着・受取済・次へ渡した・不在で保留」の4つ。\n- 家は「紙で参加」か「デジタルで参加」かを持つ。どちらでも同じ状態を記録できる。\n- 状態を変えるとき、いつ・誰が記録したかが残る。\n- ある回覧について、班ごとに「今どの家にあるか」と「その家に何日留まっているか」を取得できる。\n- 120世帯・8班の名簿を初期データとして読み込める。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "回覧の経路と状態を記録するデータとAPIを実装しました。依存は 0 で、Node 22.18 以上だけで動きます。テストは 11 本あり、すべて通っています。`workspace/trial-kairanban/` の中身は次のとおりです。\n- `src/store.ts`: ドメイン部分です。状態は上書きせず、イベントログ(`data/events.jsonl`)に追記します。現在地・留まり日数・完了数は、そのログから毎回計算します。\n- `src/server.ts`: `node:http` の API です。`public/` を `/` から配信するので、鈴木さんの画面はそこに置けます。\n- `src/gen-roster.ts`: 架空の名簿を生成します。出力は `data/roster.json` で、8班・120世帯、うち紙が 40 軒です。班長名と合言葉も入っています。\n- `src/demo.ts`: 画面確認用の見本データを作ります。\n- `test/*.test.ts` と `README.md`: テストと、動かし方・API 例です。\n\n動かし方と確認方法は次のとおりです。\n- 起動: `node src/server.ts`\n- 見本データ作成(任意): `node src/demo.ts`\n- テスト: `node --test \"test/*.test.ts\"`\n\n鈴木さんの要望 3 点には、次のように対応しました。\n- 班ごとに `completedCount`/`total`/`done` を返し、回覧全体に `completed` を付けました。\n- 記録 API は参加方法に関係なく同じ形です。\n- 保留中は `status` と `holdSince`/`holdDays` を返します。\n\n決まりごとと、使うときの注意は次のとおりです。\n- 現在地は、班の順番で最初の「次へ渡した」でない家です。「不在で保留」は飛ばしません。\n- 留まり日数は、前の家が「次へ渡した」と記録した日から数えます。先頭の家は回覧の作成日からです。\n- 3日以上で `stale: true` になります。現在地が「未着」のまま3日以上なら `receiptMissing: true` で、「受取の記録なし」を表示する用です。\n- 記録できるのは、その班の班長(名前＋合言葉)か会長です。違えば 403 を返します。合言葉は API では返しません。\n- 完了した班は `done: true` になります。その班の `stayDays` は無視して、「完了」と表示してください。\n- デモ用の合言葉(`kaichou`、`hanchou-1` など)は README に書いてあります。実運用の前に変える必要があります。"
+    },
+    {
+      "id": "T2",
+      "title": "止まっている場所の一覧画面(会長・班長向け)",
+      "acceptance": "- 回覧を選ぶと、8班それぞれの現在地(家の名前)と留まり日数が1画面で見える。\n- 3日以上留まっている班は色と文字で目立つ(色だけに頼らない)。\n- 班長が自分の班で「受取済」「次へ渡した」「不在で保留」をボタン1〜2回で記録できる。スマホの画面で使える。\n- 紙の世帯も一覧に同じように表示され、「紙」と分かる印が付く。\n- 重要度が「重要」の回覧は一覧で区別でき、全家が「受取済」になるまで未完了として表示される。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "T2 を実 API に接続しました。`web/adapt.js` が新規、`web/app.js` と `web/logic.js` を修正、`test/adapt.test.mjs` を追加、`README.md` に構成を追記しています。起動は `node src/demo.ts && node src/server.ts` で、http://localhost:3000/ を開きます。テストは `node --test test/*.test.mjs` です。"
+    }
+  ],
+  "decisions": [
+    {
+      "by": "pm",
+      "text": "解決策の検討では次の2点を前提にする。(1)紙の世帯は、紙が回るだけで不利にならないこと。(2)「どこで止まっているか」の可視化を、最初の価値の中心に置く。",
+      "phase": "discovery",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "留まり日数は、前の家が「次へ渡した」と記録した日から数え、画面は「記録から◯日」と表示する。「不在で保留」は飛ばさず現在地のまま表示する。認証は作らず、班ごとの合言葉と班長名の選択式にする。T1・T2 は現行の分割のまま進める。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "ユーザーへの提示は、T1・T2 とも可とする。ただし T2 は「実ブラウザでの見た目は未確認」と先に明示する。取り消し専用機能と保留時の迂回は今回作らない。理由は、履歴が残るため後から作っても失うものがなく、最初の価値は止まりの可視化だからだ。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "次の反復の優先順は、①実機確認、②「受取の記録なし」を班長が責められない言い方に直す、③画面の言葉を横文字なしの日本語にする、④一覧のA4印刷、⑤合言葉の再発行、⑥保留の迂回。理由は、①は両名の受け入れ条件で、②〜⑤は小さく直せて、⑥は設計が要るからだ。「読んだ」の確認と、ドアノブ・ポストの決まりは、今回の対象外にする。",
+      "phase": "acceptance",
+      "iteration": 1
+    }
+  ],
+  "verdicts": [
+    {
+      "by": "user-chokai",
+      "verdict": "accept",
+      "reason": "「どこで止まっているか」がすぐ分かる、という一番の困りごとには応えています。紙の世帯が不利にならない点もよいです。条件が3つあります。①合言葉の手間を減らす(班長さんが替わっても困らない形)。②一覧を紙に印刷できるようにする。③画面の言葉を分かりやすくする。実際の画面を私が一度、自分の目で見て確かめさせてください。",
+      "iteration": 1
+    },
+    {
+      "by": "user-parent",
+      "verdict": "accept",
+      "reason": "条件付きで ACCEPT です。理由は、アプリ不要でスマホだけで完結し、通知もなく、止まっている場所が分かるという一番の困りごとに応えているからです。条件は次の3つです。①「受取の記録なし」が班長への催促に見えない言い方にすること。②保留の迂回を次回に入れること。③スマホ実機で、片手で記録できることを確認すること。",
+      "iteration": 1
+    }
+  ],
+  "demos": [
+    {
+      "by": "eng-backend",
+      "text": "T1: 見本データを読み込んで `GET /api/circulars/c1`(重要な回覧)を叩いた実出力です。\n```\n秋の清掃活動と防災訓練のお知らせ 重要 completed=false\n1班 清水家(進) digital 次へ渡した 10日 stale=false 保留=null 15/15\n2班 林家(一郎) digital 未着 0日 stale=false 保留=null 9/15\n3班 木村家(進) paper 不在で保留 5日 stale=true 保留=5 4/15\n4班 渡辺家(花子) paper 未着 3日 stale=true 保留=null 6/15 受取の記録なし\n5班 渡辺家(進) paper 未着 7日 stale=true 保留=null 2/15 受取の記録なし\n6班 高橋家(花子) digital 未着 0日 stale=false 保留=null 12/15\n7班 木村家(花子) paper 未着 6日 stale=true 保留=null 3/15 受取の記録なし\n8班 木村家(幸子) paper 未着 0日 stale=false 保留=null 14/15\n```\n1班は 15/15 で `done` ですが、`stayDays` が 10 のまま出ています。画面では「完了」と表示し、日数は使わないでください。",
+      "phase": "build",
+      "iteration": 1
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T2: 画面だけ確認するには、次のように起動します。\n```\nPORT=4871 node mock/server.mjs   # 止める時は、表示された PID に kill <PID>\n```\nhttp://localhost:4871 を開き、「班長さんはこちら」で 1 班と合言葉 `g1` を入力します。以下はモック API の実際の応答です。\n- 1 班の現在地は `{house:\"1-6\", houseName:\"加藤家(1-6)\", mode:\"paper\", status:\"received\", stayDays:1}` でした。\n- 同じ家に `POST /api/circulars/c1/records` で `received` を記録すると、`{\"ok\":true}` が返りました。",
+      "phase": "build",
+      "iteration": 1
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T2: 実 API から取ってきた、見本データの班一覧です。班ごとの名前は `/api/groups` が `[{\"id\":\"g1\",\"name\":\"1班\",\"leaders\":[\"青木 誠\"],\"houseCount\":15}, …]` を返します。回覧は `c1`(重要)と `c2`(通常)です。画面では「班長さんはこちら」から 1班・青木 誠・`hanchou-1` を設定し、現在地カードのボタンを押します。合言葉違いで記録すると、実 API は `{\"error\":\"合言葉または記録者が違います\"}` を返します。画面はこれを受けて「合言葉が違うようです」と出し、設定を開き直します。",
+      "phase": "build",
+      "iteration": 1
+    },
+    {
+      "by": "eng-backend",
+      "text": "T1: 利用者(会長・班長)として操作したときの実出力です。\n- 見本データを作ってから `PORT=4873 node src/server.ts` を起動し、`GET /api/circulars` を叩きました。\n  - 返りは `[{\"id\":\"c1\",\"title\":\"秋の清掃活動と防災訓練のお知らせ\",\"importance\":\"重要\",\"completed\":false,\"doneGroups\":1,\"groupCount\":8}, {\"id\":\"c2\",\"title\":\"ごみ置き場の場所変更\",\"importance\":\"通常\",\"completed\":false,\"doneGroups\":0,\"groupCount\":8}]` でした(createdAt は省略しています)。\n- 合言葉違いで `POST /api/circulars/c1/records` を送ると、拒否されて `{\"error\":\"合言葉または記録者が違います\"}` が返りました。\n- 班ごとの現在地と日数は、先の DEMO に貼った `GET /api/circulars/c1` の表のとおりです。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T2: 利用者(班長)の操作を API 経由で再現した実出力です。2班・大野 恵・`hanchou-2` で、現在地の 林家(一郎)に記録しました。\n```\n受取済     → 林家(一郎) 受取済 10/15\n不在で保留 → 林家(一郎) 不在で保留 9/15\n次へ渡した → 清水家(和子) 未着 10/15\n受取済     → 林家(一郎) 受取済 10/15 (元に戻す)\n```\n画面の目視はしていません。ブラウザのスクリーンショットも取れていません。",
+      "phase": "review",
+      "iteration": 1
+    }
+  ],
+  "notes": {
+    "pm": [
+      "石田さん(町内会長): 120世帯・8班・1班約15軒。一周10日〜2週間。直近は6班が10日で戻り、3班は半月戻らず、旅行で不在の家で止まっていた。不在時に預かる決まりはない。飛ばすのは公平さを欠くと考え、コピーを作って自分で届けた。日程変更時は回覧済みの家を一軒ずつ回って訂正し、足が棒になった。判子欄で誰が読んだか分かる点は紙の良さだと評価している。",
+      "森さん(子育て世帯・今年の班長): 先週水曜19時帰宅、ドアノブに袋掛け、その日は読まず。金曜夜に開封し、読むのは防災と子どもの行事だけ。判子は押したが次の家へは土曜朝で、3日止めた。次の家は平日昼不在で、夕方に行っても留守のためドアノブに掛けた。今年は「まだですか」と2回言われた。班長として次の家に回ったかを自分で確認する用事も増えている。",
+      "発見フェーズの要点(石田さん)：3班が止まっていると気づいたのは、10日たって6班が戻った日。班長に電話し、名簿を持って1軒ずつ歩き、5軒目で新聞がたまった旅行中の家を見つけた。お年寄りは電話に出ないことがあり、歩くのが一番確実。先月の総会資料では、判子はあったのに「ごみ置き場の場所が変わった件」を読まれておらず、当日3軒が前の場所に出した。「送った・届いた・読んだは別」と本人は言う。",
+      "発見フェーズの要点(森さん)：直近の「まだですか」は2週間前の日曜、マンションの廊下で次の家の奥さんに言われた。金曜に掛けたはずの袋は、ドアノブに掛かったままだった。次の家の電話番号もLINEも知らず、確認はしていない。止まりに気づくのは、いつも相手から言われたときだけ。留守の家にはドアノブとポストのどちらに入れてよいか決まりがなく、自己判断している。",
+      "ジョブの仮説：①重要なお知らせ(防災・日程変更・ごみ)を確実に全世帯へ届け、読んだことまで確認したい。②今どの家で止まっているかを、探し歩かずに知りたい。③不在・遅延時に誰が何をするかの決まりが欲しい。④紙の世帯を取り残さない。紙の判子は強みとして残す。",
+      "計画フェーズの決定: 留まり日数は前の家が「次へ渡した」と記録した日から数える。画面は「記録から◯日」と表示し、記録なしは「受取の記録なし」と示す。「不在で保留」は飛ばさず現在地のまま表示し、迂回は次回以降。認証なしで、班ごとの合言葉と班長名の選択式にする。会長が PC かスマホのどちらで見るかは、石田さんに未確認。",
+      "受け入れ(反復1)の結果:石田さん・森さんとも条件付き ACCEPT。条件は、実機確認(両名)、合言葉の手間を減らす・再発行(石田)、一覧の印刷(石田)、横文字をやめる(石田)、「受取の記録なし」を催促に見せない(森)、保留の迂回は次回必須(森)。ドアノブかポストかの決まりは町内会の取り決めで、石田さんに役員会での相談を頼んだ。会長がPCかスマホかは未確認。"
+    ],
+    "eng-backend": [
+      "T1 の API は、状態を日本語の文字列で返す。記録は `{houseId, status, by, passphrase}` で、合言葉違いは 403。取り消し API はなく、逆の状態をもう一度記録して訂正する。次の反復の自分の担当は、合言葉の再発行(会長のみ)と保留の迂回(設計が先)。「受取の記録なし」の言い換えは画面の文言だけで足りる。",
+      "T1 の API は、状態を日本語の文字列で返す。記録は `{houseId, status, by, passphrase}` で、合言葉違いは 403。取り消し API はなく、逆の状態をもう一度記録して訂正する。次の反復の自分の担当は、合言葉の再発行(会長のみ)、保留の迂回(設計が先)、合言葉の平文保存の見直し。「受取の記録なし」の言い換えは画面の文言だけで足りる。"
+    ]
+  },
+  "historyWindow": 40
+}

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>立て替えメモ</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <section id="view-input" aria-labelledby="t-input">
+    <h1 id="t-input">立て替えを記録</h1>
+    <p id="edit-banner" class="edit-banner" hidden><span id="edit-label"></span> <button type="button" class="sub" id="cancel-edit">やめる</button></p>
+    <form id="form" novalidate>
+      <fieldset class="seg" aria-label="区分">
+        <legend class="sr">区分</legend>
+        <label><input type="radio" name="category" value="home" checked><span>🏠 家庭</span></label>
+        <label><input type="radio" name="category" value="work"><span>💼 仕事</span></label>
+      </fieldset>
+      <label for="amount">金額（円）</label>
+      <input id="amount" name="amount" inputmode="numeric" autocomplete="off" aria-describedby="err-amount" autofocus>
+      <p class="err" id="err-amount" role="alert"></p>
+      <label for="payer">払った人</label>
+      <select id="payer" aria-describedby="err-payer"></select>
+      <p class="err" id="err-payer" role="alert"></p>
+      <p class="hint" id="split-hint">全員で割ります</p>
+      <details id="more">
+        <summary>日付・メモ・負担する人</summary>
+        <label for="date">日付</label><input id="date" type="date">
+        <label for="memo">メモ</label><input id="memo" autocomplete="off" placeholder="例：洗剤">
+        <fieldset id="participants"><legend>負担する人</legend></fieldset>
+      </details>
+      <p class="err" id="err-form" role="alert"></p>
+      <button type="submit" class="primary" id="submit">保存</button>
+      <p id="saved" class="ok" role="status"></p>
+    </form>
+  </section>
+
+  <section id="view-history" hidden aria-labelledby="t-history">
+    <h1 id="t-history">履歴</h1>
+    <ul id="history" class="list"></ul>
+  </section>
+
+  <section id="view-settle" hidden aria-labelledby="t-settle">
+    <h1 id="t-settle">家庭の精算</h1>
+    <div id="settle-body"></div>
+  </section>
+
+  <section id="view-members" hidden aria-labelledby="t-members">
+    <h1 id="t-members">メンバー</h1>
+    <ul id="member-list" class="list members"></ul>
+    <form id="add-member" novalidate>
+      <label for="new-name">追加する人の名前</label>
+      <input id="new-name" autocomplete="off">
+      <p class="err" id="err-new-name" role="alert"></p>
+      <button type="submit" class="primary">追加</button>
+    </form>
+  </section>
+
+  <div id="empty-members" hidden>
+    <h1>最初に、使う人の名前を入れましょう</h1>
+    <form id="add-first" novalidate>
+      <label for="name-empty">名前（例：けいこ）</label>
+      <input id="name-empty" autocomplete="off">
+      <p class="err" id="err-name-empty" role="alert"></p>
+      <button type="submit" class="primary">追加</button>
+    </form>
+    <p class="hint">ふたり以上入れると、割り勘の記録ができます。</p>
+  </div>
+</main>
+<nav aria-label="画面">
+  <button data-view="input" aria-current="page">入力</button>
+  <button data-view="history">履歴</button>
+  <button data-view="settle">精算</button>
+  <button data-view="members">メンバー</button>
+</nav>
+<script src="app.js"></script>
+</body>
+</html>
