@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   fitSize, maxSideFrom, needsReview, visibleReceipts, flagText, countText, validateInput,
   fieldsFor, orderForScreen, monthOptions, totalText, statusText, pickStartUrl, printSheet, PRINT_HEAD,
+  parseQuery, searchReceipts, searchText,
 } from '../web/logic.js';
 import { qrMatrix, qrSvg } from '../web/qr.js';
 import { readFileSync } from 'node:fs';
@@ -153,4 +154,40 @@ test('字の大きさ: 項目名と入力欄は 16px 以上。印刷では表以
   assert.match(css, /body \{[^}]*font: 16px/, '入力欄は font: inherit で 16px を受け継ぐ');
   assert.match(css, /\.field input, \.field select \{[^}]*font: inherit/);
   assert.match(css, /@media print \{[\s\S]*body > \*:not\(\.printout\) \{ display: none !important; \}/);
+});
+
+// ---- T9: 日付か金額で探す ----
+const rec = (id, date, amount) => ({ id, status: 'done', fields: {
+  date: { value: date, needs_review: !date }, amount: { value: amount, needs_review: !amount },
+  payee: { value: 'x' }, category: { value: 'その他' } } });
+const ALL = [rec('a', '2026-10-03', '5000'), rec('b', '2026-10-07', '880'), rec('c', '2025-10-03', '1200'), rec('d', '', '5000'), rec('e', '', '')];
+
+test('探す: 金額の書き方の揺れ（5,000円・¥5000・全角）を同じ金額として読む', () => {
+  for (const t of ['5000', '5,000', '5,000円', '¥5000', '５０００']) assert.deepEqual(parseQuery(t), { kind: 'amount', amount: 5000 }, t);
+});
+test('探す: 10/3・10月3日・2026-10-03 を日付として読む。年なしはどの年でも当てる', () => {
+  assert.deepEqual(parseQuery('10/3'), { kind: 'date', year: null, month: 10, day: 3 });
+  assert.deepEqual(parseQuery('10月3日'), { kind: 'date', year: null, month: 10, day: 3 });
+  assert.deepEqual(parseQuery('2026-10-03'), { kind: 'date', year: 2026, month: 10, day: 3 });
+  assert.deepEqual(searchReceipts(ALL, '10/3').rows.map((r) => r.id), ['a', 'c']);
+  assert.deepEqual(searchReceipts(ALL, '2026/10/3').rows.map((r) => r.id), ['a']);
+});
+test('探す: 金額は日付のない行も含めて全件から一致だけを出す', () => {
+  assert.deepEqual(searchReceipts(ALL, '5000').rows.map((r) => r.id), ['a', 'd']);
+  assert.deepEqual(searchReceipts(ALL, '500').rows, []); // 部分一致はしない（5,000円を探して500円が混ざらない）
+});
+test('探す: 読めない文字・あり得ない日付は検索しない（全件のまま）', () => {
+  for (const t of ['', '  ', 'ローソン', '13/1', '10/32']) assert.equal(parseQuery(t), null, t);
+  assert.equal(searchReceipts(ALL, 'ローソン').rows.length, ALL.length);
+});
+test('探す: 見つからないときは日付のない枚数を案内する', () => {
+  const res = searchReceipts(ALL, '12/24');
+  assert.equal(res.undated, 2);
+  assert.equal(searchText(res), '見つかりません。日付が入っていない領収書が2枚あります');
+  assert.equal(searchText(searchReceipts(ALL, '5000')), '5,000円：2枚見つかりました。写真をタップすると原寸で開きます');
+  assert.equal(searchText(searchReceipts([rec('a', '2026-10-03', '5000')], '1/1')), '見つかりません（1月1日）');
+});
+test('探す: 読み取り待ち（fields が null）の行でも落ちない', () => {
+  assert.doesNotThrow(() => searchReceipts([{ id: 'q', status: 'queued', fields: null }], '10/3'));
+  assert.equal(searchReceipts([{ id: 'q', status: 'queued', fields: null }], '10/3').undated, 1);
 });

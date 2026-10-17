@@ -12,6 +12,12 @@
   <p id="count" class="count" role="status" aria-live="polite">要確認 0件</p>
   <button id="filter" class="btn ghost" type="button" aria-pressed="false">要確認だけ見る</button>
 </header>
+<section id="searchbar" class="searchbar" role="search" hidden>
+  <label for="search">写真を探す（金額か日付）</label>
+  <input id="search" type="search" autocomplete="off" enterkeyhint="search" placeholder="例: 5000 または 10/3" aria-describedby="search-msg">
+  <p id="search-msg" class="search-msg" role="status" aria-live="polite"></p>
+  <button id="show-undated" class="btn ghost" type="button" aria-pressed="false" hidden>日付のない領収書を見る</button>
+</section>
 <section id="monthbar" class="monthbar" hidden>
   <label for="month">表示する月</label>
   <select id="month"><option value="">すべて</option></select>

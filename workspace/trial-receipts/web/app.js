@@ -4,14 +4,16 @@ import {
   FIELD_KEYS, FIELD_LABELS, CATEGORIES, maxSideFrom,
   fitSize, needsReview, visibleReceipts, flagText, countText, validateInput,
   fieldsFor, orderForScreen, monthOptions, monthLabel, totalText, isPending, statusText, printSheet,
+  searchReceipts, searchText, isUndated,
 } from './logic.js';
 
 const $ = (s) => document.querySelector(s);
 const els = { list: $('#list'), empty: $('#empty'), bar: $('#bar'), count: $('#count'), filter: $('#filter'),
   camera: $('#camera'), toast: $('#toast'), noMatch: $('#no-match'), banner: $('#demo-banner'),
-  monthbar: $('#monthbar'), month: $('#month'), total: $('#total'), undated: $('#undated'), csv: $('#csv'), csvOff: $('#csv-off'), print: $('#print'), printout: $('#printout') };
+  monthbar: $('#monthbar'), month: $('#month'), total: $('#total'), undated: $('#undated'), csv: $('#csv'), csvOff: $('#csv-off'), print: $('#print'), printout: $('#printout'),
+  searchbar: $('#searchbar'), search: $('#search'), searchMsg: $('#search-msg'), showUndated: $('#show-undated') };
 
-const state = { api: null, receipts: [], count: 0, table: null, months: [], month: '', onlyReview: false, pending: [], rowSig: new Map() };
+const state = { api: null, receipts: [], all: [], search: '', showUndated: false, count: 0, table: null, months: [], month: '', onlyReview: false, pending: [], rowSig: new Map() };
 let shotNo = 0;
 const maxSide = maxSideFrom(new URLSearchParams(location.search).get('maxside'));
 
@@ -59,6 +61,13 @@ els.filter.addEventListener('click', () => {
   els.filter.setAttribute('aria-pressed', String(state.onlyReview));
   render();
 });
+// ---- 探す（T9）。打つたびに全件から絞る。Esc で消して一覧に戻る ----
+els.search.addEventListener('input', () => { state.search = els.search.value; state.showUndated = false; render(); });
+els.search.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { els.search.value = ''; state.search = ''; state.showUndated = false; render(); }
+  if (e.key === 'Enter') els.search.blur(); // スマホのキーボードを閉じて結果を見せる
+});
+els.showUndated.addEventListener('click', () => { state.showUndated = !state.showUndated; render(); });
 els.month.addEventListener('change', async () => {
   state.month = els.month.value;
   try { await refresh(); } catch (e) { say(`読み込めませんでした：${e.message}`); }
@@ -100,6 +109,7 @@ function apply(res, all) {
   state.receipts = orderForScreen(res.receipts);
   state.count = res.needs_review_count; // 月に関係なく全体
   state.table = res;
+  state.all = orderForScreen(all.receipts);
   state.months = monthOptions(all.receipts);
   state.waiting = all.receipts.filter(isPending).length;
   state.reading = state.waiting > 0;
@@ -123,12 +133,13 @@ function render() {
   els.empty.hidden = total !== 0;
   els.bar.hidden = total === 0;
 
-  renderMonthbar(total);
-  const rows = visibleReceipts(state.receipts, state.onlyReview);
-  els.noMatch.hidden = !(state.onlyReview && total > 0 && rows.length === 0 && state.pending.length === 0);
+  const found = renderSearch(total);
+  renderMonthbar(total, !!found);
+  const rows = found ? found.rows : visibleReceipts(state.receipts, state.onlyReview);
+  els.noMatch.hidden = !!found || !(state.onlyReview && total > 0 && rows.length === 0 && state.pending.length === 0);
 
   const want = [
-    ...(state.onlyReview ? [] : state.pending).map((p) => ({ key: p.key, sig: JSON.stringify([p.error]), build: () => pendingRow(p) })),
+    ...(state.onlyReview || found ? [] : state.pending).map((p) => ({ key: p.key, sig: JSON.stringify([p.error]), build: () => pendingRow(p) })),
     ...rows.map((r) => ({ key: r.id, sig: JSON.stringify([r.status, r.queue_position, r.fields, r.edited]), build: () => receiptRow(r) })),
   ];
   const keep = new Set(want.map((w) => w.key));
@@ -152,9 +163,31 @@ function render() {
   }
 }
 
-function renderMonthbar(total) {
+// 探しているときは月・「要確認だけ」に関係なく全件から。見つからなければ日付のない行へ案内する。
+function renderSearch(total) {
+  els.searchbar.hidden = total === 0;
+  const res = searchReceipts(state.all, state.search);
+  const typed = state.search.trim() !== '';
+  els.filter.hidden ||= typed;
+  if (!res.query) {
+    els.searchMsg.className = 'search-msg';
+    els.searchMsg.textContent = typed ? '金額（例: 5000）か日付（例: 10/3）を入れてください' : '';
+    els.showUndated.hidden = true;
+    return null;
+  }
+  const miss = res.rows.length === 0;
+  els.searchMsg.className = 'search-msg' + (miss ? ' miss' : '');
+  els.searchMsg.textContent = searchText(res);
+  els.showUndated.hidden = !(miss && res.undated);
+  els.showUndated.setAttribute('aria-pressed', String(state.showUndated));
+  els.showUndated.textContent = state.showUndated ? '日付のない領収書を閉じる' : `日付のない領収書を見る（${res.undated}枚）`;
+  if (miss && state.showUndated) return { rows: state.all.filter(isUndated) };
+  return res;
+}
+
+function renderMonthbar(total, searching) {
   const t = state.table;
-  els.monthbar.hidden = total === 0 || !t;
+  els.monthbar.hidden = total === 0 || !t || searching;
   if (els.monthbar.hidden) return;
   const want = ['', ...state.months];
   if (state.month && !want.includes(state.month)) want.push(state.month);

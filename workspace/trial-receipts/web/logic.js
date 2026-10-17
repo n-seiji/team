@@ -150,3 +150,53 @@ export function printSheet({ month, receipts = [], total = 0, total_note = '' })
     note: total_note,
   };
 }
+
+// ---- T9: 日付か金額で元の写真を探す ----
+// 「5000」「5,000円」「¥5000」は金額、「10/3」「10月3日」「2026-10-03」は日付として読む。
+// 年を書かなければ、どの年の 10/3 でも当てる。読めない文字列は null（全件表示のまま）。
+export function parseQuery(text) {
+  const s = String(text ?? '').normalize('NFKC').trim().replace(/\s+/g, '');
+  if (!s) return null;
+  let m = s.match(/^(?:(\d{4})[-/年.])?(\d{1,2})[-/月.](\d{1,2})日?$/);
+  if (m) {
+    const [, y, mo, d] = m.map((x) => (x === undefined ? null : Number(x)));
+    if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31) return { kind: 'date', year: y, month: mo, day: d };
+    return null;
+  }
+  m = s.match(/^[¥\\]?(\d{1,3}(?:,\d{3})+|\d+)円?$/);
+  if (m) return { kind: 'amount', amount: Number(m[1].replace(/,/g, '')) };
+  return null;
+}
+
+export function queryLabel(q) {
+  if (!q) return '';
+  if (q.kind === 'amount') return yen(q.amount);
+  return `${q.year ? `${q.year}年` : ''}${q.month}月${q.day}日`;
+}
+
+export function matchesQuery(r, q) {
+  const f = fieldsFor(r) || {};
+  if (q.kind === 'amount') {
+    const v = String(f.amount?.value ?? '').replace(/,/g, '');
+    return v !== '' && Number(v) === q.amount;
+  }
+  const d = String(f.date?.value ?? '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!d) return false;
+  return Number(d[2]) === q.month && Number(d[3]) === q.day && (!q.year || Number(d[1]) === q.year);
+}
+
+export const isUndated = (r) => !fieldsFor(r)?.date?.value;
+
+// 探すときは月や「要確認だけ」に関係なく、全件から探す（先生に聞かれる月は今見ている月とは限らない）。
+export function searchReceipts(all, text) {
+  const q = parseQuery(text);
+  if (!q) return { query: null, rows: all, undated: 0 };
+  const rows = all.filter((r) => matchesQuery(r, q));
+  return { query: q, rows, undated: all.filter(isUndated).length };
+}
+
+export function searchText({ query, rows, undated }) {
+  if (!query) return '';
+  if (rows.length) return `${queryLabel(query)}：${rows.length}枚見つかりました。写真をタップすると原寸で開きます`;
+  return undated ? `見つかりません。日付が入っていない領収書が${undated}枚あります` : `見つかりません（${queryLabel(query)}）`;
+}

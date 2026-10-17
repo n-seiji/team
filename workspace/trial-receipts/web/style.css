@@ -55,6 +55,13 @@ main { padding: 12px 16px; max-width: 760px; margin: 0 auto; }
 .monthbar[hidden], .monthbar [hidden] { display: none; }
 /* 待ち・失敗・直した印は、欄の並び（1列/2列）にかかわらず行の幅いっぱいに出す */
 .fields > .status, .fields > .edited { grid-column: 1 / -1; }
+.searchbar { max-width: 760px; margin: 0 auto; padding: 12px 16px 0; display: grid; gap: 6px; }
+.searchbar label { font-size: 16px; font-weight: 700; }
+.searchbar input { font: inherit; font-size: 18px; min-height: 48px; padding: 6px 12px; border: 2px solid var(--accent); border-radius: 10px; background: var(--card); color: var(--fg); }
+.search-msg { margin: 0; font-size: 16px; font-weight: 700; }
+.search-msg:empty { display: none; }
+.search-msg.miss { color: var(--warn-fg); }
+.searchbar[hidden], .searchbar [hidden] { display: none; }
 .monthbar .actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* /start（テスト機の画面に出す） */
