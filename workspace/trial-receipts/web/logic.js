@@ -12,12 +12,6 @@ export function fitSize(w, h, max = MAX_SIDE) {
   return { width: Math.round(w * r), height: Math.round(h * r), scaled: true };
 }
 
-export const flaggedKeys = (r) =>
-  r.status === 'done' ? FIELD_KEYS.filter((k) => r.fields?.[k]?.needs_review) : [];
-
-// サーバーと同じ数え方: 読み取り中は数えない。失敗は手入力が要るので数える。
-export const needsReview = (r) => r.status === 'failed' || flaggedKeys(r).length > 0;
-
 // 失敗した行も、写真を見てその場で入力できるように空欄の4項目を用意する。
 export const FAILED_REASON = '読み取り失敗';
 // サーバーが空欄の fields を付けて返す場合も、未修正の項目は「読み取れなかった」と伝える。
@@ -29,6 +23,12 @@ export function fieldsFor(r) {
     return [k, { value: f?.value ?? '', confidence: 0, needs_review: true, reason: FAILED_REASON }];
   }));
 }
+
+export const flaggedKeys = (r) =>
+  r.status === 'reading' ? [] : FIELD_KEYS.filter((k) => fieldsFor(r)?.[k]?.needs_review);
+
+// サーバーと同じ数え方（d9f3796）: 読み取り中は数えない。失敗した行も項目の要確認だけで決める。
+export const needsReview = (r) => flaggedKeys(r).length > 0;
 
 // 画面の並び順。日付がまだない行（撮ったばかり・読み取り中・失敗）を先頭に新しい順で出し、
 // その下は API の順（日付順）のまま。撮った直後の行が一覧の末尾に消えないようにする。

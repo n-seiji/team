@@ -17,6 +17,10 @@ test('縮小: 長辺を2000にして縦横比を保つ', () => {
 test('読み取り中は要確認に数えず、失敗は数える（サーバーの needs_review_count と同じ）', () => {
   assert.equal(needsReview({ status: 'reading', fields: null }), false);
   assert.equal(needsReview({ status: 'failed', fields: null }), true);
+  const ok = { value: 'x', confidence: 1, needs_review: false, reason: '' };
+  const fixed = { status: 'failed', fields: { date: ok, amount: ok, payee: ok, category: ok } };
+  assert.equal(needsReview(fixed), false, '失敗行も4項目を直せば要確認から外れる');
+  assert.equal(needsReview({ ...fixed, fields: { ...fixed.fields, amount: undefined } }), true);
   assert.equal(needsReview(done(true)), true);
   assert.equal(needsReview(done(false)), false);
 });

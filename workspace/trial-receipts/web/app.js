@@ -185,7 +185,7 @@ function receiptRow(r) {
   if (r.status === 'reading') { li.append(el('p', { class: 'status', role: 'status' }, '読み取り中…')); return li; }
   const fields = fieldsFor(r);
   const box = el('div', { class: 'fields' });
-  if (r.status === 'failed') box.append(el('p', { class: 'status fail wide' }, '読み取れませんでした。写真を見て入力してください'));
+  if (r.status === 'failed' && needsReview(r)) box.append(el('p', { class: 'status fail wide' }, '読み取れませんでした。写真を見て入力してください'));
   FIELD_KEYS.forEach((k) => box.append(fieldBox(r, fields, k)));
   if (r.edited) box.append(el('p', { class: 'edited wide' }, '✓ 手で直しました'));
   li.append(box);
