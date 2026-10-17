@@ -14,7 +14,7 @@ node --test test/*.test.mjs  # ロジックのテスト
 - LAN の http でも動く（`input[capture]` を使うので HTTPS 必須ではない）。外部公開するなら HTTPS にすること。
 
 ## 受け入れテストの始め方（テスト機）
-1. テスト機で `node src/server.mjs` を起動し、テスト機のブラウザで `http://localhost:3000/start` を開く。LAN の URL の QR と、同じ URL が大きな字で出る（QR は依存なしの `web/qr.js` で作る）。
+1. テスト機で `READER=tesseract node src/server.mjs` を起動し（起動ログに「読み取り: tesseract（ローカル）」と出ることを確かめる）、テスト機のブラウザで `http://localhost:3000/start` を開く。LAN の URL の QR と、同じ URL が大きな字で出る（QR は依存なしの `web/qr.js` で作る）。
 2. スマホはテスト機と同じ Wi-Fi（端末同士がつながるもの）か、テスト機のテザリングにつなぐ。
 3. URL が違うとき（テザリングなど）は `http://localhost:3000/start?url=http://192.168.43.1:3000/` のように指定できる。
 
