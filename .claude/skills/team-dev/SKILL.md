@@ -60,7 +60,8 @@ Repeat until the session is `done`, or until the stopping point the user asked f
 
 ## 3. Finish
 
-- Show `team status` (backlog with results) and the users' verdicts, and point to
+- Show `team status` (backlog with results, tasks waiting on a person, questions for the human) and the users'
+  verdicts, and point to
   `.team/sessions/<name>/transcript.md` (full conversation including private thoughts) and `workspace/<name>/`.
 - Suggest next steps: another iteration (if users rejected and iterations remain the engine already looped back to
   `planning` — just continue the loop), new personas, or committing the result.
@@ -84,6 +85,8 @@ their own fresh clone. So:
 
 - If the user says something meant for the team ("tell them the budget is small", "I want a web UI"), inject it:
   `team say "<their words>"` — every member sees it as a message from `human`.
+- Members never wait on the user. When a reply has `[ASK_HUMAN]`, put the question (and the default the team went
+  ahead with) in your next update to the user and keep the loop running; relay their answer with `team say`.
 - If the user wants to *be* a member for a turn, record their words with `team record --as <member> --force`.
 - To change who is on the team, edit `team.config.json` / `personas/*.json` and start a new session.
 

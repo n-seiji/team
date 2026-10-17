@@ -43,7 +43,11 @@ export interface PhaseDef {
   finale?: boolean;
 }
 
-export type TaskStatus = "todo" | "doing" | "done";
+/**
+ * `blocked`: only a real person can finish it (a real device, an account, publishing); `dropped`: the PM closed it
+ * without doing it. Both count as settled for the team, and are handed over to the human at the end.
+ */
+export type TaskStatus = "todo" | "doing" | "done" | "blocked" | "dropped";
 
 export interface Task {
   id: string;
@@ -55,7 +59,16 @@ export interface Task {
   /** Where the task was created (absent in older sessions). */
   phase?: string;
   iteration?: number;
+  /** What was done ([TASK_DONE]), what a person must do ([TASK_BLOCKED]) or why it was dropped ([TASK_DROP]). */
   summary?: string;
+}
+
+/** A question only the real human can answer ([ASK_HUMAN]); the team keeps going on a stated default meanwhile. */
+export interface HumanQuestion {
+  by: string;
+  text: string;
+  phase: string;
+  iteration: number;
 }
 
 export interface Verdict {
@@ -98,6 +111,8 @@ export interface SessionState {
   verdicts: Verdict[];
   /** What engineers actually showed users ([DEMO]): steps and real output. Absent in older sessions. */
   demos?: Demo[];
+  /** Questions for the real human ([ASK_HUMAN]). Absent in older sessions. */
+  questions?: HumanQuestion[];
   /**
    * The workspace is an existing codebase (e.g. a git worktree given with `init --workspace`), not a folder
    * the team created. Engineers then follow its own rules, and claude-cli turns run inside it.
@@ -117,6 +132,7 @@ export type EntryKind =
   | "decision"
   | "verdict"
   | "demo"
+  | "ask_human"
   | "advance"
   | "system";
 

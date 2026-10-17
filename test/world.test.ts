@@ -145,7 +145,7 @@ test("wrap-up is skipped when nothing is left, and runs for open tasks", () => {
   w.record("e2", "-");
   w.record("pm", "left for the human");
   assert.equal(w.state.status, "done");
-  assert.ok(w.emitted.some((e) => e.kind === "system" && /Still open \(for the human\): T3 \(follow-up\)/.test(e.text)));
+  assert.ok(w.emitted.some((e) => e.kind === "system" && /Still open: T3 \(follow-up\)/.test(e.text)));
 });
 
 test("a rejection with iterations left loops instead of wrapping up", () => {
@@ -196,4 +196,72 @@ test("in the last iteration, follow-ups are handed over in wrap-up, not built", 
   const items = wrapupItems(w.state);
   assert.deepEqual(items.followUps.map((t) => t.id), ["T3"]);
   assert.deepEqual(items.tasks, []);
+});
+
+test("dropped, replaced and blocked tasks no longer hold the build open", () => {
+  const w = make();
+  w.record("pm", "[ADVANCE] enough");
+  w.record(
+    "pm",
+    "[TASK owner=e1] A\n- a\n[TASK owner=e2] B\n- b\n[TASK owner=e1] C\n- c\n" +
+      "[TASK owner=e2 replaces=T2] B, smaller\n- b'\n[TASK_DROP T3] out of scope\n[ADVANCE]",
+  );
+  assert.equal(w.phase.id, "build");
+  assert.deepEqual(
+    w.state.tasks.map((t) => [t.id, t.status]),
+    [["T1", "todo"], ["T2", "dropped"], ["T3", "dropped"], ["T4", "todo"]],
+  );
+  assert.equal(w.state.tasks[1].summary, "replaced by T4");
+  w.record("e1", "[TASK_DONE T1] did A");
+  w.record("e2", "[TASK_BLOCKED T4] needs a real phone to scan the QR");
+  assert.equal(w.phase.id, "review", "build ends: nothing left the team itself can do");
+  assert.equal(w.state.tasks[3].status, "blocked");
+});
+
+test("users cannot drop tasks; questions for the human are kept and reported at the end", () => {
+  const w = make(1);
+  toBuild(w);
+  w.record("e1", "[TASK_DONE T1] ok\n[ASK_HUMAN] May we publish to GitHub Pages? Meanwhile we demo from a local server.");
+  w.record("e2", "[TASK_BLOCKED T2] only the owner can create the API key");
+  w.record("e1", "lgtm");
+  w.record("e2", "lgtm");
+  w.record("pm", "ready");
+  w.record("u1", "[TASK_DROP T1] I don't need it\n[VERDICT accept] ok");
+  assert.equal(w.state.tasks[0].status, "done");
+  w.record("u2", "[VERDICT accept] ok");
+  w.record("pm", "thanks");
+  assert.equal(w.state.status, "done");
+  assert.equal(w.state.questions?.length, 1);
+  assert.match(w.state.questions![0].text, /GitHub Pages/);
+  const end = w.emitted.at(-1)!.text;
+  assert.match(end, /Waiting on a person: T2 \(B\)\./);
+  assert.match(end, /1 question\(s\) for the human/);
+  assert.doesNotMatch(end, /Still open/);
+});
+
+test("the PM plans the next iteration with last rejections, flagging users who keep rejecting", async () => {
+  const { buildPrompt } = await import("../src/prompt.ts");
+  const w = make(3);
+  toAcceptance(w);
+  w.record("u1", "[VERDICT reject] I can't open a terminal");
+  w.record("u2", "[VERDICT accept] ok");
+  w.record("pm", "[DECISION] retry");
+  assert.equal(w.phase.id, "planning");
+  let pm = buildPrompt(w.state, "pm", w.emitted, []).user;
+  assert.match(pm, /## Rejections from the last iteration\n- U1: I can't open a terminal/);
+  assert.doesNotMatch(pm, /rejected in all/);
+  assert.doesNotMatch(buildPrompt(w.state, "e1", w.emitted, []).user, /Rejections from the last iteration/);
+
+  w.record("pm", "[TASK owner=e1] C\n- c\n[ADVANCE]");
+  w.record("e1", "[TASK_DONE T3] ok");
+  w.record("e2", "-");
+  w.record("e1", "-");
+  w.record("e2", "-");
+  w.record("pm", "-");
+  w.record("u1", "[VERDICT reject] still a terminal");
+  w.record("u2", "[VERDICT accept] ok");
+  w.record("pm", "-");
+  assert.equal(w.state.iteration, 3);
+  pm = buildPrompt(w.state, "pm", w.emitted, []).user;
+  assert.match(pm, /- U1 \(rejected in all 2 iterations so far\): still a terminal/);
 });

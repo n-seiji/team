@@ -72,12 +72,25 @@ export const PROTOCOL_HELP = `Reply ONLY with action tags. Each tag starts a lin
   [DONE] end your turn (optional)`;
 
 export const ACTION_HELP: Record<string, string> = {
-  TASK: "[TASK owner=<engineer-id>] short title\n  acceptance criteria on the following lines (testable, user-visible)",
+  TASK:
+    "[TASK owner=<engineer-id>] short title\n  acceptance criteria on the following lines (testable, user-visible)\n" +
+    "  ([TASK owner=<id> replaces=T1] when it supersedes T1; T1 is then closed)",
   TASK_START: "[TASK_START T1] you started working on task T1",
-  TASK_DONE: "[TASK_DONE T1] what you implemented, which files, how to run/verify it",
+  TASK_DONE:
+    "[TASK_DONE T1] what you implemented, which files, and how you verified it: the command you ran and its result, " +
+    "or \"not run\" (never claim a check you did not run)",
+  TASK_BLOCKED:
+    "[TASK_BLOCKED T1] only a real person outside the team can finish this (a real device, an account, a permission, " +
+    "publishing); say exactly what they must do. The team moves on",
+  TASK_DROP: "[TASK_DROP T1] close a task the team will not do, with the reason",
+  ASK_HUMAN:
+    "[ASK_HUMAN] a question only the real human can answer (a product or preference call, a permission, money, " +
+    "anything irreversible), plus the default the team goes ahead with meanwhile. Never for something you can check yourself",
   DEMO:
     "[DEMO T1] what a user does and what they see, with real output you produced (pasted, or the path of a generated file / screenshot)",
   DECISION: "[DECISION] a decision the team should follow from now on",
   ADVANCE: "[ADVANCE] end the current phase now because its goal is met (PM only)",
-  VERDICT: "[VERDICT accept] or [VERDICT reject] followed by your honest reasons (acceptance phase)",
+  VERDICT:
+    "[VERDICT accept] or [VERDICT reject] followed by your honest reasons (acceptance phase), what you based it on " +
+    "(which demo or file you read) and what you could not check",
 };

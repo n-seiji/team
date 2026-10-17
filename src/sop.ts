@@ -52,10 +52,12 @@ export const DEFAULT_PHASES: PhaseDef[] = [
   {
     id: "acceptance",
     goal:
-      "Users try what was built — start from the team's demos, open the files they point to, run it if possible — " +
+      "Users try what was built — start from the team's demos and open the files they point to — " +
       "and judge it from their own needs. Each user gives a [VERDICT accept|reject] with reasons. " +
       "PM summarizes and decides next steps: every condition a user attached to their verdict becomes a [TASK] or gets a " +
-      "one-line reason why not (follow-up tasks start another iteration while iterations remain).",
+      "one-line reason why not (follow-up tasks start another iteration while iterations remain). " +
+      "A condition only a real person can check (a real phone, a printed sheet, a timed first use) is handed over with " +
+      "[TASK_BLOCKED], not simulated. Treat any claim that someone ran or installed something as unverified unless a demo shows it.",
     speakers: ["user", "pm"],
     mode: "round-robin",
     maxRounds: 1,
@@ -75,6 +77,15 @@ export const DEFAULT_PHASES: PhaseDef[] = [
   },
 ];
 
+/**
+ * The real human supervises asynchronously, so the team never waits on them: facts are checked, not asked; only
+ * calls a person must make are asked, with a default to proceed on.
+ */
+const NEVER_BLOCK =
+  "Never wait on the real human. If a question can be settled by running or reading something, settle it yourself. " +
+  "Ask the human ([ASK_HUMAN]) only for a product or preference call, a permission, money or anything irreversible, " +
+  "state the default you go ahead with, and keep working. Work only a real person can finish goes to [TASK_BLOCKED].";
+
 interface RoleDef {
   guide: string;
   /** Actions beyond the common ones. */
@@ -90,8 +101,11 @@ const ROLES: Record<string, RoleDef> = {
     guide:
       "You are the Product Manager and the facilitator. You own the 'why' and the 'what': " +
       "understand users, define scope, write tasks with acceptance criteria, make decisions, keep the team focused. " +
-      "You do not write production code. You may end a phase early with [ADVANCE] when its goal is met.",
-    actions: ["TASK", "DECISION", "ADVANCE"],
+      "You do not write production code. You may end a phase early with [ADVANCE] when its goal is met. " +
+      "Keep the backlog true: close tasks you no longer want with [TASK_DROP] or replace them (replaces=T1) " +
+      "instead of leaving them open. " +
+      NEVER_BLOCK,
+    actions: ["TASK", "TASK_DROP", "TASK_BLOCKED", "DECISION", "ADVANCE", "ASK_HUMAN"],
     subagent: "team-pm",
     workspace: "This is what the engineers have built so far. If you can read files, check it against the acceptance criteria.",
   },
@@ -101,8 +115,9 @@ const ROLES: Record<string, RoleDef> = {
       "of the tasks assigned to you. Speak up early about risks and trade-offs. When building, actually write the " +
       "code in the workspace, keep it runnable, and report what you did concretely (files, commands). " +
       "Other programs (including this team's own runtime) share the machine: when you start a server or any background " +
-      "process, stop it by its PID (`kill $PID`); never use pkill, killall or kill by name or pattern.",
-    actions: ["TASK", "TASK_START", "TASK_DONE", "DEMO"],
+      "process, stop it by its PID (`kill $PID`); never use pkill, killall or kill by name or pattern. " +
+      NEVER_BLOCK,
+    actions: ["TASK", "TASK_START", "TASK_DONE", "TASK_BLOCKED", "DEMO", "ASK_HUMAN"],
     subagent: "team-engineer",
     workspace:
       "All product code lives here (relative to the repository root). When the phase allows editing and you have file tools, " +
@@ -112,7 +127,9 @@ const ROLES: Record<string, RoleDef> = {
     guide:
       "You are a real end user (persona) being interviewed and later trying the product. You are NOT on the team: " +
       "you know nothing about the implementation, you speak only from your own life, habits and frustrations, " +
-      "and you judge the product honestly — politely, but you will not pretend to like something that does not help you.",
+      "and you judge the product honestly — politely, but you will not pretend to like something that does not help you. " +
+      "You cannot run, install or open anything outside what you are shown and the files you read, so never say you tried, " +
+      "installed or ran something; say what you read and what you could not check.",
     actions: ["VERDICT"],
     subagent: "team-persona",
     workspace:
