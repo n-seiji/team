@@ -1,7 +1,7 @@
 // Agent reply protocol. Like TinyTroupe's THINK / TALK / DONE actions, but as
 // plain-text tags so any model (or a human) can produce them reliably:
 //
-//   [THINK] private reasoning, only you will remember it
+//   [THINK] a short private memo, only its author sees it
 //   [SAY to=pm,eng-a] message (to=all when omitted)
 //   [TASK owner=eng-a] title
 //   acceptance criteria (following lines)
@@ -67,7 +67,7 @@ function parseAttrs(s: string): { attrs: Record<string, string>; arg?: string } 
 
 export const PROTOCOL_HELP = `Reply ONLY with action tags. Each tag starts a line; its content runs until the next tag.
 Write every tag's content (including [THINK] and [NOTE]) in the session language.
-  [THINK] private reasoning (only you remember it; keep it short)
+  [THINK] a short private memo to yourself (only you see it)
   [SAY to=all] message to everyone        ([SAY to=<id>,<id>] to address specific members; they will reply next)
   [NOTE] a fact you want to remember for the rest of the project (long-term memory)
   [DONE] end your turn (optional)`;

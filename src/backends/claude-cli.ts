@@ -21,7 +21,8 @@ export class ClaudeCliBackend implements Backend {
   }
 
   respond(p: TurnPrompt, ctx: TurnContext): Promise<string> {
-    const args = ["-p", "--output-format", "text", "--allowedTools", (p.canEdit ? BUILDER : READ_ONLY).join(",")];
+    // --strict-mcp-config: a turn needs no MCP servers, and loading the user's (Slack, Notion, ...) slows every turn.
+    const args = ["-p", "--output-format", "text", "--strict-mcp-config", "--allowedTools", (p.canEdit ? BUILDER : READ_ONLY).join(",")];
     if (p.canEdit) args.push("--permission-mode", "acceptEdits");
     if (this.model) args.push("--model", this.model);
     // In an existing codebase, run inside it so its own CLAUDE.md, rules and hooks apply to the turn.
@@ -44,7 +45,8 @@ export class ClaudeCliBackend implements Backend {
       child.stderr.on("data", (d) => (err += d));
       child.on("error", (e) => reject(new Error(`failed to start "${this.bin}": ${e.message}`)));
       child.on("close", (code) =>
-        code === 0 ? resolve(out.trim()) : reject(new Error(`claude exited with ${code}: ${err.slice(0, 500)}`)),
+        // In text mode claude prints API errors (rate limits, safeguards) on stdout, not stderr.
+        code === 0 ? resolve(out.trim()) : reject(new Error(`claude exited with ${code}: ${(err.trim() || out.trim()).slice(-500)}`)),
       );
       child.stdin.end(input);
     });

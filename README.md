@@ -46,7 +46,7 @@ If any user rejects and the iteration limit (`maxIterations`) has not been reach
 Agents reply with plain-text tags, an extension of TinyTroupe's THINK / TALK / DONE actions (`src/protocol.ts`):
 
 ```
-[THINK] private reasoning, visible only to its author
+[THINK] a short private memo, visible only to its author
 [SAY to=user-yamada] the addressed member speaks next (to=all addresses everyone)
 [NOTE] long-term memory, shown to its author on every later turn
 [TASK owner=eng-backend] title

@@ -45,7 +45,7 @@ reject が1件でもあり、イテレーション上限 (`maxIterations`) に�
 エージェントは TinyTroupe の THINK / TALK / DONE を拡張したテキストタグで返答します（`src/protocol.ts`）。
 
 ```
-[THINK] 本人にしか見えない思考
+[THINK] 本人にしか見えない短いメモ
 [SAY to=user-yamada] 指名された人が次に話す（to=all なら全員宛て）
 [NOTE] 長期メモ（以降のターンで毎回本人に提示される）
 [TASK owner=eng-backend] タイトル

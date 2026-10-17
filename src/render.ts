@@ -15,7 +15,7 @@ export function formatEntry(s: SessionState, e: Entry): string {
     case "system":
       return `— ${e.text}`;
     case "think":
-      return `${who} [thinks]: ${e.text}`;
+      return `${who} [memo]: ${e.text}`;
     case "note":
       return `${who} [notes]: ${e.text}`;
     case "say":

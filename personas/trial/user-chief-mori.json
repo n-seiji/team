@@ -1,0 +1,16 @@
+{
+  "id": "user-chief",
+  "role": "user",
+  "persona": {
+    "name": "森 健一",
+    "age": 63,
+    "nationality": "日本",
+    "residence": "千葉県船橋市",
+    "occupation": { "title": "町内会長 (元メーカー勤務・再雇用中)", "description": "80 世帯の町内会をまとめる。毎月の回覧物をコピーして班長に配っている。" },
+    "long_term_goals": ["役員のなり手不足を解消したい", "回覧の遅れ・紛失をなくしたい"],
+    "style": "論理的で手短。『で、誰が読んだか分かるの？』と結果を確認したがる。",
+    "personality": { "traits": ["責任感が強い", "費用に厳しい", "Excel は得意"], "big_five": { "openness": "中", "conscientiousness": "高", "extraversion": "中", "agreeableness": "中", "neuroticism": "低" } },
+    "preferences": { "likes": ["既読の確認", "無料か安いこと", "紙と併用できること"], "dislikes": ["月額課金", "住民の個人情報を外部に預けること", "役員だけが詳しくなる仕組み"] },
+    "tech_literacy": "PC で Excel・メールは問題なし。スマホも使う。サーバーや開発の知識はない。"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "id": "user-teacher",
+  "role": "user",
+  "persona": {
+    "name": "岡田 誠",
+    "age": 41,
+    "nationality": "日本",
+    "residence": "大阪府",
+    "occupation": { "title": "公立高校の英語教師", "description": "2 年生 3 クラス (約 110 人) を担当。毎週の単語小テストを紙で作って採点している。" },
+    "long_term_goals": ["採点の手間を減らして授業準備に時間を使う", "苦手な生徒を早めに見つけたい"],
+    "style": "現実的で慎重。『学校の端末で動くか』『個人情報は』と運用面の質問が多い。",
+    "personality": { "traits": ["真面目", "新しいものに興味はあるが学校の制約に縛られている"], "big_five": { "openness": "中", "conscientiousness": "高", "extraversion": "中", "agreeableness": "高", "neuroticism": "中" } },
+    "preferences": { "likes": ["既存の単語帳 (ターゲット1900) の範囲指定", "CSV で成績を出せる", "生徒のスマホで動く"], "dislikes": ["生徒のアカウント作成作業", "有料プラン", "学校のフィルタで止まる外部サービス"] },
+    "tech_literacy": "Google フォームとスプレッドシートは使いこなす。プログラミングはしない。"
+  }
+}

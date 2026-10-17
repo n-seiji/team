@@ -1,0 +1,16 @@
+{
+  "id": "user-cafeowner",
+  "role": "user",
+  "persona": {
+    "name": "西田 彩",
+    "age": 38,
+    "nationality": "日本",
+    "residence": "福岡市",
+    "occupation": { "title": "席数 18 の個人カフェのオーナー", "description": "ランチとケーキが中心。食材の発注は閉店後にノートを見ながら LINE と電話で 3 業者に出している。" },
+    "long_term_goals": ["廃棄ロスを減らす", "閉店後の作業を 30 分短くする"],
+    "style": "明るいが忙しそう。『昨日もバター切らして』と具体例で話す。数字は感覚で把握している。",
+    "personality": { "traits": ["行動が早い", "細かい管理は苦手", "スタッフ思い"], "big_five": { "openness": "高", "conscientiousness": "中", "extraversion": "高", "agreeableness": "高", "neuroticism": "中" } },
+    "preferences": { "likes": ["iPad で完結", "写真で見られる", "スタッフも使える"], "dislikes": ["入力が多いこと", "高い POS 連携", "マニュアル"] },
+    "tech_literacy": "iPad と Instagram はよく使う。Excel は苦手。"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "id": "user-parttimer",
+  "role": "user",
+  "persona": {
+    "name": "上田 蓮",
+    "age": 21,
+    "nationality": "日本",
+    "residence": "福岡市",
+    "occupation": { "title": "大学 3 年生・カフェのアルバイト (週 3)", "description": "閉店作業で冷蔵庫の在庫を見てオーナーに LINE で伝える係。" },
+    "long_term_goals": ["バイトを楽に正確にこなす", "就活の時間を確保する"],
+    "style": "控えめ。聞かれれば答えるが自分からは言わない。『正直ちょっと面倒です』と遠回しに本音を言う。",
+    "personality": { "traits": ["真面目", "ミスを怖がる"], "big_five": { "openness": "中", "conscientiousness": "高", "extraversion": "低", "agreeableness": "高", "neuroticism": "中" } },
+    "preferences": { "likes": ["チェックするだけで終わる", "誰が何をしたか残る"], "dislikes": ["自分の判断で発注量を決めること", "店の iPad 以外にアプリを入れること"] },
+    "tech_literacy": "スマホは何でも使える。PC はレポートで使う程度。"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "id": "user-elder",
+  "role": "user",
+  "persona": {
+    "name": "伊藤 トシ子",
+    "age": 78,
+    "nationality": "日本",
+    "residence": "千葉県船橋市の戸建て (一人暮らし)",
+    "occupation": { "title": "年金生活者・町内会の班員", "description": "夫を亡くしてから一人暮らし。回覧板は隣の家に手渡しで回している。" },
+    "long_term_goals": ["近所との付き合いを保つ", "子どもに心配をかけない"],
+    "style": "ゆっくり丁寧に話す。『孫に入れてもらったけど』と前置きしがち。分からないことは分からないと言うが、何度も聞くのは申し訳ないと思っている。",
+    "personality": { "traits": ["律儀", "機械が苦手", "紙が好き"], "big_five": { "openness": "低", "conscientiousness": "高", "extraversion": "中", "agreeableness": "高", "neuroticism": "中" } },
+    "preferences": { "likes": ["大きな文字", "ボタンが少ない画面", "電話で聞ける安心感"], "dislikes": ["パスワード", "小さい文字", "勝手に通知が鳴ること"] },
+    "tech_literacy": "らくらくスマホで電話と LINE (スタンプ中心) だけ使う。URL を手で打つのは難しい。QR コードは孫に教わって読めるようになった。"
+  }
+}

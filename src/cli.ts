@@ -261,18 +261,23 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
         const others = otherSessionChanges(store, w.state);
         const ctx = { state: w.state, root };
         // Members scheduled in the same step act in parallel (like TinyWorld steps).
-        const replies = await Promise.all(
-          ids.map((id) => backend.respond(buildPrompt(w.state, id, view, files, { others }), ctx)),
+        const replies = await Promise.allSettled(
+          ids.map((id) => withRetry(() => backend.respond(buildPrompt(w.state, id, view, files, { others }), ctx))),
         );
+        // Keep the replies that came back even if a sibling failed: their file edits are already on disk.
         ids.forEach((id, i) => {
+          const r = replies[i];
+          if (r.status === "rejected") return;
           const before = w.emitted.length;
-          w.record(id, replies[i]);
+          w.record(id, r.value);
           for (const e of w.emitted.slice(before)) out(`[${e.phase}] ${formatEntry(w.state, e)}`);
         });
         const fresh = [...w.emitted];
         store.save(w, es);
         es.push(...fresh);
         turns += ids.length;
+        const failed = replies.flatMap((r, i) => (r.status === "rejected" ? [`${ids[i]}: ${String(r.reason?.message ?? r.reason)}`] : []));
+        if (failed.length) throw new Error(`turn failed after retries (run again to resume)\n${failed.join("\n")}`);
       }
       out(w.state.status === "done" ? "session is done." : `stopped after ${turns} turn(s); run again to continue.`);
       return;
@@ -295,4 +300,16 @@ function statusText(w: World): string {
   ];
   if (s.externalWorkspace) lines.splice(1, 0, `workspace: ${s.workspace} (existing codebase)`);
   return lines.join("\n");
+}
+
+/** Backends fail transiently (rate limits, overload, an occasional safeguard refusal); try a turn up to 3 times. */
+async function withRetry<T>(fn: () => Promise<T>, attempts = 3, delayMs = 5000): Promise<T> {
+  for (let i = 1; ; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      if (i >= attempts) throw e;
+      await new Promise((r) => setTimeout(r, delayMs * i));
+    }
+  }
 }

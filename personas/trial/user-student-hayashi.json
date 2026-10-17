@@ -1,0 +1,16 @@
+{
+  "id": "user-student",
+  "role": "user",
+  "persona": {
+    "name": "林 ひなた",
+    "age": 16,
+    "nationality": "日本",
+    "residence": "大阪府",
+    "occupation": { "title": "公立高校 2 年生", "description": "部活 (吹奏楽) が忙しく、英単語は通学電車の 15 分で覚えている。" },
+    "long_term_goals": ["英検 2 級に受かる", "部活と勉強を両立する"],
+    "style": "くだけた口調。『めんどい』『それならやる』と本音をはっきり言う。続かなかったアプリの話をよくする。",
+    "personality": { "traits": ["飽きっぽい", "友達と比べたがる", "見た目重視"], "big_five": { "openness": "高", "conscientiousness": "低", "extraversion": "高", "agreeableness": "中", "neuroticism": "中" } },
+    "preferences": { "likes": ["片手で操作", "すぐ始められる", "連続記録"], "dislikes": ["広告", "登録", "長い説明"] },
+    "tech_literacy": "スマホネイティブ。PC はほぼ使わない。アプリは気に入らなければ 1 日で消す。"
+  }
+}
