@@ -12,7 +12,9 @@ export function createApi(base = '') {
   return {
     kind: 'real',
     base,
-    list: () => fetch(`${base}/receipts`).then(j), // { receipts, needs_review_count }
+    // month 'YYYY-MM' を付けるとその月だけ。{ receipts, needs_review_count(全体), total, total_note, undated_count }
+    list: (month = '') => fetch(`${base}/receipts${month ? `?month=${month}` : ''}`).then(j),
+    csvUrl: (month = '') => `${base}/export.csv${month ? `?month=${month}` : ''}`,
     // body は画像のバイト列そのもの（multipart ではない）。Content-Type で形式を伝える
     upload: (blob) =>
       fetch(`${base}/receipts`, {

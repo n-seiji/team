@@ -2,14 +2,16 @@ import { createApi } from './api.js';
 import { createMockApi } from './mock-api.js';
 import {
   FIELD_KEYS, FIELD_LABELS, CATEGORIES, MAX_SIDE,
-  fitSize, flaggedKeys, needsReview, visibleReceipts, flagText, countText, validateInput,
+  fitSize, needsReview, visibleReceipts, flagText, countText, validateInput,
+  fieldsFor, orderForScreen, monthOptions, monthLabel, totalText,
 } from './logic.js';
 
 const $ = (s) => document.querySelector(s);
 const els = { list: $('#list'), empty: $('#empty'), bar: $('#bar'), count: $('#count'), filter: $('#filter'),
-  camera: $('#camera'), toast: $('#toast'), noMatch: $('#no-match'), banner: $('#demo-banner') };
+  camera: $('#camera'), toast: $('#toast'), noMatch: $('#no-match'), banner: $('#demo-banner'),
+  monthbar: $('#monthbar'), month: $('#month'), total: $('#total'), undated: $('#undated'), csv: $('#csv'), csvOff: $('#csv-off') };
 
-const state = { api: null, receipts: [], count: 0, onlyReview: false, pending: [], rowSig: new Map() };
+const state = { api: null, receipts: [], count: 0, table: null, months: [], month: '', onlyReview: false, pending: [], rowSig: new Map() };
 let shotNo = 0;
 
 // ---- 縮小（長辺 MAX_SIDE px）。失敗したら元画像をそのまま送る ----
@@ -36,6 +38,7 @@ async function register(file) {
     await state.api.upload(blob, file.name || 'receipt.jpg');
     state.pending = state.pending.filter((x) => x !== p);
     URL.revokeObjectURL(p.url);
+    state.reading = true;
     await refresh();
     say(`${shotNo}枚目を登録しました`);
   } catch (e) {
@@ -55,21 +58,33 @@ els.filter.addEventListener('click', () => {
   els.filter.setAttribute('aria-pressed', String(state.onlyReview));
   render();
 });
+els.month.addEventListener('change', async () => {
+  state.month = els.month.value;
+  try { await refresh(); } catch (e) { say(`読み込めませんでした：${e.message}`); }
+});
 
 function say(text) { els.toast.textContent = ''; setTimeout(() => (els.toast.textContent = text), 50); }
 
 // ---- 取得と定期更新（読み取り待ちがある間だけ） ----
+// 月の選択肢は全件から作るので、月で絞っているときは全件も取る。
 async function refresh() {
-  const res = await state.api.list();
-  state.receipts = res.receipts;
-  state.count = res.needs_review_count;
+  const [res, all] = await Promise.all([state.api.list(state.month), state.month ? state.api.list() : null]);
+  apply(res, all || res);
   render();
+}
+function apply(res, all) {
+  state.receipts = orderForScreen(res.receipts);
+  state.count = res.needs_review_count; // 月に関係なく全体
+  state.table = res;
+  state.months = monthOptions(all.receipts);
+  state.reading = all.receipts.some((r) => r.status === 'reading');
 }
 let timer;
 function schedulePoll() {
   clearTimeout(timer);
   timer = setTimeout(async () => {
-    try { if (state.receipts.some((r) => r.status === 'reading')) await refresh(); } catch {}
+    // 月で絞っていると読み取り中の行（日付なし）は見えないので、全件側で待ちがあるかを見る
+    try { if (state.reading) await refresh(); } catch {}
     schedulePoll();
   }, 1500);
 }
@@ -83,6 +98,7 @@ function render() {
   els.empty.hidden = total !== 0;
   els.bar.hidden = total === 0;
 
+  renderMonthbar(total);
   const rows = visibleReceipts(state.receipts, state.onlyReview);
   els.noMatch.hidden = !(state.onlyReview && total > 0 && rows.length === 0 && state.pending.length === 0);
 
@@ -109,6 +125,27 @@ function render() {
     if (prev ? prev.nextElementSibling !== li : els.list.firstElementChild !== li) els.list.insertBefore(li, prev ? prev.nextElementSibling : els.list.firstChild);
     prev = li;
   }
+}
+
+function renderMonthbar(total) {
+  const t = state.table;
+  els.monthbar.hidden = total === 0 || !t;
+  if (els.monthbar.hidden) return;
+  const want = ['', ...state.months];
+  if (state.month && !want.includes(state.month)) want.push(state.month);
+  if ([...els.month.options].map((o) => o.value).join() !== want.join()) {
+    els.month.replaceChildren(...want.map((m) => el('option', { value: m }, m ? monthLabel(m) : 'すべて')));
+    els.month.value = state.month;
+  }
+  els.total.textContent = totalText({ month: state.month, total: t.total ?? 0, total_note: t.total_note ?? '' });
+  els.total.classList.toggle('has', !!t.total_note);
+  const undated = state.month ? t.undated_count ?? 0 : 0;
+  els.undated.hidden = undated === 0;
+  els.undated.textContent = `日付が入っていない領収書が${undated}枚あり、この月の表に入っていません。「すべて」で直せます`;
+  const url = state.api.csvUrl?.(state.month);
+  els.csv.hidden = !url;
+  els.csvOff.hidden = !!url;
+  if (url) els.csv.href = url;
 }
 
 function el(tag, attrs = {}, ...kids) {
@@ -140,16 +177,17 @@ function receiptRow(r) {
   const label = r.fields?.payee?.value || '領収書';
   const li = el('li', { class: 'row' + (needsReview(r) ? ' flag' : '') }, thumb(url, label));
   if (r.status === 'reading') { li.append(el('p', { class: 'status', role: 'status' }, '読み取り中…')); return li; }
-  if (r.status === 'failed') { li.append(el('p', { class: 'status fail' }, '読み取れませんでした。写真を見て手で入力してください')); return li; }
+  const fields = fieldsFor(r);
   const box = el('div', { class: 'fields' });
-  FIELD_KEYS.forEach((k) => box.append(fieldBox(r, k)));
+  if (r.status === 'failed') box.append(el('p', { class: 'status fail wide' }, '読み取れませんでした。写真を見て入力してください'));
+  FIELD_KEYS.forEach((k) => box.append(fieldBox(r, fields, k)));
   if (r.edited) box.append(el('p', { class: 'edited wide' }, '✓ 手で直しました'));
   li.append(box);
   return li;
 }
 
-function fieldBox(r, key) {
-  const f = r.fields[key];
+function fieldBox(r, fields, key) {
+  const f = fields[key];
   const id = `f-${r.id}-${key}`;
   const msgId = `m-${r.id}-${key}`;
   const flagged = f.needs_review;
@@ -188,12 +226,13 @@ async function boot() {
   try {
     if (!api) throw new Error('mock');
     const res = await api.list();
-    state.receipts = res.receipts; state.count = res.needs_review_count;
+    apply(res, res);
   } catch {
     api = createMockApi();
     els.banner.hidden = false;
   }
   state.api = api;
+  if (api.kind === 'mock') { const res = await api.list(); apply(res, res); }
   render();
   schedulePoll();
 }

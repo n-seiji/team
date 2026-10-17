@@ -24,10 +24,22 @@ export function createMockApi({ delay = 1500 } = {}) {
     items.filter((r) => r.status === 'done' && Object.values(r.fields).some((f) => f.needs_review)).length;
   return {
     kind: 'mock',
-    list: async () => ({ receipts: items.map((r) => structuredClone({ ...r, blob: undefined })), needs_review_count: count() }),
+    list: async (month = '') => {
+      const dateOf = (r) => r.fields?.date?.value || '';
+      const rows = month ? items.filter((r) => dateOf(r).startsWith(month)) : items;
+      const unconfirmed = rows.filter((r) => r.status !== 'done' || Object.values(r.fields).some((f) => f.needs_review)).length;
+      return {
+        receipts: rows.map((r) => structuredClone({ ...r })),
+        needs_review_count: count(),
+        total: rows.reduce((s, r) => s + (Number(r.fields?.amount?.value) || 0), 0),
+        total_note: unconfirmed ? `未確認が${unconfirmed}件あり、合計は確定ではありません` : '',
+        undated_count: items.filter((r) => !dateOf(r)).length,
+      };
+    },
+    csvUrl: () => null, // デモでは CSV を出さない（見本データを本物の表として保存させない）
     upload: async (blob) => {
       const n = seq++;
-      const r = { id: `mock-${n + 1}`, status: 'reading', fields: null, edited: false, image_url: URL.createObjectURL(blob) };
+      const r = { id: `mock-${n + 1}`, status: 'reading', created_at: new Date().toISOString(), fields: null, edited: false, image_url: URL.createObjectURL(blob) };
       items.unshift(r);
       setTimeout(() => { r.fields = SAMPLES[n % SAMPLES.length](); r.status = 'done'; }, delay);
       return { id: r.id, status: r.status };

@@ -44,3 +44,12 @@ main { padding: 12px 16px; max-width: 760px; margin: 0 auto; }
 .edited { font-size: 13px; color: var(--ok); margin: 0; }
 @media (min-width: 560px) { .fields { grid-template-columns: 1fr 1fr; } .field.wide { grid-column: 1 / -1; } }
 @media (prefers-reduced-motion: no-preference) { .row { transition: border-color .2s; } }
+.monthbar { max-width: 760px; margin: 0 auto; padding: 12px 16px 0; display: grid; gap: 6px; }
+.monthbar label { font-size: 13px; color: var(--muted); }
+.monthbar select { font: inherit; min-height: 44px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--fg); }
+.monthbar .btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+.total { margin: 4px 0 0; font-size: 18px; font-weight: 700; }
+.total.has { color: var(--warn-fg); }
+.total.has::before { content: "⚠ "; }
+.note.left { text-align: left; margin: 0; font-size: 14px; }
+.monthbar[hidden], .monthbar [hidden] { display: none; }

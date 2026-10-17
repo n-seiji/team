@@ -15,19 +15,58 @@ export function fitSize(w, h, max = MAX_SIDE) {
 export const flaggedKeys = (r) =>
   r.status === 'done' ? FIELD_KEYS.filter((k) => r.fields?.[k]?.needs_review) : [];
 
-export const needsReview = (r) => flaggedKeys(r).length > 0;
+// サーバーと同じ数え方: 読み取り中は数えない。失敗は手入力が要るので数える。
+export const needsReview = (r) => r.status === 'failed' || flaggedKeys(r).length > 0;
+
+// 失敗した行も、写真を見てその場で入力できるように空欄の4項目を用意する。
+export const FAILED_REASON = '読み取り失敗';
+// サーバーが空欄の fields を付けて返す場合も、未修正の項目は「読み取れなかった」と伝える。
+export function fieldsFor(r) {
+  if (r.status !== 'failed') return r.fields;
+  return Object.fromEntries(FIELD_KEYS.map((k) => {
+    const f = r.fields?.[k];
+    if (f && !f.needs_review) return [k, f];
+    return [k, { value: f?.value ?? '', confidence: 0, needs_review: true, reason: FAILED_REASON }];
+  }));
+}
+
+// 画面の並び順。日付がまだない行（撮ったばかり・読み取り中・失敗）を先頭に新しい順で出し、
+// その下は API の順（日付順）のまま。撮った直後の行が一覧の末尾に消えないようにする。
+export function orderForScreen(list) {
+  const undated = list.filter((r) => !r.fields?.date?.value).sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+  return [...undated, ...list.filter((r) => r.fields?.date?.value)];
+}
+
+// 月の選択肢。日付のある行から YYYY-MM を集め、新しい月が上。
+export function monthOptions(list) {
+  return [...new Set(list.map((r) => r.fields?.date?.value?.slice(0, 7)).filter(Boolean))].sort().reverse();
+}
+
+export const yen = (n) => `${Number(n).toLocaleString('ja-JP')}円`;
+
+export function monthLabel(m) {
+  const [y, mo] = m.split('-');
+  return `${y}年${Number(mo)}月`;
+}
+
+// 合計の行。未確認があるときは「確定ではない」をはっきり出す（total_note はサーバーの文言）。
+export function totalText({ month, total, total_note }) {
+  const head = `${month ? monthLabel(month) : 'すべて'}の合計 ${yen(total)}`;
+  return total_note ? `${head}（${total_note}）` : head;
+}
 
 export function visibleReceipts(list, onlyReview) {
   return onlyReview ? list.filter(needsReview) : list;
 }
 
-// 「要確認：金額が薄くて読めません」。reason は述語の形（「薄くて読めません」「形式が不正です」）で受け取る。
-// 「未読み取り」だけは最初のアダプタが返す固定語なので、自然な文にする。
+// 「要確認：金額が薄くて読めません」。reason は述語の形（「空です」「不正な形式です」「不確かです」）で受け取る。
+// 「未読み取り」（最初のアダプタの固定語）と画面側の「読み取り失敗」だけは、自然な文にする。
 export function flagText(key, field) {
   const label = FIELD_LABELS[key];
   const reason = field?.reason;
   if (!reason) return `要確認：${label}を確認してください`;
   if (reason === '未読み取り') return `要確認：${label}はまだ読み取られていません`;
+  if (reason === FAILED_REASON) return `要確認：読み取れませんでした。写真を見て${label}を入力してください`;
   return `要確認：${label}が${reason}`;
 }
 

@@ -12,6 +12,14 @@
   <p id="count" class="count" role="status" aria-live="polite">要確認 0件</p>
   <button id="filter" class="btn ghost" type="button" aria-pressed="false">要確認だけ見る</button>
 </header>
+<section id="monthbar" class="monthbar" hidden>
+  <label for="month">表示する月</label>
+  <select id="month"><option value="">すべて</option></select>
+  <p id="total" class="total" aria-live="polite"></p>
+  <p id="undated" class="note left" hidden></p>
+  <a id="csv" class="btn" download hidden>CSV を保存（Excel で開けます）</a>
+  <p id="csv-off" class="note left" hidden>デモ表示では CSV は保存できません</p>
+</section>
 <main>
   <section id="empty" class="empty" hidden>
     <button class="btn big shoot" type="button">📷 領収書を撮る</button>

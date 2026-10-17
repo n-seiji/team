@@ -18,12 +18,17 @@ node --test test/*.test.mjs  # ロジックのテスト
 - 要確認は 色＋⚠アイコン＋文言（例「要確認：金額が薄くて読めません」）。直して保存すると消える。
 - 一覧上部の「要確認 ○件」は API の全体 `needs_review_count`。「要確認だけ見る」ボタンで絞り込んでも変わらない。
 - 0件のときは「領収書を撮ると、ここに表ができます」と大きな撮影ボタンだけ。
+- 並び順: 日付がまだない行（撮ったばかり・読み取り中・失敗）を先頭に新しい順。その下は API の日付順。
+- 読み取りに失敗した行も、空欄の4項目を出して写真を見ながら入力できる（「要確認：読み取れませんでした。写真を見て金額を入力してください」）。
+- 月の表: 「表示する月」で月を選ぶと、その月の行と「2026年10月の合計 12,345円」が出る。未確認があれば「（未確認が○件あり、合計は確定ではありません）」を併記。日付のない領収書は月の表に入らないので、その枚数を案内する。
+- 「CSV を保存」は `GET /export.csv?month=` へのリンク。デモ表示（モック）では出さない（見本データを本物の表として保存させないため）。
 
-## API への期待（eng-backend と確認中）
+## API（eng-backend と合意済み。実装は `src/server.mjs`）
 | 操作 | 形 |
 |---|---|
-| `POST /receipts` | multipart の `image`。すぐ `{id, status}` |
-| `GET /receipts` | `{receipts:[{id,status,fields,edited,image_url?}], needs_review_count}`。`fields.{date,amount,payee,category}` は `{value,confidence,needs_review,reason}` |
+| `POST /receipts` | body は画像のバイト列そのもの（`Content-Type: image/jpeg` など）。すぐ `{id, status}` |
+| `GET /receipts?month=YYYY-MM` | `{receipts:[{id,status,fields,edited,image_url}], needs_review_count, total, total_note, undated_count}`。`needs_review_count` は月に関係なく全体の枚数。`fields.{date,amount,payee,category}` は `{value,confidence,needs_review,reason}` |
+| `GET /export.csv?month=YYYY-MM` | BOM 付き UTF-8 の CSV |
 | `PATCH /receipts/:id` | `{ "amount": "1200" }`（直す項目だけ）。更新後の領収書を返す |
 | `GET /receipts/:id/image` | 元の写真 |
 - `reason` は述語の形（「薄くて読めません」「不正な形式です」）。「未読み取り」だけは画面側で文にする。
@@ -31,5 +36,5 @@ node --test test/*.test.mjs  # ロジックのテスト
 
 ## 未確認・既知の制限
 - 実ブラウザ（iOS Safari / Android Chrome）での動作はまだ確認していない。ここで確認できたのはロジックのテストのみ。
-- 月での絞り込み、CSV ダウンロードは T2 側の画面が決まってから。
-- 一覧の並び順は API の返す順をそのまま使う（モックは新しい順）。
+- 実 API には `node src/server.mjs` → `http://<IP>:3000/` で同じオリジンからつながる（スモーク確認済み）。
+- 失敗した行を4項目とも直しても、サーバー側では status が failed のままで要確認に数えられる（eng-backend に相談中）。
