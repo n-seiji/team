@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   fitSize, maxSideFrom, needsReview, visibleReceipts, flagText, countText, validateInput,
-  fieldsFor, orderForScreen, monthOptions, totalText, statusText, pickStartUrl, printSheet, PRINT_HEAD,
+  fieldsFor, orderForScreen, monthOptions, totalText, statusText, pickStartUrl, printSheet, PRINT_HEAD, noAmountCount, noAmountText,
   parseQuery, searchReceipts, searchText,
 } from '../web/logic.js';
 import { qrMatrix, qrSvg } from '../web/qr.js';
@@ -138,13 +138,32 @@ test('印刷: 5列と合計だけ。id や /receipts/… は出ない。未確�
   assert.deepEqual(s.head, PRINT_HEAD);
   assert.deepEqual(s.head, ['日付', '金額', '支払先', 'カテゴリ', '要確認']);
   assert.deepEqual(s.rows[0], ['2026-10-03', '5,000円', 'タクシー', '交通費', '']);
-  assert.deepEqual(s.rows[1], ['2026-10-07', '', 'カフェ', '会議費', '要確認']);
+  assert.deepEqual(s.rows[1], ['2026-10-07', '', 'カフェ', '会議費', '金額']);
   assert.equal(s.title, '2026年10月の経費（領収書 2枚）');
   assert.equal(s.total, '合計 6,200円');
   assert.equal(s.note, '未確認が1件あり、合計は確定ではありません');
   const text = JSON.stringify(s);
   assert.ok(!text.includes('abc-123') && !text.includes('/receipts/'), 'id と画像のパスは紙に出さない');
   assert.equal(printSheet({ ...table, total_note: '' }).note, '');
+});
+
+test('T11: 紙で、合計に入っていない枚数・怪しい項目名・未分類が分かる', () => {
+  const ok = (v) => ({ value: v, confidence: 1, needs_review: false, reason: '' });
+  const ng = (v, reason) => ({ value: v, confidence: 0.2, needs_review: true, reason });
+  const receipts = [
+    { id: 'a', status: 'done', fields: { date: ok('2026-10-01'), amount: ok(1200), payee: ok('ローソン新宿店'), category: ng('その他', 'カテゴリが決まりません') } },
+    { id: 'b', status: 'done', fields: { date: ok('2026-10-08'), amount: ng('', 'はっきり読めません'), payee: ok('〇〇交通タクシー'), category: ok('交通費') } },
+    { id: 'c', status: 'done', fields: { date: ng('', '見つかりません'), amount: ng('', 'はっきり読めません'), payee: ok('珈琲館'), category: ok('会議費') } },
+    { id: 'd', status: 'done', fields: { date: ok('2026-10-09'), amount: ok(480), payee: ok('珈琲館'), category: ok('会議費') } },
+  ];
+  const s = printSheet({ month: '2026-10', receipts, total: 1680, total_note: '未確認が3件あり、合計は確定ではありません' });
+  assert.deepEqual(s.rows[0], ['2026-10-01', '1,200円', 'ローソン新宿店', '未分類（要確認）', '分類']);
+  assert.deepEqual(s.rows[1], ['2026-10-08', '', '〇〇交通タクシー', '交通費', '金額']);
+  assert.equal(s.rows[2][4], '日付・金額');
+  assert.deepEqual(s.rows[3], ['2026-10-09', '480円', '珈琲館', '会議費', '']);
+  assert.ok(!s.rows.some((r) => r[4] === '要確認'), '「要確認」の一語だけにしない');
+  assert.equal(s.no_amount, '金額が入っていない領収書 2枚（合計に入っていません）');
+  assert.equal(noAmountText(noAmountCount([receipts[0], receipts[3]])), '', '全部入っていれば出さない');
 });
 test('字の大きさ: 項目名と入力欄は 16px 以上。印刷では表以外を隠す', () => {
   const css = readFileSync(new URL('../web/style.css', import.meta.url), 'utf8');

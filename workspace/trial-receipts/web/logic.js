@@ -128,18 +128,30 @@ export function pickStartUrl({ override, urls = [], origin, hostname }) {
   return { url, others: lan.filter((u) => u !== url) };
 }
 
+// 合計に入っていない行（金額が空欄）。先生は合計の数字だけを見るので、合計の横に枚数を出す（T11）。
+// 読み取り待ちの行もまだ金額がなく、合計に入っていないので数える。
+const hasAmount = (r) => { const v = r.fields?.amount?.value; return v !== '' && v != null; };
+export const noAmountCount = (receipts = []) => receipts.filter((r) => !hasAmount(r)).length;
+export const noAmountText = (n) => (n ? `金額が入っていない領収書 ${n}枚（合計に入っていません）` : '');
+
+// 紙の「要確認」の列に出す項目名。カテゴリは先生に通じる「分類」と書く。
+export const PRINT_FLAG_LABELS = { date: '日付', amount: '金額', payee: '支払先', category: '分類' };
+// カテゴリが要確認のままなら「その他」と書かない。決まった分類に見えてしまうため（CSV も同じ文言）。
+export const UNCLASSIFIED = '未分類（要確認）';
+
 // 印刷用の表（先生が綴じる紙）。日付・金額・支払先・カテゴリ・要確認の5列と合計だけ。id や画像のパスは出さない。
 export const PRINT_HEAD = ['日付', '金額', '支払先', 'カテゴリ', '要確認'];
 export function printSheet({ month, receipts = [], total = 0, total_note = '' }) {
   const rows = receipts.map((r) => {
     const f = fieldsFor(r) ?? {};
     const amount = f.amount?.value;
+    const flags = flaggedKeys(r);
     return [
       f.date?.value || '（日付なし）',
       amount ? yen(amount) : '',
       f.payee?.value || '',
-      f.category?.value || '',
-      isPending(r) ? '読み取り中' : needsReview(r) ? '要確認' : '',
+      flags.includes('category') ? UNCLASSIFIED : f.category?.value || '',
+      isPending(r) ? '読み取り中' : flags.map((k) => PRINT_FLAG_LABELS[k]).join('・'),
     ];
   });
   return {
@@ -147,6 +159,7 @@ export function printSheet({ month, receipts = [], total = 0, total_note = '' })
     head: PRINT_HEAD,
     rows,
     total: `合計 ${yen(total)}`,
+    no_amount: noAmountText(noAmountCount(receipts)),
     note: total_note,
   };
 }

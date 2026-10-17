@@ -3,7 +3,7 @@ import { createMockApi } from './mock-api.js';
 import {
   FIELD_KEYS, FIELD_LABELS, CATEGORIES, maxSideFrom,
   fitSize, needsReview, visibleReceipts, flagText, countText, validateInput,
-  fieldsFor, orderForScreen, monthOptions, monthLabel, totalText, isPending, statusText, printSheet,
+  fieldsFor, orderForScreen, monthOptions, monthLabel, totalText, isPending, statusText, printSheet, noAmountCount, noAmountText,
   searchReceipts, searchText, isUndated,
 } from './logic.js';
 
@@ -85,6 +85,7 @@ function buildPrintout() {
       el('thead', {}, el('tr', {}, ...s.head.map((h, i) => cell('th', h, i)))),
       el('tbody', {}, ...s.rows.map((r) => el('tr', {}, ...r.map((v, i) => cell('td', v, i))))),
       el('tfoot', {}, el('tr', {}, el('td', { colspan: String(numCol) }, ''), el('td', { class: 'num' }, s.total), el('td', { colspan: String(s.head.length - numCol - 1) }, '')))),
+    s.no_amount ? el('p', { class: 'p-note' }, `⚠ ${s.no_amount}`) : null,
     s.note ? el('p', { class: 'p-note' }, `⚠ ${s.note}`) : null);
 }
 els.print.addEventListener('click', () => { buildPrintout(); window.print(); });
@@ -195,8 +196,9 @@ function renderMonthbar(total, searching) {
     els.month.replaceChildren(...want.map((m) => el('option', { value: m }, m ? monthLabel(m) : 'すべて')));
     els.month.value = state.month;
   }
-  els.total.textContent = totalText({ month: state.month, total: t.total ?? 0, total_note: t.total_note ?? '' });
-  els.total.classList.toggle('has', !!t.total_note);
+  const noAmount = noAmountText(noAmountCount(t.receipts));
+  els.total.textContent = totalText({ month: state.month, total: t.total ?? 0, total_note: t.total_note ?? '' }) + (noAmount ? ` ／ ${noAmount}` : '');
+  els.total.classList.toggle('has', !!t.total_note || !!noAmount);
   const undated = state.month ? t.undated_count ?? 0 : 0;
   els.undated.hidden = undated === 0;
   els.undated.textContent = `日付が入っていない領収書が${undated}枚あり、この月の表に入っていません。「すべて」で直せます`;

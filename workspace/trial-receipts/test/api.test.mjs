@@ -154,6 +154,14 @@ test('CSV は数式に見える支払先を無害化する', () => {
   assert.match(toCsv([rec]), /"'=HYPERLINK\(""x""\)"/);
 });
 
+test('CSV: カテゴリが要確認のままの行は「その他」ではなく「未分類（要確認）」', () => {
+  const rec = { id: 'y', status: 'done', fields: { date: { value: '2026-10-01' }, amount: { value: 1200 }, payee: { value: 'ローソン' }, category: { value: 'その他', needs_review: true, reason: 'が決まりません' } } };
+  const line = toCsv([rec]).split('\r\n')[1];
+  assert.match(line, /"ローソン","未分類（要確認）","要確認：/);
+  const ok = { ...rec, fields: { ...rec.fields, category: { value: '消耗品費', needs_review: false } } };
+  assert.match(toCsv([ok]).split('\r\n')[1], /"ローソン","消耗品費",""/);
+});
+
 // 読み取りを外から1件ずつ進められるリーダー
 function gatedReader() {
   const waiting = [];

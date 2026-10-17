@@ -41,9 +41,11 @@ export function toCsv(rows) {
   const lines = [head.map(q).join(',')];
   for (const r of rows) {
     const f = r.fields ?? {};
-    const reasons = FIELDS.filter((k) => f[k]?.needs_review).map((k) => `${LABELS[k]}が${f[k].reason}`).join(' / ');
+    const reasons = FIELDS.filter((k) => f[k]?.needs_review).map((k) => (f[k].reason === '未読み取り' ? `${LABELS[k]}はまだ読み取られていません` : `${LABELS[k]}が${f[k].reason}`)).join(' / ');
     const flag = rowUnconfirmed(r) ? `要確認${reasons ? '：' + reasons : ''}` : '';
-    lines.push([f.date?.value ?? '', f.amount?.value ?? '', f.payee?.value ?? '', f.category?.value ?? '', flag, r.id, `/receipts/${r.id}/image`].map(q).join(','));
+    // 紙と同じく、カテゴリが要確認のままなら「その他」ではなく「未分類（要確認）」と書く（T11）
+    const category = f.category?.needs_review ? '未分類（要確認）' : f.category?.value ?? '';
+    lines.push([f.date?.value ?? '', f.amount?.value ?? '', f.payee?.value ?? '', category, flag, r.id, `/receipts/${r.id}/image`].map(q).join(','));
   }
   return '﻿' + lines.join('\r\n') + '\r\n'; // UTF-8 BOM（Excel向け）
 }
