@@ -233,3 +233,11 @@ test('/api/info は、同じ Wi-Fi のスマホから開ける URL を返す', a
   assert.ok(Array.isArray(info.urls));
   assert.equal(info.reader, 'none');
 });
+
+test('/start は拡張子なしで QR の画面を返す（起動ログに出す URL が 404 にならない）', async (t) => {
+  const s = await start(t);
+  const res = await fetch(s.base + '/start');
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get('content-type'), /text\/html/);
+  assert.match(await res.text(), /start\.js/);
+});

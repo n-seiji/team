@@ -142,7 +142,7 @@ export function createApp({ dataDir = path.join(root, 'data'), reader = nullRead
         return res.end(toCsv(t.rows));
       }
       if (req.method === 'GET') { // フロントの静的ファイル（web/）
-        const rel = p === '/' ? 'index.html' : p.slice(1);
+        const rel = p === '/' ? 'index.html' : p === '/start' ? 'start.html' : p.slice(1);
         const file = path.join(publicDir, rel);
         if (file.startsWith(publicDir + path.sep) && STATIC[path.extname(file)]) {
           try {
