@@ -117,6 +117,26 @@ test('リーダーが例外を投げると failed になり、項目は要確認
   s.close();
 });
 
+test('failed の行も4項目を直せば要確認が消え、件数から外れる（status は failed のまま残す）', async () => {
+  const s = await start({ reader: async () => { throw new Error('boom'); } });
+  const rec = await (await post(s.base)).json();
+  await settle();
+  assert.equal((await (await fetch(`${s.base}/receipts`)).json()).needs_review_count, 1);
+  const r = await fetch(`${s.base}/receipts/${rec.id}`, {
+    method: 'PATCH', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ date: '2026-10-05', amount: '880', payee: 'タクシー', category: '交通費' }),
+  });
+  const got = await r.json();
+  assert.equal(r.status, 200);
+  assert.equal(got.status, 'failed');
+  assert.equal(got.needs_review, false);
+  const list = await (await fetch(`${s.base}/receipts?month=2026-10`)).json();
+  assert.equal(list.needs_review_count, 0);
+  assert.equal(list.unconfirmed_count, 0);
+  assert.equal(list.total, 880);
+  s.close();
+});
+
 test('normalize: 閾値未満・形式NG・カテゴリ外は要確認。推測で埋めない', () => {
   const n = normalize({
     date: { value: '2026-13-01', confidence: 0.99 },

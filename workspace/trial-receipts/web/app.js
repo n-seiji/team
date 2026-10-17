@@ -63,6 +63,12 @@ els.month.addEventListener('change', async () => {
   try { await refresh(); } catch (e) { say(`読み込めませんでした：${e.message}`); }
 });
 
+// 入力中の行は描画を後回しにしているので、行からフォーカスが出たら描き直す
+els.list.addEventListener('focusout', (e) => {
+  const row = e.target.closest('li');
+  setTimeout(() => { if (row && !row.contains(document.activeElement)) render(); }, 0);
+});
+
 function say(text) { els.toast.textContent = ''; setTimeout(() => (els.toast.textContent = text), 50); }
 
 // ---- 取得と定期更新（読み取り待ちがある間だけ） ----
@@ -201,6 +207,11 @@ function fieldBox(r, fields, key) {
     if (bad) { msg.className = 'err-msg'; msg.textContent = bad; input.setAttribute('aria-invalid', 'true'); return; }
     try {
       await state.api.patch(r.id, { [key]: next.trim() });
+      // Tab で隣の欄へ移ると行ごとの描き直しは保留になるので、直した欄の要確認はここで消す
+      f.value = next.trim();
+      msg.className = 'sr-only'; msg.textContent = '';
+      input.removeAttribute('aria-invalid');
+      input.closest('.field')?.classList.remove('flag');
       await refresh();
       say(`${FIELD_LABELS[key]}を直しました`);
     } catch (e) { msg.className = 'err-msg'; msg.textContent = `保存できませんでした：${e.message}`; }
