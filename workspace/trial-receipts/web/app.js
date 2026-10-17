@@ -3,13 +3,13 @@ import { createMockApi } from './mock-api.js';
 import {
   FIELD_KEYS, FIELD_LABELS, CATEGORIES, maxSideFrom,
   fitSize, needsReview, visibleReceipts, flagText, countText, validateInput,
-  fieldsFor, orderForScreen, monthOptions, monthLabel, totalText,
+  fieldsFor, orderForScreen, monthOptions, monthLabel, totalText, isPending, statusText, printSheet,
 } from './logic.js';
 
 const $ = (s) => document.querySelector(s);
 const els = { list: $('#list'), empty: $('#empty'), bar: $('#bar'), count: $('#count'), filter: $('#filter'),
   camera: $('#camera'), toast: $('#toast'), noMatch: $('#no-match'), banner: $('#demo-banner'),
-  monthbar: $('#monthbar'), month: $('#month'), total: $('#total'), undated: $('#undated'), csv: $('#csv'), csvOff: $('#csv-off') };
+  monthbar: $('#monthbar'), month: $('#month'), total: $('#total'), undated: $('#undated'), csv: $('#csv'), csvOff: $('#csv-off'), print: $('#print'), printout: $('#printout') };
 
 const state = { api: null, receipts: [], count: 0, table: null, months: [], month: '', onlyReview: false, pending: [], rowSig: new Map() };
 let shotNo = 0;
@@ -64,6 +64,23 @@ els.month.addEventListener('change', async () => {
   try { await refresh(); } catch (e) { say(`読み込めませんでした：${e.message}`); }
 });
 
+// ---- 印刷（月の表を紙用の5列で組み、ブラウザの印刷を開く。Ctrl+P でも同じ表になる） ----
+function buildPrintout() {
+  if (!state.table) return;
+  const s = printSheet({ month: state.month, ...state.table });
+  const numCol = s.head.indexOf('金額');
+  const cell = (tag, text, i) => el(tag, i === numCol ? { class: 'num' } : i === 0 ? { class: 'date' } : {}, text);
+  els.printout.replaceChildren(
+    el('h1', {}, s.title),
+    el('table', {},
+      el('thead', {}, el('tr', {}, ...s.head.map((h, i) => cell('th', h, i)))),
+      el('tbody', {}, ...s.rows.map((r) => el('tr', {}, ...r.map((v, i) => cell('td', v, i))))),
+      el('tfoot', {}, el('tr', {}, el('td', { colspan: String(numCol) }, ''), el('td', { class: 'num' }, s.total), el('td', { colspan: String(s.head.length - numCol - 1) }, '')))),
+    s.note ? el('p', { class: 'p-note' }, `⚠ ${s.note}`) : null);
+}
+els.print.addEventListener('click', () => { buildPrintout(); window.print(); });
+window.addEventListener('beforeprint', buildPrintout);
+
 // 入力中の行は描画を後回しにしているので、行からフォーカスが出たら描き直す
 els.list.addEventListener('focusout', (e) => {
   const row = e.target.closest('li');
@@ -84,7 +101,8 @@ function apply(res, all) {
   state.count = res.needs_review_count; // 月に関係なく全体
   state.table = res;
   state.months = monthOptions(all.receipts);
-  state.reading = all.receipts.some((r) => r.status === 'reading');
+  state.waiting = all.receipts.filter(isPending).length;
+  state.reading = state.waiting > 0;
 }
 let timer;
 function schedulePoll() {
@@ -99,7 +117,7 @@ function schedulePoll() {
 // ---- 描画 ----
 function render() {
   const total = state.receipts.length + state.pending.length;
-  els.count.textContent = countText(state.count);
+  els.count.textContent = countText(state.count, state.waiting);
   els.count.classList.toggle('has', state.count > 0);
   els.filter.hidden = total === 0;
   els.empty.hidden = total !== 0;
@@ -111,7 +129,7 @@ function render() {
 
   const want = [
     ...(state.onlyReview ? [] : state.pending).map((p) => ({ key: p.key, sig: JSON.stringify([p.error]), build: () => pendingRow(p) })),
-    ...rows.map((r) => ({ key: r.id, sig: JSON.stringify([r.status, r.fields, r.edited]), build: () => receiptRow(r) })),
+    ...rows.map((r) => ({ key: r.id, sig: JSON.stringify([r.status, r.queue_position, r.fields, r.edited]), build: () => receiptRow(r) })),
   ];
   const keep = new Set(want.map((w) => w.key));
   for (const [k] of state.rowSig) if (!keep.has(k)) { document.getElementById(`r-${k}`)?.remove(); state.rowSig.delete(k); }
@@ -170,7 +188,7 @@ function thumb(url, alt) {
 
 function pendingRow(p) {
   const li = el('li', { class: 'row' }, thumb(p.url, '撮影した領収書'));
-  if (!p.error) return li.appendChild(el('p', { class: 'status', role: 'status' }, '読み取り中…')).parentElement;
+  if (!p.error) return li.appendChild(el('p', { class: 'status', role: 'status' }, '送っています…')).parentElement;
   li.append(el('div', {},
     el('p', { class: 'status fail' }, `送れませんでした：${p.error}`),
     el('button', { class: 'btn', type: 'button', onclick: () => { state.pending = state.pending.filter((x) => x !== p); register(p.file); } }, 'もう一度送る'),
@@ -183,9 +201,10 @@ function receiptRow(r) {
   const url = state.api.imageUrl(r);
   const label = r.fields?.payee?.value || '領収書';
   const li = el('li', { class: 'row' + (needsReview(r) ? ' flag' : '') }, thumb(url, label));
-  if (r.status === 'reading') { li.append(el('p', { class: 'status', role: 'status' }, '読み取り中…')); return li; }
   const fields = fieldsFor(r);
   const box = el('div', { class: 'fields' });
+  // 待っている間も手で入れ始められる（直した欄は読み取り結果で上書きされない）
+  if (isPending(r)) box.append(el('p', { class: 'status wide', role: 'status' }, statusText(r)));
   if (r.status === 'failed' && needsReview(r)) box.append(el('p', { class: 'status fail wide' }, '読み取れませんでした。写真を見て入力してください'));
   FIELD_KEYS.forEach((k) => box.append(fieldBox(r, fields, k)));
   if (r.edited) box.append(el('p', { class: 'edited wide' }, '✓ 手で直しました'));
@@ -225,7 +244,7 @@ function fieldBox(r, fields, key) {
     control.value = f.value || '';
   } else {
     control = el('input', { ...common, type: 'text', value: f.value ?? '', onchange: (e) => save(e.target),
-      inputmode: key === 'amount' ? 'numeric' : 'text', placeholder: key === 'date' ? '2026-03-05' : '', enterkeyhint: 'done' });
+      inputmode: key === 'amount' ? 'numeric' : 'text', placeholder: key === 'date' ? '例: 2026-03-05' : '', enterkeyhint: 'done' });
   }
   return el('div', { class: 'field' + (flagged ? ' flag' : '') + (key === 'payee' ? ' wide' : '') },
     el('label', { for: id }, FIELD_LABELS[key]), control, msg);

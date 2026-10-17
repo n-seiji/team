@@ -20,6 +20,23 @@ const blank = (reason) => ({
 export function createMockApi({ delay = 1500 } = {}) {
   const items = [];
   let seq = 0;
+  // 本物と同じく1枚ずつ順番に読む（queued → reading → done）
+  const queue = [];
+  let running = null;
+  const pump = () => {
+    if (running || !queue.length) return;
+    running = queue.shift();
+    running.status = 'reading';
+    setTimeout(() => {
+      const r = running;
+      const s = SAMPLES[r.n % SAMPLES.length]();
+      r.fields = Object.fromEntries(Object.keys(s).map((k) => [k, r.fields?.[k]?.edited ? r.fields[k] : s[k]]));
+      r.status = 'done';
+      running = null;
+      pump();
+    }, delay);
+  };
+  const position = (r) => queue.indexOf(r) + (running ? 1 : 0);
   const count = () =>
     items.filter((r) => r.status === 'done' && Object.values(r.fields).some((f) => f.needs_review)).length;
   return {
@@ -29,7 +46,7 @@ export function createMockApi({ delay = 1500 } = {}) {
       const rows = month ? items.filter((r) => dateOf(r).startsWith(month)) : items;
       const unconfirmed = rows.filter((r) => r.status !== 'done' || Object.values(r.fields).some((f) => f.needs_review)).length;
       return {
-        receipts: rows.map((r) => structuredClone({ ...r })),
+        receipts: rows.map(({ n, ...r }) => structuredClone(r.status === 'queued' ? { ...r, queue_position: position(items.find((x) => x.id === r.id)) } : r)),
         needs_review_count: count(),
         total: rows.reduce((s, r) => s + (Number(r.fields?.amount?.value) || 0), 0),
         total_note: unconfirmed ? `未確認が${unconfirmed}件あり、合計は確定ではありません` : '',
@@ -39,19 +56,22 @@ export function createMockApi({ delay = 1500 } = {}) {
     csvUrl: () => null, // デモでは CSV を出さない（見本データを本物の表として保存させない）
     upload: async (blob) => {
       const n = seq++;
-      const r = { id: `mock-${n + 1}`, status: 'reading', created_at: new Date().toISOString(), fields: null, edited: false, image_url: URL.createObjectURL(blob) };
+      const r = { id: `mock-${n + 1}`, n, status: 'queued', created_at: new Date().toISOString(), fields: null, edited: false, image_url: URL.createObjectURL(blob) };
       items.unshift(r);
-      setTimeout(() => { r.fields = SAMPLES[n % SAMPLES.length](); r.status = 'done'; }, delay);
+      queue.push(r);
+      pump();
       return { id: r.id, status: r.status };
     },
     patch: async (id, fields) => {
       const r = items.find((x) => x.id === id);
-      if (!r || r.status !== 'done') throw new Error('この領収書はまだ直せません');
+      if (!r) throw new Error('この領収書が見つかりません');
+      r.fields ??= blank('未読み取り');
       for (const [k, v] of Object.entries(fields)) {
-        r.fields[k] = { value: v, confidence: 1, needs_review: false, reason: '' };
+        r.fields[k] = { value: v, confidence: 1, needs_review: false, reason: '', edited: true };
       }
       r.edited = true;
-      return structuredClone({ ...r });
+      const { n, ...out } = r;
+      return structuredClone(out);
     },
     imageUrl: (r) => r.image_url,
   };

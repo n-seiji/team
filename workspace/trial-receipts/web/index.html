@@ -17,7 +17,10 @@
   <select id="month"><option value="">すべて</option></select>
   <p id="total" class="total" aria-live="polite"></p>
   <p id="undated" class="note left" hidden></p>
-  <a id="csv" class="btn" download hidden>CSV を保存（Excel で開けます）</a>
+  <div class="actions">
+    <button id="print" class="btn" type="button">🖨 印刷（先生に渡す表）</button>
+    <a id="csv" class="btn" download hidden>CSV を保存（Excel で開けます）</a>
+  </div>
   <p id="csv-off" class="note left" hidden>デモ表示では CSV は保存できません</p>
 </section>
 <main>
@@ -31,6 +34,7 @@
 <footer class="bar" id="bar">
   <button class="btn primary shoot" type="button">📷 撮影</button>
 </footer>
+<section id="printout" class="printout"></section>
 <input id="camera" type="file" accept="image/*" capture="environment" hidden>
 <p id="toast" class="sr-only" role="status" aria-live="polite"></p>
 <script type="module" src="app.js"></script>

@@ -25,6 +25,7 @@ export function maxSideFrom(param) {
 export const FAILED_REASON = '読み取り失敗';
 // サーバーが空欄の fields を付けて返す場合も、未修正の項目は「読み取れなかった」と伝える。
 export function fieldsFor(r) {
+  if (isPending(r)) return pendingFields(r);
   if (r.status !== 'failed') return r.fields;
   return Object.fromEntries(FIELD_KEYS.map((k) => {
     const f = r.fields?.[k];
@@ -33,8 +34,26 @@ export function fieldsFor(r) {
   }));
 }
 
+// 順番待ち・読み取り中の行。読み取りを待たずに手で入れられるよう空欄を出すが、⚠ はまだ出さない。
+// 手で直した欄（edited）はそのまま。読み取り結果が届いても上書きされない（サーバー側の約束）。
+export const isPending = (r) => r.status === 'queued' || r.status === 'reading';
+function pendingFields(r) {
+  return Object.fromEntries(FIELD_KEYS.map((k) => {
+    const f = r.fields?.[k];
+    return [k, f?.edited ? f : { value: '', confidence: 0, needs_review: false, reason: '' }];
+  }));
+}
+
+// 「順番待ち（前に2枚）」「読み取り中…」。queue_position は前にある枚数（読み取り中の1枚を含む）。
+export function statusText(r) {
+  if (r.status === 'reading') return '読み取り中…';
+  if (r.status !== 'queued') return '';
+  const n = r.queue_position;
+  return Number.isInteger(n) && n > 0 ? `順番待ち（前に${n}枚）` : '順番待ち';
+}
+
 export const flaggedKeys = (r) =>
-  r.status === 'reading' ? [] : FIELD_KEYS.filter((k) => fieldsFor(r)?.[k]?.needs_review);
+  isPending(r) ? [] : FIELD_KEYS.filter((k) => fieldsFor(r)?.[k]?.needs_review);
 
 // サーバーと同じ数え方（d9f3796）: 読み取り中は数えない。失敗した行も項目の要確認だけで決める。
 export const needsReview = (r) => flaggedKeys(r).length > 0;
@@ -79,8 +98,10 @@ export function flagText(key, field) {
   return `要確認：${label}が${reason}`;
 }
 
-export function countText(n) {
-  return n === 0 ? '要確認 0件（すべて確認済み）' : `要確認 ${n}件`;
+// waiting: 順番待ち・読み取り中の枚数。待ちがあるのに「すべて確認済み」とは言わない。
+export function countText(n, waiting = 0) {
+  if (n === 0) return waiting ? `要確認 0件（読み取り待ち ${waiting}枚）` : '要確認 0件（すべて確認済み）';
+  return `要確認 ${n}件`;
 }
 
 // 日付 YYYY-MM-DD / 金額は整数の文字列だけを通す（サーバーも検証するが、入力ミスをその場で返す）
@@ -95,4 +116,37 @@ export function validateInput(key, text) {
   if (key === 'amount' && !/^\d{1,9}$/.test(v)) return '金額は数字だけで入力してください（例: 1200）';
   if (key === 'category' && !CATEGORIES.includes(v)) return 'カテゴリを選んでください';
   return '';
+}
+
+// /start で QR にする URL を選ぶ。?url= の指定が最優先。スマホから開いているならその URL。
+// LAN の候補が複数あるときは家庭・事務所の Wi-Fi でよく使う 192.168.* → 10.* → 172.* の順。
+export function pickStartUrl({ override, urls = [], origin, hostname }) {
+  const rank = (u) => { const h = new URL(u).hostname; return h.startsWith('192.168.') ? 0 : h.startsWith('10.') ? 1 : h.startsWith('172.') ? 2 : 3; };
+  const lan = [...urls].sort((a, b) => rank(a) - rank(b));
+  const local = /^(localhost|127\.|\[?::1)/.test(hostname);
+  const url = override || (!local ? `${origin}/` : lan[0] ?? `${origin}/`);
+  return { url, others: lan.filter((u) => u !== url) };
+}
+
+// 印刷用の表（先生が綴じる紙）。日付・金額・支払先・カテゴリ・要確認の5列と合計だけ。id や画像のパスは出さない。
+export const PRINT_HEAD = ['日付', '金額', '支払先', 'カテゴリ', '要確認'];
+export function printSheet({ month, receipts = [], total = 0, total_note = '' }) {
+  const rows = receipts.map((r) => {
+    const f = fieldsFor(r) ?? {};
+    const amount = f.amount?.value;
+    return [
+      f.date?.value || '（日付なし）',
+      amount ? yen(amount) : '',
+      f.payee?.value || '',
+      f.category?.value || '',
+      isPending(r) ? '読み取り中' : needsReview(r) ? '要確認' : '',
+    ];
+  });
+  return {
+    title: `${month ? monthLabel(month) : 'すべて'}の経費（領収書 ${rows.length}枚）`,
+    head: PRINT_HEAD,
+    rows,
+    total: `合計 ${yen(total)}`,
+    note: total_note,
+  };
 }
