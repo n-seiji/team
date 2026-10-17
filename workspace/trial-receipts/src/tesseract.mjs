@@ -73,12 +73,12 @@ export function findAmount(lines) {
     if (!/^\d{1,3}(,\d{3})+$|^\d+$/.test(raw)) { found.push({ bad: true }); continue; }
     found.push({ value: Number(raw.replace(/,/g, '')), conf: l.conf });
   }
-  if (!found.length) return blank('合計が見つかりません');
-  if (found.some((f) => f.bad)) return blank('数字が読み取れません');
+  if (!found.length) return blank('合計の行に見つかりません');
+  if (found.some((f) => f.bad)) return blank('はっきり読めません');
   const values = new Set(found.map((f) => f.value));
-  if (values.size > 1) return blank('合計の候補が複数あります');
+  if (values.size > 1) return blank('2つ以上の値に読めます');
   const v = found[0].value;
-  if (!isValidAmount(v)) return blank('数字が読み取れません');
+  if (!isValidAmount(v)) return blank('はっきり読めません');
   return { value: v, confidence: Math.min(...found.map((f) => f.conf)) };
 }
 
@@ -90,19 +90,19 @@ export function findDate(lines) {
     for (const m of t.matchAll(/(20\d{2})[年/.\-](\d{1,2})[月/.\-](\d{1,2})/g)) found.push({ y: +m[1], m: +m[2], d: +m[3], conf: l.conf });
     for (const m of t.matchAll(/(?:令和|R)(\d{1,2})[年/.](\d{1,2})[月/.](\d{1,2})/g)) found.push({ y: 2018 + +m[1], m: +m[2], d: +m[3], conf: l.conf });
   }
-  if (!found.length) return blank('日付が見つかりません');
+  if (!found.length) return blank('見つかりません');
   const iso = (f) => `${f.y}-${String(f.m).padStart(2, '0')}-${String(f.d).padStart(2, '0')}`;
   const values = new Set(found.map(iso));
-  if (values.size > 1) return blank('日付の候補が複数あります');
+  if (values.size > 1) return blank('2つ以上の値に読めます');
   const v = iso(found[0]);
-  if (!isValidDate(v)) return blank('日付が読み取れません');
+  if (!isValidDate(v)) return blank('はっきり読めません');
   return { value: v, confidence: Math.min(...found.map((f) => f.conf)) };
 }
 
 // 支払先は先頭の、数字や記号だけではない行。
 export function findPayee(lines) {
   const l = lines.find((x) => (x.text.match(/[\p{L}]/gu) ?? []).length >= 2 && !/領収|レシート|receipt/i.test(x.text));
-  return l ? { value: l.text.slice(0, 40), confidence: l.conf } : blank('支払先が見つかりません');
+  return l ? { value: l.text.slice(0, 40), confidence: l.conf } : blank('見つかりません');
 }
 
 // カテゴリはキーワードで1つに決まるときだけ。決まらなければ空欄（→「その他」＋要確認）。
@@ -115,7 +115,7 @@ const CATEGORY_WORDS = [
 export function findCategory(lines) {
   const text = lines.map((l) => l.text).join('\n');
   const hits = CATEGORY_WORDS.filter(([, re]) => re.test(text)).map(([c]) => c);
-  if (hits.length !== 1) return blank(hits.length ? 'カテゴリの候補が複数あります' : 'カテゴリが決まりません');
+  if (hits.length !== 1) return blank(hits.length ? '1つに決まりません（候補が複数）' : '決まりません');
   return { value: hits[0], confidence: 0.85 }; // 仮の値。実サンプルで誤りが出たら下げる
 }
 

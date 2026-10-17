@@ -27,14 +27,14 @@ test('誤読しそうな形は数にせず、空欄＋要確認になる', () =>
   assert.deepEqual([n.amount.value, n.amount.needs_review], ['', true]);
   assert.equal(n.date.value, '2026-10-09');
   // 合成画像で実際に出た読み（「¥1,500」→「\\1.500」）。末尾の 500 だけを拾わない
-  assert.deepEqual(extract([L('運賃 ~”\\1.500', 0.99)]).amount, { value: '', confidence: 0, reason: '数字が読み取れません' });
+  assert.deepEqual(extract([L('運賃 ~”\\1.500', 0.99)]).amount, { value: '', confidence: 0, reason: 'はっきり読めません' });
 });
 
 test('合計や日付の候補が食い違えば、どちらも選ばない', () => {
   const r = extract([L('2026/10/03'), L('2026/10/08'), L('合計 ¥480'), L('ご請求 ¥4,800')]);
   assert.equal(r.amount.value, '');
-  assert.equal(r.amount.reason, '合計の候補が複数あります');
-  assert.equal(r.date.reason, '日付の候補が複数あります');
+  assert.equal(r.amount.reason, '2つ以上の値に読めます');
+  assert.equal(r.date.reason, '2つ以上の値に読めます');
 });
 
 test('令和の日付、存在しない日付', () => {
@@ -73,3 +73,16 @@ function whitePng(w, h) {
   const raw = Buffer.alloc((w + 1) * h, 255); for (let y = 0; y < h; y++) raw[y * (w + 1)] = 0;
   return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
 }
+
+test('reason は述語の形で、画面の「要確認：金額が○○」で項目名が重ならない', async () => {
+  const { flagText } = await import('../web/logic.js');
+  const cases = [
+    extract([]),
+    extract([L('合計 ¥1,2O0'), L('2026/10/03'), L('2026/10/04')]),
+    extract([L('合計 ¥480'), L('合計 ¥500')]),
+  ];
+  for (const r of cases) for (const k of ['date', 'amount', 'payee', 'category']) {
+    const text = flagText(k, normalize(r)[k]);
+    assert.doesNotMatch(text, /(日付|金額|支払先|カテゴリ)が(日付|金額|支払先|カテゴリ|数字)/, text);
+  }
+});
