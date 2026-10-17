@@ -6,7 +6,7 @@ import * as path from "node:path";
 import type { Entry, SessionState } from "./types.ts";
 import { ACTION_HELP, PROTOCOL_HELP } from "./protocol.ts";
 import { EXTERNAL_WORKSPACE_GUIDE, allowedActions, canEdit, roleGuide, workspaceGuide } from "./sop.ts";
-import { formatBacklog, formatEntry } from "./render.ts";
+import { formatBacklog, formatEntry, formatQuestions } from "./render.ts";
 import { currentPhase, findMember, visibleTo, wrapupItems } from "./world.ts";
 
 export interface TurnPrompt {
@@ -65,6 +65,8 @@ export function buildPrompt(
   const showDemos = demos.length > 0 && (m.role !== "engineer" || phase.finale);
   const wrap = phase.finale ? wrapupItems(s) : undefined;
   const others = m.role === "engineer" ? (extra.others ?? []) : [];
+  const questions = m.role !== "user" && s.questions?.length ? formatQuestions(s) : "";
+  const rejections = m.role === "pm" && phase.iterationStart ? rejectionsToAddress(s) : [];
 
   const user = [
     "## Product brief",
@@ -90,6 +92,19 @@ export function buildPrompt(
           ...wrap.followUps.map(
             (t) => `- follow-up ${t.id} (added in ${t.phase}; users have not seen it): do NOT build it, hand it over: ${t.title}`,
           ),
+        ]
+      : []),
+    ...(questions
+      ? ["", "## Questions already sent to the human (unanswered unless the human said otherwise; keep going on the defaults)", questions]
+      : []),
+    ...(rejections.length
+      ? [
+          "",
+          "## Rejections from the last iteration",
+          ...rejections,
+          "Before planning fixes, write down in one sentence the premise of the current product that each rejection " +
+            "contradicts (e.g. \"users start it from a terminal\"), and decide whether to change that premise instead of " +
+            "patching around it. A user who rejected for the same reason again means the last fixes rested on a wrong premise.",
         ]
       : []),
     ...(showDemos ? ["", "## Demos shown by the team (this iteration)", ...demos.map((d) => `- ${displayDemo(s, d)}`)] : []),
@@ -120,6 +135,19 @@ export function buildPrompt(
   ].join("\n");
 
   return { member: m.id, role: m.role, canEdit: edit, system, user };
+}
+
+/** Last iteration's rejections, marking users who rejected in every iteration so far (the fixes did not land). */
+function rejectionsToAddress(s: SessionState): string[] {
+  const last = s.iteration - 1;
+  return s.verdicts
+    .filter((v) => v.iteration === last && v.verdict === "reject")
+    .map((v) => {
+      const name = findMember(s, v.by)?.persona.name ?? v.by;
+      const streak = s.verdicts.filter((x) => x.by === v.by && x.iteration <= last).every((x) => x.verdict === "reject");
+      const again = streak && last > 1 ? ` (rejected in all ${last} iterations so far)` : "";
+      return `- ${name}${again}: ${v.reason.replace(/\n/g, " ")}`;
+    });
 }
 
 function displayDemo(s: SessionState, d: { by: string; text: string }): string {

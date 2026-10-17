@@ -51,10 +51,14 @@ Agents reply with plain-text tags, an extension of TinyTroupe's THINK / TALK / D
 [NOTE] long-term memory, shown to its author on every later turn
 [TASK owner=eng-backend] title
 acceptance criteria (on the following lines)
-[TASK_DONE T1] what was implemented, in which files, and how it was verified
+[TASK owner=eng-backend replaces=T1] a task that supersedes T1 (T1 is closed)
+[TASK_DONE T1] what was implemented, in which files, and how it was verified (the command and its result, or "not run")
+[TASK_BLOCKED T1] only a real person can finish this (a real device, an account, publishing): what they must do
+[TASK_DROP T1] close a task the team will not do (PM only), with the reason
+[ASK_HUMAN] a question only the real human can answer, plus the default the team goes ahead with
 [DEMO T1] what a user does and sees, with real output (pasted, or a generated file / screenshot path)
 [DECISION] a decision the team follows from now on
-[VERDICT accept] / [VERDICT reject] reasons
+[VERDICT accept] / [VERDICT reject] reasons, what they are based on, what could not be checked
 [ADVANCE] end the current phase (PM only)
 [DONE]
 ```

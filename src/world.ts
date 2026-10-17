@@ -1,7 +1,7 @@
 // The "world" (TinyWorld analogue): roster, shared transcript, phase/turn
 // scheduling and the effects of each action. Pure state transitions live here;
 // persistence is in store.ts so this module is easy to test.
-import type { Entry, EntryKind, PersonaSpec, PhaseDef, SessionState, Task } from "./types.ts";
+import type { Entry, EntryKind, PersonaSpec, PhaseDef, SessionState, Task, TaskStatus } from "./types.ts";
 import { parseReply, type Action } from "./protocol.ts";
 import { allowedActions } from "./sop.ts";
 
@@ -61,6 +61,7 @@ export class World {
       decisions: [],
       verdicts: [],
       demos: [],
+      questions: [],
       notes: {},
       historyWindow: o.historyWindow ?? 40,
     };
@@ -146,22 +147,35 @@ export class World {
         s.tasks.push(t);
         this.log(m.id, "task", `${t.id} owner=${owner ?? "-"}: ${t.title}${t.acceptance ? "\n" + t.acceptance : ""}`);
         if (owner && !this.member(owner)) this.log("system", "system", `Warning: ${t.id} owner "${owner}" is not a team member.`);
+        // [TASK replaces=T1]: the new task supersedes T1, so T1 no longer holds the build open.
+        for (const old of (a.attrs.replaces ?? "").split(",").map((x) => x.trim()).filter(Boolean)) {
+          const o = s.tasks.find((x) => x.id === old && x !== t);
+          if (!o) {
+            this.log("system", "system", `Warning: ${t.id} replaces unknown task "${old}".`);
+            continue;
+          }
+          this.updateTask(m.id, o, "dropped", `replaced by ${t.id}`);
+        }
         break;
       }
       case "TASK_START":
-      case "TASK_DONE": {
+      case "TASK_DONE":
+      case "TASK_BLOCKED":
+      case "TASK_DROP": {
         const tid = a.arg ?? /\bT\d+\b/.exec(a.text)?.[0];
         const t = s.tasks.find((x) => x.id === tid);
         if (!t) {
           this.log("system", "system", `Ignored [${a.type}] from ${m.id}: unknown task "${tid ?? ""}".`);
           break;
         }
-        t.status = a.type === "TASK_DONE" ? "done" : "doing";
         t.owner ??= m.id;
-        if (a.type === "TASK_DONE") t.summary = a.text;
-        this.log(m.id, "task_update", `${t.id} → ${t.status}${a.text ? ": " + a.text : ""}`);
+        this.updateTask(m.id, t, TASK_STATUS[a.type], a.type === "TASK_START" ? undefined : a.text);
         break;
       }
+      case "ASK_HUMAN":
+        (s.questions ??= []).push({ by: m.id, text: a.text, phase: this.phase.id, iteration: s.iteration });
+        this.log(m.id, "ask_human", a.text, ["human"]);
+        break;
       case "DEMO": {
         const tid = a.arg ?? /\bT\d+\b/.exec(a.text)?.[0];
         (s.demos ??= []).push({ by: m.id, text: tid && a.arg ? `${tid}: ${a.text}` : a.text, phase: this.phase.id, iteration: s.iteration });
@@ -191,6 +205,12 @@ export class World {
       case "DONE":
         break;
     }
+  }
+
+  private updateTask(by: string, t: Task, status: TaskStatus, summary?: string): void {
+    t.status = status;
+    if (summary !== undefined) t.summary = summary;
+    this.log(by, "task_update", `${t.id} → ${status}${summary ? ": " + summary : ""}`);
   }
 
   /**
@@ -225,7 +245,7 @@ export class World {
       if (guard > 1000) throw new Error("scheduler did not converge");
       if (s.queue.length === 0) {
         const p = this.phase;
-        const tasksDone = !!p.untilTasksDone && s.tasks.length > 0 && s.tasks.every((t) => t.status === "done");
+        const tasksDone = !!p.untilTasksDone && s.tasks.length > 0 && s.tasks.every(isSettled);
         if (s.round > 0 && (s.round >= p.maxRounds || tasksDone)) {
           this.endPhase();
           continue;
@@ -299,9 +319,20 @@ export class World {
     const vs = s.verdicts.filter((v) => v.iteration === s.iteration);
     const accepted = vs.filter((v) => v.verdict === "accept").length;
     const summary = vs.length ? `${accepted}/${vs.length} users accepted.` : "No user verdicts were given.";
-    const open = s.tasks.filter((t) => t.status !== "done");
-    const rest = open.length ? ` Still open (for the human): ${open.map((t) => `${t.id} (${t.title})`).join(", ")}.` : "";
-    this.log("system", "system", `Session finished after iteration ${s.iteration}. ${summary}${rest}`);
+    const list = (status: (t: Task) => boolean) =>
+      s.tasks
+        .filter(status)
+        .map((t) => `${t.id} (${t.title})`)
+        .join(", ");
+    const open = list((t) => !isSettled(t));
+    const blocked = list((t) => t.status === "blocked");
+    const questions = s.questions ?? [];
+    const rest = [
+      open && `Still open: ${open}.`,
+      blocked && `Waiting on a person: ${blocked}.`,
+      questions.length && `${questions.length} question(s) for the human (see team status).`,
+    ].filter(Boolean);
+    this.log("system", "system", `Session finished after iteration ${s.iteration}. ${summary}${rest.map((r) => " " + r).join("")}`);
   }
 
   private logPhaseStart(): void {
@@ -325,6 +356,18 @@ export class World {
 
 const systemNow = () => new Date().toISOString();
 
+const TASK_STATUS: Record<string, TaskStatus> = {
+  TASK_START: "doing",
+  TASK_DONE: "done",
+  TASK_BLOCKED: "blocked",
+  TASK_DROP: "dropped",
+};
+
+/** Nothing more the team itself can do: done, dropped, or waiting on a real person. */
+export function isSettled(t: Task): boolean {
+  return t.status === "done" || t.status === "dropped" || t.status === "blocked";
+}
+
 /**
  * What a wrap-up phase must take care of: tasks not done, and decisions of this iteration made in or after the
  * last regular phase where anyone could edit the workspace (so nobody has applied them yet). Open tasks created
@@ -339,7 +382,7 @@ export function wrapupItems(s: SessionState): {
   const lastEdit = Math.max(-1, ...regular.filter(({ p }) => p.editors?.length).map(({ i }) => i));
   const late = (phase: string | undefined, iteration: number | undefined) =>
     lastEdit >= 0 && iteration === s.iteration && s.phases.findIndex((p) => p.id === phase) > lastEdit;
-  const open = s.tasks.filter((t) => t.status !== "done");
+  const open = s.tasks.filter((t) => !isSettled(t));
   const followUps = open.filter((t) => late(t.phase, t.iteration) && !s.phases.find((p) => p.id === t.phase)?.finale);
   const decisions =
     lastEdit < 0

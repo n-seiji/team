@@ -7,7 +7,7 @@ import { Store, loadConfig, loadPersona } from "./store.ts";
 import { World, isPrivate } from "./world.ts";
 import { DEFAULT_PHASES, subagentFor } from "./sop.ts";
 import { buildPrompt, listWorkspace, promptAsText } from "./prompt.ts";
-import { formatBacklog, formatEntry, displayName } from "./render.ts";
+import { formatBacklog, formatEntry, formatQuestions, displayName } from "./render.ts";
 import { createBackend } from "./backends/index.ts";
 import { findOverlaps, formatOverlap, otherSessionChanges, sameRepoChanges } from "./overlap.ts";
 import type { BackendConfig } from "./types.ts";
@@ -309,6 +309,7 @@ function statusText(w: World): string {
     "backlog:",
     formatBacklog(s.tasks, "  (none)"),
   ];
+  if (s.questions?.length) lines.push("questions for the human (the team proceeds on the stated defaults):", formatQuestions(s));
   if (s.externalWorkspace) lines.splice(1, 0, `workspace: ${s.workspace} (existing codebase)`);
   return lines.join("\n");
 }

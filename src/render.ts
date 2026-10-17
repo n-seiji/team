@@ -30,12 +30,17 @@ export function formatEntry(s: SessionState, e: Entry): string {
 
 export function formatTask(t: Task): string {
   const acc = t.acceptance ? `\n    acceptance: ${indent(t.acceptance, "    ")}` : "";
-  const sum = t.summary ? `\n    result: ${indent(t.summary, "    ")}` : "";
+  const label = t.status === "blocked" ? "needs a person" : t.status === "dropped" ? "dropped" : "result";
+  const sum = t.summary ? `\n    ${label}: ${indent(t.summary, "    ")}` : "";
   return `- ${t.id} [${t.status}] owner=${t.owner ?? "-"} ${t.title}${acc}${sum}`;
 }
 
 export function formatBacklog(tasks: Task[], empty: string): string {
   return tasks.length ? tasks.map(formatTask).join("\n") : empty;
+}
+
+export function formatQuestions(s: SessionState): string {
+  return (s.questions ?? []).map((q) => `- (${q.phase}, ${displayName(s, q.by)}) ${indent(q.text, "  ")}`).join("\n");
 }
 
 /** Human-readable transcript, including private thoughts (like TinyTroupe's console view). */
@@ -55,6 +60,11 @@ export function renderMarkdown(s: SessionState, entries: Entry[]): string {
   out.push(formatBacklog(s.tasks, "_(none)_"));
   out.push("", "## Decisions", "");
   out.push(s.decisions.length ? s.decisions.map((d) => `- (${d.phase}, ${displayName(s, d.by)}) ${d.text}`).join("\n") : "_(none)_");
+  const questions = s.questions ?? [];
+  if (questions.length) {
+    out.push("", "## Questions for the human", "");
+    out.push(formatQuestions(s));
+  }
   out.push("", "## Verdicts", "");
   out.push(
     s.verdicts.length

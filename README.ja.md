@@ -50,9 +50,13 @@ reject が1件でもあり、イテレーション上限 (`maxIterations`) に�
 [NOTE] 長期メモ（以降のターンで毎回本人に提示される）
 [TASK owner=eng-backend] タイトル
 受け入れ基準（次の行から）
-[TASK_DONE T1] 何をどのファイルに実装し、どう確認したか
+[TASK owner=eng-backend replaces=T1] T1 を置き換えるタスク（T1 は閉じる）
+[TASK_DONE T1] 何をどのファイルに実装し、どう確認したか（実行したコマンドと結果、または「未実行」）
+[TASK_BLOCKED T1] 実機・アカウント・公開など、人にしかできない作業。人が何をすればよいか
+[TASK_DROP T1] やらないことにしたタスクを閉じる（PM のみ）。理由
+[ASK_HUMAN] 本物の人にしか答えられない質問と、それまでチームが進める既定の案
 [DECISION] チームの決定事項
-[VERDICT accept] / [VERDICT reject] 理由
+[VERDICT accept] / [VERDICT reject] 理由・何を見て判断したか・確かめられなかったこと
 [ADVANCE] フェーズを終える（PM のみ）
 [DONE]
 ```
