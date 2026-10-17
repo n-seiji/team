@@ -89,6 +89,7 @@ READER=tesseract node src/server.mjs   # ローカルの tesseract で読む（�
 - HEIC は読めない（failed になり、写真を見て入力する）。画面は送信前に JPEG へ縮小するので、通常は届かない。
 - サンプルの一覧: `samples/` に画像と `answers.json`（正解。コミットしない）を置いて、`READER=tesseract node scripts/sample-report.mjs` を実行する。
   - `answers.json` の形: `{"cafe-1.jpg": {"kind": "カフェ", "date": "2026-10-03", "amount": 480}}`
+  - 受け入れテスト当日の手順: ① `mkdir -p samples && cp data/images/* samples/` ② `node scripts/sample-report.mjs --init samples` で空欄の `answers.json` を作る（書いた正解は残る） ③ 写真を見て `kind`・`date`・`amount` を埋める ④ `READER=tesseract node scripts/sample-report.mjs`。空欄のままの項目は数えない。
   - 出るもの: 画像ごとの4項目と秒数、金額・日付の「通過（要確認なしで正解）／誤読（要確認なしで不正解）／要確認」の件数と母数、kind ごとの行。％は出さない。
 - 実サンプルでの結果はまだない（受け入れテストで撮ってから測る）。
 

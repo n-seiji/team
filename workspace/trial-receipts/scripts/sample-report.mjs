@@ -3,6 +3,8 @@
 // 画像は外部に送らない。精度の数字（％）は出さず、件数と母数だけを出す。
 // samples/answers.json（コミットしない）に正解があれば、金額と日付を「通過／誤読／要確認」で数える。
 //   形: {"cafe-1.jpg": {"kind": "カフェ", "date": "2026-10-03", "amount": 480}, ...}
+// 受け入れテスト当日: `node scripts/sample-report.mjs --init samples` で、画像ごとの空欄の answers.json を作る。
+//   既に書いた正解は残す。null や空欄のままの項目は数えない（正解を書いていないものを誤読にしない）。
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { nullReader, normalize, FIELDS, LABELS } from '../src/reader.mjs';
@@ -34,11 +36,20 @@ export function judge(field, answer) {
   return field.value === answer ? '通過' : '誤読';
 }
 
+const hasAnswer = (a, key) => a != null && a[key] != null && a[key] !== '';
+
+// OCR の結果は入れない。正解は写真を見て人が書く（OCR の値に引きずられないため）。
+export function answersSkeleton(files, existing = {}) {
+  const out = {};
+  for (const f of files) out[f] = existing[f] ?? { kind: '', date: null, amount: null };
+  return out;
+}
+
 export function tally(rows, answers, key) {
   const c = { 通過: 0, 誤読: 0, 要確認: 0, n: 0 };
   for (const r of rows) {
     const a = answers[r.file];
-    if (!a || a[key] === undefined) continue;
+    if (!hasAnswer(a, key)) continue;
     c[judge(r.fields[key], a[key])]++; c.n++;
   }
   return c;
@@ -53,7 +64,7 @@ export function format(rows, answers = null) {
       const x = fields[f];
       const cell = x.needs_review ? `要確認(${x.reason})${x.value === '' ? '' : ' ' + x.value}` : String(x.value);
       const a = answers?.[file];
-      return a && (f === 'date' || f === 'amount') && a[f] !== undefined ? `${cell} [${judge(x, a[f])}]` : cell;
+      return (f === 'date' || f === 'amount') && hasAnswer(a, f) ? `${cell} [${judge(x, a[f])}]` : cell;
     }), seconds === undefined ? '' : seconds.toFixed(1)].join('\t'));
   }
   const review = Object.fromEntries(FIELDS.map((f) => [LABELS[f], rows.filter((r) => r.fields[f].needs_review).length]));
@@ -72,7 +83,19 @@ export function format(rows, answers = null) {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const dir = process.argv[2] ?? 'samples';
+  const init = process.argv.includes('--init');
+  const dir = process.argv.slice(2).find((a) => !a.startsWith('--')) ?? 'samples';
+  if (init) {
+    const file = path.join(dir, 'answers.json');
+    let existing = {};
+    try { existing = JSON.parse(await fs.readFile(file, 'utf8')); } catch (e) { if (e.code !== 'ENOENT') throw e; }
+    const files = (await fs.readdir(dir)).filter((f) => IMAGE.test(f)).sort();
+    const next = answersSkeleton(files, existing);
+    await fs.writeFile(file, JSON.stringify(next, null, 2) + '\n');
+    const empty = files.filter((f) => !hasAnswer(next[f], 'amount') || !hasAnswer(next[f], 'date')).length;
+    console.log(`${file} に ${files.length} 枚分を書きました（正解が未記入: ${empty} 枚）。写真を見て kind・date・amount を埋めてください。`);
+    process.exit(0);
+  }
   const reader = await pickReader(process.env.READER);
   const rows = await report(dir, reader).catch((e) => {
     if (e.code === 'ENOENT') { console.error(`${dir} がありません。サンプル画像を置いてください。`); process.exit(1); }

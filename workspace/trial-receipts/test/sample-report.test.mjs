@@ -47,3 +47,19 @@ test('正解と比べて、金額と日付を「通過／誤読／要確認」�
   assert.match(out, /最短 2\.0 \/ 最長 3\.5/);
   assert.match(out, /2026-10-09 \[誤読\]/);
 });
+
+test('answers.json の下書き: 書いた正解は残し、空欄の項目は数えない', async () => {
+  const { answersSkeleton } = await import('../scripts/sample-report.mjs');
+  const sk = answersSkeleton(['a.jpg', 'b.jpg'], { 'a.jpg': { kind: 'カフェ', date: '2026-10-03', amount: 480 } });
+  assert.deepEqual(sk, {
+    'a.jpg': { kind: 'カフェ', date: '2026-10-03', amount: 480 },
+    'b.jpg': { kind: '', date: null, amount: null },
+  });
+  const f = (value, needs_review = false) => ({ value, needs_review });
+  const rows = [
+    { file: 'a.jpg', fields: { amount: f(480), date: f('2026-10-03') } },
+    { file: 'b.jpg', fields: { amount: f(999), date: f('2026-01-01') } },
+  ];
+  assert.deepEqual(tally(rows, sk, 'amount'), { 通過: 1, 誤読: 0, 要確認: 0, n: 1 });
+  assert.deepEqual(tally(rows, { ...sk, 'b.jpg': { kind: '', date: '', amount: '' } }, 'date'), { 通過: 1, 誤読: 0, 要確認: 0, n: 1 });
+});
