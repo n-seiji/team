@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>回覧の状況</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body class="admin">
+<main>
+  <h1>回覧の状況</h1>
+  <form id="keyform" hidden>
+    <label for="key">管理キーを入れてください</label>
+    <input id="key" type="password" autocomplete="current-password" required>
+    <button type="submit">開く</button>
+    <p id="keyerr" class="error" role="alert"></p>
+  </form>
+  <p id="banner" class="banner" role="status" hidden></p>
+  <section id="tools" class="tools" hidden>
+    <details id="newCircular">
+      <summary>＋ 回覧を登録</summary>
+      <form id="circularForm" novalidate>
+        <label for="ctitle">タイトル</label>
+        <input id="ctitle" type="text" maxlength="200" aria-describedby="ctitleErr">
+        <p id="ctitleErr" class="error field-err" hidden></p>
+        <label for="cbody">本文</label>
+        <textarea id="cbody" rows="6" aria-describedby="cbodyErr"></textarea>
+        <p id="cbodyErr" class="error field-err" hidden></p>
+        <button type="submit">登録する</button>
+      </form>
+    </details>
+    <details id="newHousehold">
+      <summary>＋ 世帯を追加</summary>
+      <form id="householdForm" novalidate>
+        <label for="hname">表示名（例：山田さん）</label>
+        <input id="hname" type="text" maxlength="50" aria-describedby="hnameErr">
+        <p id="hnameErr" class="error field-err" hidden></p>
+        <button type="submit">追加する</button>
+      </form>
+    </details>
+    <a class="print-link" href="/print.html" target="_blank" rel="noopener">QRを印刷（全世帯）</a>
+  </section>
+  <section id="board" hidden>
+    <label for="circular">回覧</label>
+    <select id="circular"></select>
+    <p id="summary" class="summary" aria-live="polite"></p>
+    <label class="filter"><input id="onlyUnread" type="checkbox"> 未読の世帯だけ見る</label>
+    <ul id="rows" class="rows"></ul>
+    <p id="empty" class="empty" hidden></p>
+  </section>
+  <p id="msg" class="error" role="alert"></p>
+</main>
+<script src="/admin.js"></script>
+</body>
+</html>

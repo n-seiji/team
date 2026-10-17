@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>小テスト</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="app" aria-live="polite">
+  <p id="loading">読み込み中…</p>
+  <section id="error" hidden><h1>テストを開けません</h1><p id="error-msg"></p></section>
+  <section id="start" hidden>
+    <h1>小テスト</h1>
+    <p id="start-info"></p>
+    <p class="note">本名はいりません。</p>
+    <p id="kumi-hint" class="note">組は数字か英字だけ（例: 3、2B）</p>
+    <form id="seat" novalidate>
+      <div class="seat">
+        <div class="field">
+          <label for="kumi">組</label>
+          <input id="kumi" maxlength="3" autocomplete="off" autocapitalize="characters" aria-describedby="kumi-hint kumi-err" placeholder="例: 2B">
+          <p id="kumi-err" class="err"></p>
+        </div>
+        <div class="field">
+          <label for="no">出席番号</label>
+          <input id="no" maxlength="2" inputmode="numeric" autocomplete="off" aria-describedby="no-err" placeholder="1〜99">
+          <p id="no-err" class="err"></p>
+        </div>
+      </div>
+      <label for="nick">ニックネーム (なくてもよい・12文字まで)</label>
+      <input id="nick" maxlength="12" autocomplete="off">
+      <button id="begin" class="btn primary">はじめる</button>
+    </form>
+  </section>
+  <section id="quiz" hidden>
+    <header><p id="qpos" class="count"></p></header>
+    <div id="qcard" class="card"></div>
+    <div id="choices" class="actions"></div>
+    <form id="typing" class="actions" hidden>
+      <input id="answer" aria-label="日本語の意味" autocomplete="off">
+      <button class="btn primary">こたえる</button>
+    </form>
+  </section>
+  <section id="result" hidden>
+    <h1 id="score"></h1>
+    <div id="wrong-box"><h2>まちがえた単語</h2><ul id="wrong"></ul></div>
+    <p id="code-help">この結果コードを先生に送ると提出になります。</p>
+    <input id="code" readonly aria-label="結果コード">
+    <a id="form-link" class="btn primary" target="_blank" rel="noopener" hidden>コピーしてフォームを開く</a>
+    <button id="copy" class="btn primary">コードをコピー</button>
+    <p id="cmsg" class="msg"></p>
+    <button id="retry" class="btn">もう一度やる</button>
+    <button id="study" class="btn">この単語を学習画面で使う</button>
+  </section>
+</main>
+<script type="module" src="test.js"></script>
+</body>
+</html>

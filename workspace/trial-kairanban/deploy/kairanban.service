@@ -1,0 +1,18 @@
+# 回覧板サーバーを、電源が入ったら自動で立ち上げる設定 (Raspberry Pi OS などの systemd 用)
+# 置き場所: /etc/systemd/system/kairanban.service
+# 有効にする: sudo systemctl enable --now kairanban
+[Unit]
+Description=Kairanban (町内会の回覧板)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=kairan
+WorkingDirectory=/home/kairan/trial-kairanban
+EnvironmentFile=/home/kairan/kairanban.env
+ExecStart=/usr/bin/node src/main.ts
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

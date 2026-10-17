@@ -1,0 +1,2 @@
+# 毎晩3時に USB メモリ (/media/usb) へバックアップする。crontab -e で kairan ユーザーに入れる
+0 3 * * * cd /home/kairan/trial-kairanban && /usr/bin/node src/tool.ts backup /home/kairan/kairanban.db /media/usb/kairanban-backup >> /home/kairan/backup.log 2>&1

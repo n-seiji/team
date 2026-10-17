@@ -1,0 +1,7 @@
+{
+  "name": "trial-gitlint",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.18" },
+  "scripts": { "test": "node --test \"test/*.test.ts\"" }
+}

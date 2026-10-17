@@ -1,0 +1,685 @@
+{
+  "version": 1,
+  "name": "trial-tango",
+  "brief": "高校生が通学中に英単語を覚えられ、先生は小テストの採点を減らせる Web アプリ",
+  "language": "ja",
+  "workspace": "workspace/trial-tango",
+  "createdAt": "2026-10-17T08:38:52.028Z",
+  "status": "done",
+  "members": [
+    {
+      "id": "pm",
+      "role": "pm",
+      "persona": {
+        "name": "佐藤 美咲",
+        "age": 36,
+        "occupation": {
+          "title": "Product Manager",
+          "organization": "小さなSaaSスタートアップ",
+          "description": "ユーザーインタビューから課題を言語化し、最小のスコープで価値を届けることに責任を持つ。"
+        },
+        "long_term_goals": [
+          "ユーザーが本当に使い続けるプロダクトを作る",
+          "チームが迷わず動ける判断を素早く下す"
+        ],
+        "style": "質問が具体的で短い。『最後にそれが起きたのはいつですか？』のように事実を掘る。決めるときは理由とトレードオフを一言添える。",
+        "personality": {
+          "traits": [
+            "好奇心が強い",
+            "スコープを削るのが得意",
+            "ユーザーの言葉をそのまま引用する"
+          ],
+          "big_five": {
+            "openness": "高",
+            "conscientiousness": "高",
+            "extraversion": "中",
+            "agreeableness": "中",
+            "neuroticism": "低"
+          }
+        },
+        "skills": [
+          "ユーザーインタビュー (The Mom Test)",
+          "ジョブ理論",
+          "受け入れ基準の記述",
+          "優先順位付け"
+        ],
+        "beliefs": [
+          "ユーザーが言う解決策より、ユーザーの過去の行動を信じる",
+          "最初のリリースは恥ずかしいくらい小さくていい"
+        ]
+      }
+    },
+    {
+      "id": "eng-backend",
+      "role": "engineer",
+      "persona": {
+        "name": "田中 健",
+        "age": 41,
+        "occupation": {
+          "title": "Senior Backend Engineer",
+          "description": "データモデル、API、CLI、テストを担当。シンプルで壊れにくい設計を好む。"
+        },
+        "style": "結論から話す。リスクは数字や具体例で示す。不明点はその場で確認する。",
+        "personality": {
+          "traits": [
+            "慎重",
+            "テストを先に書く",
+            "依存を増やすのが嫌い"
+          ],
+          "big_five": {
+            "openness": "中",
+            "conscientiousness": "高",
+            "extraversion": "低",
+            "agreeableness": "中",
+            "neuroticism": "低"
+          }
+        },
+        "skills": [
+          "TypeScript",
+          "Go",
+          "SQL",
+          "API設計",
+          "自動テスト"
+        ],
+        "preferences": {
+          "likes": [
+            "標準ライブラリ",
+            "小さな関数",
+            "README に動かし方を書くこと"
+          ],
+          "dislikes": [
+            "根拠のない見積もり",
+            "巨大なフレームワーク"
+          ]
+        }
+      }
+    },
+    {
+      "id": "eng-frontend",
+      "role": "engineer",
+      "persona": {
+        "name": "鈴木 ひかり",
+        "age": 29,
+        "occupation": {
+          "title": "Frontend / UX Engineer",
+          "description": "画面・CLI の使い勝手、アクセシビリティ、初回体験を担当。ユーザー視点で仕様に意見を言う。"
+        },
+        "style": "フレンドリーで提案型。『ユーザーはここで迷いそう』と体験ベースで話す。",
+        "personality": {
+          "traits": [
+            "共感力が高い",
+            "手を動かして試作するのが早い",
+            "細部にこだわる"
+          ],
+          "big_five": {
+            "openness": "高",
+            "conscientiousness": "中",
+            "extraversion": "高",
+            "agreeableness": "高",
+            "neuroticism": "中"
+          }
+        },
+        "skills": [
+          "TypeScript",
+          "HTML/CSS",
+          "React",
+          "アクセシビリティ",
+          "プロトタイピング"
+        ],
+        "preferences": {
+          "likes": [
+            "空状態やエラー時の丁寧なメッセージ",
+            "キーボードだけで操作できるUI"
+          ],
+          "dislikes": [
+            "説明が必要なUI"
+          ]
+        }
+      }
+    },
+    {
+      "id": "user-student",
+      "role": "user",
+      "persona": {
+        "name": "林 ひなた",
+        "age": 16,
+        "nationality": "日本",
+        "residence": "大阪府",
+        "occupation": {
+          "title": "公立高校 2 年生",
+          "description": "部活 (吹奏楽) が忙しく、英単語は通学電車の 15 分で覚えている。"
+        },
+        "long_term_goals": [
+          "英検 2 級に受かる",
+          "部活と勉強を両立する"
+        ],
+        "style": "くだけた口調。『めんどい』『それならやる』と本音をはっきり言う。続かなかったアプリの話をよくする。",
+        "personality": {
+          "traits": [
+            "飽きっぽい",
+            "友達と比べたがる",
+            "見た目重視"
+          ],
+          "big_five": {
+            "openness": "高",
+            "conscientiousness": "低",
+            "extraversion": "高",
+            "agreeableness": "中",
+            "neuroticism": "中"
+          }
+        },
+        "preferences": {
+          "likes": [
+            "片手で操作",
+            "すぐ始められる",
+            "連続記録"
+          ],
+          "dislikes": [
+            "広告",
+            "登録",
+            "長い説明"
+          ]
+        },
+        "tech_literacy": "スマホネイティブ。PC はほぼ使わない。アプリは気に入らなければ 1 日で消す。"
+      }
+    },
+    {
+      "id": "user-teacher",
+      "role": "user",
+      "persona": {
+        "name": "岡田 誠",
+        "age": 41,
+        "nationality": "日本",
+        "residence": "大阪府",
+        "occupation": {
+          "title": "公立高校の英語教師",
+          "description": "2 年生 3 クラス (約 110 人) を担当。毎週の単語小テストを紙で作って採点している。"
+        },
+        "long_term_goals": [
+          "採点の手間を減らして授業準備に時間を使う",
+          "苦手な生徒を早めに見つけたい"
+        ],
+        "style": "現実的で慎重。『学校の端末で動くか』『個人情報は』と運用面の質問が多い。",
+        "personality": {
+          "traits": [
+            "真面目",
+            "新しいものに興味はあるが学校の制約に縛られている"
+          ],
+          "big_five": {
+            "openness": "中",
+            "conscientiousness": "高",
+            "extraversion": "中",
+            "agreeableness": "高",
+            "neuroticism": "中"
+          }
+        },
+        "preferences": {
+          "likes": [
+            "既存の単語帳 (ターゲット1900) の範囲指定",
+            "CSV で成績を出せる",
+            "生徒のスマホで動く"
+          ],
+          "dislikes": [
+            "生徒のアカウント作成作業",
+            "有料プラン",
+            "学校のフィルタで止まる外部サービス"
+          ]
+        },
+        "tech_literacy": "Google フォームとスプレッドシートは使いこなす。プログラミングはしない。"
+      }
+    }
+  ],
+  "phases": [
+    {
+      "id": "discovery",
+      "goal": "PM interviews the users to uncover their real situation, pains and jobs-to-be-done. Users answer strictly in character, with concrete episodes. No solutions yet.",
+      "speakers": [
+        "pm",
+        "user"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 2
+    },
+    {
+      "id": "planning",
+      "goal": "PM turns findings into a small, shippable scope: [TASK] items with clear acceptance criteria, each assigned to an engineer. Engineers challenge feasibility, split or re-assign tasks, and agree on tech choices.",
+      "speakers": [
+        "pm",
+        "engineer"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 2,
+      "iterationStart": true
+    },
+    {
+      "id": "build",
+      "goal": "Engineers implement their own tasks in the workspace (real files, runnable code, tests when sensible), coordinate interfaces with each other, and mark finished work with [TASK_DONE].",
+      "speakers": [
+        "engineer"
+      ],
+      "mode": "parallel",
+      "maxRounds": 3,
+      "untilTasksDone": true,
+      "editors": [
+        "engineer"
+      ]
+    },
+    {
+      "id": "review",
+      "goal": "Engineers review each other's work against the acceptance criteria and fix issues. Before users judge it, each engineer posts a [DEMO] for their tasks: what a user would do and what they would see, with output you really produced (run the command, render the page or email, paste the result or the path of the generated file or screenshot). Never describe output you did not produce. PM checks every task against its acceptance criteria and states what is ready for users.",
+      "speakers": [
+        "engineer",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1,
+      "editors": [
+        "engineer"
+      ]
+    },
+    {
+      "id": "acceptance",
+      "goal": "Users try what was built — start from the team's demos, open the files they point to, run it if possible — and judge it from their own needs. Each user gives a [VERDICT accept|reject] with reasons. PM summarizes and decides next steps.",
+      "speakers": [
+        "user",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1
+    },
+    {
+      "id": "wrapup",
+      "goal": "The session is about to end. Engineers apply every decision made during review and acceptance and finish their open tasks ([TASK_DONE]); a task that cannot be finished here gets one line saying why and what is left. PM then confirms what shipped and lists, for the real human, anything still open or needing their decision.",
+      "speakers": [
+        "engineer",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1,
+      "editors": [
+        "engineer"
+      ],
+      "finale": true
+    }
+  ],
+  "phaseIndex": 5,
+  "iteration": 2,
+  "maxIterations": 2,
+  "round": 0,
+  "turn": 49,
+  "queue": [],
+  "pending": [],
+  "insertions": 0,
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "生徒の単語学習画面 (登録なし・片手)",
+      "acceptance": "- 開いてすぐ、登録やログインなしで単語カードが出る。広告はない。\n- 画面下半分の親指が届く範囲だけで、「めくる」「覚えた」「まだ」の操作ができる。\n- 通学中の10分で使える。開いたら最後に見た位置から続きが出る。\n- 「覚えた」単語の累計数を表示する。数日あけても減らず、責める文言や連続記録は出さない。\n- スマホ幅 (360px) で横スクロールなし。ブラウザを閉じて開き直しても進捗が残る。",
+      "owner": "eng-frontend",
+      "status": "doing",
+      "createdBy": "pm"
+    },
+    {
+      "id": "T2",
+      "title": "先生用: 単語リストからテストリンクを作る",
+      "acceptance": "- 先生が「英語,日本語」の行を貼り付けると、30問以内のテスト用リンクが作られる。\n- 問題データはリンク自体に入っていて、サーバーに送らない。そのリンクを開けば同じ問題が出る。\n- リンクを開く生徒は、同じ単語を学習画面でも使える (リストの読み込み口を frontend と共通化する)。\n- 不正な行や空行があっても、どの行が無効かを示して他の行は使える。\n- 先生が使うために、ブラウザだけでオフラインでも動く。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "先生が貼った単語リストからテストリンクを作る機能を実装した。`npm test` は 35 件すべて通った (pass 35 / fail 0)。画面は実際のブラウザで動かしていない。\n- 関数は `src/teacher.js` の `buildTestLink(text, baseUrl)` (async)。\n  - 有効な行からリンクを作る。無効な行は、行番号つきで `errors` に残る。有効な行が 0 のときはリンクを作らず、`ok:false` と理由を返す。\n  - 31 行目以降は使わず、`truncated` を返す。\n- 作ったリンクを `decodeTest` で開くと、同じ問題と同じテストIDが戻る (テストで確認)。問題データは `#` の後ろにあり、サーバーには送らない。\n- 生徒側の単語の読み込み口は `parseWordList` / `decodeTest` に共通化してある。\n- 画面は `teacher.html` と `teacher.js`。無効な行は「3行目: カンマがありません」の形で出す。リンクのコピーボタンも付けた。入力は localStorage に残る。\n- オフライン用に `sw.js` を追加した。ネットワーク優先で、つながらないときだけ保存したファイルを使う。\n- 動かし方は、静的サーバーで配る (例: `python3 -m http.server`)。ES モジュールを使うので、`file://` で直接開くと Chrome では動かない。README に書いた。\n- 未確認: 画面の動作 (ブラウザなし)、`sw.js` のオフライン動作、実機のスマホ、LINE で開くこと。\n- 生徒がテストを開くページは、いまは `index.html` と仮置きにしている。T3 の置き場所が決まったら、`teacher.js` の `TEST_PAGE` を直す。"
+    },
+    {
+      "id": "T3",
+      "title": "生徒用: 自動採点テストと結果コード",
+      "acceptance": "- テストリンクを開くと、ニックネームを入力して (本名は求めない) すぐ回答できる。\n- 4択か入力で回答し、終了すると点数と間違えた単語が即座に出る。\n- 点数・ニックネーム・テストIDを入れた短い結果コードが出て、1タップでコピーできる。\n- 結果コードを先生に渡すだけで提出になる。生徒に登録は要らない。\n- 同じテストを何度やり直しても、学習画面の進捗は減らない。",
+      "owner": "eng-frontend",
+      "status": "doing",
+      "createdBy": "pm"
+    },
+    {
+      "id": "T4",
+      "title": "先生用: 結果コードの集計画面",
+      "acceptance": "- 先生が結果コードを複数行まとめて貼ると、ニックネーム・点数の一覧表になる。\n- 平均点と、30問中何点かを一覧で見られる。同じテストIDのコードだけが集計される。\n- 一覧を CSV で書き出せる。Excel に開ける文字コードにする。\n- 貼った内容は先生の端末内にだけ残る。外部には送らない。\n- 壊れた結果コードは、どの行か分かる形でスキップされる。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "結果コードの集計画面と CSV 書き出しを実装した。`npm test` は 35 件すべて通った。画面は実際のブラウザで動かしていない。\n- 関数は `src/teacher.js` の `aggregateResults(text, id?)` と `toCsv(rows)`。CSV は結果コードの解析とは別の小さな関数にしてある。\n- 集計の動き:\n  - 複数行を貼ると、ニックネームと点数の一覧、人数、平均点 (満点つき) が出る。\n  - `id` を省略すると、いちばん多いテストIDを使う。別のIDの行は「別のテストのコードです」でスキップする。テストIDが 2 つ以上あるときは、画面の選択欄で切り替えられる。\n  - 壊れた行は、行番号と理由つきでスキップする。空行は数えない。\n  - 全く同じコードの貼り重ねは 1 件にする。同じ人のやり直し (点数が違う) は両方残す。\n  - 問題数が他と違う行は、スキップする。\n- CSV は BOM つき UTF-8 で、改行は CRLF。ニックネームが `=` `+` `-` `@` で始まるときは、先頭に `'` を付ける。カンマ・引用符・改行はエスケープする。いずれもテストで確認した。\n- 貼った内容は localStorage にだけ残る。「貼った内容を消す」ボタンも付けた。外には送らない。\n- 未確認: 画面の動作と CSV を Excel で開くこと (ブラウザと Excel がない)。\n- 日本語の入った CSV を Excel で開いたときに文字化けしないかは、岡田先生に実機で確認してほしい。"
+    },
+    {
+      "id": "T5",
+      "title": "共通モジュール: 単語リスト解析・テストリンク符号化・結果コード",
+      "acceptance": "- `parseWordList(text)` は「英語,日本語」の行から `{words, errors}` を返す。空行は無視する。不正な行は行番号つきで errors に入り、他の行は words に残る。31行目以降は使わず、その旨を返す。\n- `encodeTest(words)` は `#` 以降に入れる文字列を返し、`decodeTest(s)` で元の単語が戻る。30問で 1500文字以内、日本語を含む。サーバーには送らない。\n- `makeResultCode` / `parseResultCode` は `テストID-点数-問題数-ニックネーム-チェック4文字` を作る・読む。壊れたコードは、理由つきでエラーを返す。\n- 依存を増やさず、ブラウザの標準機能だけで動く。オフラインで動く。Node のテストで上の全部を確認できる。\n- README に使い方を書く。frontend は同じ関数を呼べる。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "eng-backend",
+      "summary": "共通モジュールを実装し、`npm test` で Node のテストが全部通りました (pass 20 / fail 0)。テストを先に書いています。実機のスマホで LINE から開く確認は、まだしていません。\n- `workspace/trial-tango/src/tango.js` に次の関数を置きました。\n  - `parseWordList` は `{words:{en,ja,key}[], errors:{line,reason}[], truncated}` を返します。\n  - `encodeTest` / `decodeTest` は async です。`decodeTest` は例外を投げず、`{ok:true, words, id}` か `{ok:false, reason}` を返します。\n  - `testId` は単語の内容から作る6文字のIDです。\n  - `makeResultCode` / `parseResultCode` は `テストID-点数-問題数-ニックネーム-チェック4文字` を作る・読む関数です。\n- `test/tango.test.js` と、`package.json` の `npm test` を追加しました。README に使い方と、結果コードが改ざん防止ではないことを書きました。\n- 決めた仕様:\n  - カンマは最初の1つで分けます。全角カンマも使えます。\n  - 同じ英語が2回出たら、2回目以降を errors にします。4択の選択肢が重なるのを防ぐためです。\n  - `truncated` は、30問に達したあとにまだ空でない行があるときに true になります。\n  - `makeResultCode` は、点数が 0〜問題数の範囲外なら例外を投げます。画面側のバグを見つけるためです。\n- 30問のリンク長 (`#` の後ろ) の実測値です。\n  - 日本語入りの現実的な30問 (各行に複数の意味を含む) で 816文字でした。\n  - 繰り返しの多いテスト用データでは 295文字でした。\n  - 1500文字以内の条件は満たしています。\n  - 先生が書く内容次第で変わるので、実際のリストで岡田先生にも確認してもらいたいです。"
+    },
+    {
+      "id": "T6",
+      "title": "T6 結果コード・集計・CSV に組と出席番号を入れ、GitHub Pages で公開する",
+      "acceptance": "- `makeResultCode` / `parseResultCode` が組と出席番号を持つ。組は3文字までの数字か英字、番号は1〜99。壊れた値は、先生に見せられる理由を付けてエラーにする。チェック4文字は組と番号も含めて計算する。\n- 集計画面の一覧と CSV に「組・番号・ニックネーム・点数・問題数」の列が出て、組→番号の順に並ぶ。Excel で番号順に並べ替えられるよう、番号は数値の列にする。\n- 同じ組・番号の人が複数回出したときは、両方を残して印で分かるようにする。\n- Google フォームの回答の列 (見出し行、タイムスタンプ、前後の空白を含む) をそのまま貼っても、コード部分だけを読み取る。読めない行は、行番号つきでスキップする。\n- README に、先生向けの手順を書く。Google フォームの作り方を1行、集計画面への貼り方を1行。\n- GitHub Pages に公開し、https の URL で `teacher.html`・`test.html`・`index.html` が開ける。その URL を README の先頭に書く。\n- `npm test` と `demo/browser.mjs` が、新しい形式で通る。",
+      "owner": "eng-backend",
+      "status": "todo",
+      "createdBy": "pm"
+    },
+    {
+      "id": "T7",
+      "title": "T7 テスト開始画面に組・番号を足し、学習画面の文言を直す",
+      "acceptance": "- テストの開始画面に「組」「出席番号」「ニックネーム」の欄がある。本名は要らないことを1行で出す。組か番号がない、または範囲外のときは始められず、どこを直せばいいかが出る。\n- 前回入れた組・番号は端末に残り、次のテストでは最初から入っている。\n- 結果画面の結果コードに組・番号が入り、1タップでコピーできる。T4 の集計にそのまま貼れる。\n- 学習画面に単語がないとき、「先生のテストリンクから開いてください」を主に出す。貼り付け欄は折りたたみの中に入れる。\n- 「控え」を「進捗をコピー」に名前を変え、説明は「スマホを替えたり、データが消えたときに戻せます」の1行だけにする。責める文言や警告の色は使わない。\n- 360px 幅で横スクロールが出ない。ボタンは44px以上で、下半分の操作位置は変えない。",
+      "owner": "eng-frontend",
+      "status": "doing",
+      "createdBy": "pm"
+    },
+    {
+      "id": "T8",
+      "title": "T8 テスト開始画面に組の入力例を出す",
+      "acceptance": "- 開始画面の組の欄の近くに「組は数字か英字だけ（例: 3、2B）」の1行が出る。\n- `2-3` や `2年3組` を入れて「はじめる」を押すと止まり、組の欄の真下に、例つきでどう直せばいいかが出る。文言は `checkKumi` と同じものを使う。\n- 360px 幅で横スクロールが出ない。「はじめる」と欄の位置は変えない。",
+      "owner": "eng-frontend",
+      "status": "todo",
+      "createdBy": "pm"
+    },
+    {
+      "id": "T9",
+      "title": "T9 集計の一覧と CSV に提出時刻を出す",
+      "acceptance": "- Google フォームの列を貼ったとき、タイムスタンプがあれば、一覧と CSV に「提出時刻」の列が出る。\n- 同じ組・番号が2回以上あるとき、どちらが先に出されたかが時刻で分かる。どちらを成績にするかは決めず、両方残す。\n- タイムスタンプがない貼り方 (コードだけ) でも、今までどおり集計できる。列は空になる。\n- CSV は BOM つき UTF-8・CRLF のまま。`npm test` が通る。\n- 事前入力の URL を毎週使い回せるか (コードの部分だけを差し替えられるか) を確かめ、結果を PM に報告する。",
+      "owner": "eng-backend",
+      "status": "todo",
+      "createdBy": "pm"
+    }
+  ],
+  "decisions": [
+    {
+      "by": "pm",
+      "text": "生徒向けは、登録なし・広告なし・片手で操作できることを前提にする。1日抜けても進捗が「ゼロに戻る」設計にはしない。連続記録で責めない。",
+      "phase": "discovery",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "先生向けの価値は「採点の手間を減らす」ことと「つまずく生徒を早く見つける」ことの2つ。最初のリリースでは採点の手間削減を優先する。",
+      "phase": "discovery",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "生徒の氏名と成績は外部に置かない前提で検討する。先生の端末内、または匿名・ニックネームで扱う案を優先する。管理職の許可が要るものは、最初のリリースの範囲に入れない。",
+      "phase": "discovery",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "最初のリリースはサーバーを持たない静的 Web アプリにする。データは端末内 (localStorage) とリンク内のデータだけで扱う。理由: 個人情報を外に置かず、管理職の許可を不要にするため。トレードオフとして、端末をまたぐ同期はできない。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "単語帳はアプリに同梱しない。先生が貼った単語リストを使う。理由: ターゲット1900は著作物で、先生が毎週30問を作っているため。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "進捗は「覚えた単語数」の累計で見せる。1日抜けても減らさない。連続記録、ランキング、他の生徒との比較は作らない。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "T5 を最優先にする。T5 は田中さんが先に作る。T1〜T4 はその関数を呼ぶ。そのため T2 と T4 は T5 が終わってから始める。T1 と T3 の画面は、型を先に合わせて並行で進める。理由: 全タスクが共通部分に依存するため。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "T5 のインターフェースは、鈴木さんの案で決める。`parseWordList` は `{words: {en, ja, key}[], errors: {line, reason}[], truncated: boolean}` を返す。`key` は英語の綴りを小文字にして trim したもの。`decodeTest` は例外を投げず、`{ok:false, reason}` を返す。切れたリンクの理由は、生徒に見せる文言にできる形にする。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "T1 の受け入れ条件に次を足す。「進捗をコピー」「進捗を貼って復元」を学習画面から1タップで届く場所に置く。文言は責めない。書き出したコードを貼ると、覚えた数が元に戻る。復元は足し合わせ方式で、古いコードを貼っても数は減らない。「覚えた」は単語の key ごとに持ち、リストを入れ替えても累計は減らさない。理由: iPhone の Safari は7日開かないとデータが消えるため、ひなたさんのような生徒に直撃する。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "結果コードは改ざん防止をしない。チェック4文字は、コピーミスや切れを見つけるためだけに使う。画面や README に「改ざん防止」とは書かない。理由: サーバーがないので防げない。小テストなら、先生が本人の前で確認する運用で足りる。トレードオフとして、点数の書き換えは技術的には防げない。岡田先生が困るなら次回に見直す。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "日本語の欄に複数の意味がある場合は、入力式では書かれた意味のどれか1つに合えば正解にする。意味の区切りは「、」とする。4択では全文を1つの選択肢にする。CSV は BOM つきの UTF-8 にする。ニックネームが `=` `+` `-` `@` で始まるときは、先頭に `'` を付ける。単語が4つ未満のリストは、入力式に自動で切り替える。理由: 採点を減らす目的を優先し、判定を厳しくしないため。岡田先生が違うと言えば直す。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "「完了」にする前に、実機のスマホで確認する。確認する点は、360px 幅、親指が届く下半分、30問のテストリンクを LINE で送って開けること。ボタンは44px以上にする。キーボード操作にも対応する。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "T5 の追加仕様を採用する。`encodeTest` / `decodeTest` は async、他は同期。テストIDは単語の内容から作る6文字のハッシュ。ニックネームは `-` と改行を除いて12文字まで、空なら「名無し」。`errors.reason` と `decodeTest` の `reason` は、先生・生徒にそのまま見せられる文言にする。理由: 同じ問題なら集計が分かれず、画面側の二重処理も要らないため。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "30問のリンク長が1500文字を超えたら、田中さんがその時点で相談する。進捗保存の関数は画面と分け、T3 のやり直しからは呼ばない。T1〜T5 の内容と担当は、このまま変えずに進める。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "配布は静的ホスティング (GitHub Pages) に置き、https の URL を先生に渡す方法にする。`file://` で開く運用はしない。理由: LINE から開くには https が要り、ES モジュールは `file://` で動かないため。データはリンクと端末の中だけにあり、サーバーには送らない。トレードオフとして、学校のフィルタで止まる恐れがある。岡田先生に、校内の PC で URL が開けるかを最初に確認してもらう。手順は次の回で田中さんが README に書く。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "T1〜T5 は「ユーザーに見せられる状態」とする。TASK_DONE にするのは、実機 (iPhone Safari・Android)、LINE で30問のリンクを開くこと、Excel での文字化けの3点を確かめてから。T4 で別のテストのコードが「コピーミス」と出る件は、今回は直さない。先生が困ると言えば直す。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "結果コードと CSV に「組・出席番号」を入れる。本名は求めない。理由: ニックネームだけでは成績簿と照らし合わせられず、採点を減らす目的が果たせないため。番号なら校内の扱いで済むと岡田先生が確認している。トレードオフとして、結果コードの形式が変わるので、今回のコードとは互換を持たない (まだ配っていないので問題ない)。",
+      "phase": "acceptance",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "結果コードは、生徒が学校の Google フォームに貼り、先生が回答の列ごと集計画面に貼る運用にする。理由: LINE で110人分が個別に届くのを避けるため。学校ですでに使っている手段なので、新しい許可が要らない。トレードオフとして、組・番号と点数が Google のフォームに載る。岡田先生が困ると言えば見直す。",
+      "phase": "acceptance",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "iteration 2 の範囲は、組・番号 (T6・T7)、Google フォーム経由の集計、GitHub Pages での公開、T1 の空状態と「控え」の文言だけにする。「今週◯個覚えた」は見送る。TASK_DONE の条件 (実機・LINE・Excel の3点) は変えない。",
+      "phase": "acceptance",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "結果コードの形式は `テストID-組-番号-点数-問題数-ニックネーム-チェック4文字` にする。関数は `makeResultCode({id,kumi,no,score,total,nick})`、`parseResultCode`、`checkKumi`、`checkNo`。組は全角を半角に、英字を大文字にそろえる。番号は1〜99の整数。`reason` には、組・番号のどちらの欄の問題かを書く。画面と集計で同じチェックを使う。ニックネームは任意のまま (空なら「名無し」)。理由: 入力チェックを1か所にまとめ、生徒と先生に同じ文言を見せるため。",
+      "phase": "planning",
+      "iteration": 2
+    },
+    {
+      "by": "pm",
+      "text": "フォームへの導線を iteration 2 に入れる。T6 (田中さん) では、先生の画面にフォームの URL 欄を1つ足してリンクのデータに入れる。受け付けるのは `https://docs.google.com/forms/` と `https://forms.gle/` だけで、30問とフォームの URL を合わせて1500文字以内に収める (実測して報告する)。T7 (ひかりさん) では、結果画面に「コピーしてフォームを開く」(`<a target=\"_blank\">` で開くときに同時にコピー) を置く。コピーに失敗したら、コードを全選択した状態で「長押しでコピーしてください」の1行を出す。URL がないテストではコピーボタンだけを出す。「事前入力した URL」は見送り、岡田先生の手間を聞いてから決める。",
+      "phase": "planning",
+      "iteration": 2
+    },
+    {
+      "by": "pm",
+      "text": "GitHub Pages は、`workspace/trial-tango/` の静的ファイルだけを入れた公開リポジトリを別に作って公開する。リポジトリの作成と Pages の有効化は、持ち主の許可を得てから行う (確認は PM がする)。田中さんは先に `dist/` を作るコマンドを用意する。許可が月曜に間に合わなければ、実機・LINE・Excel の確認は翌週にずらし、TASK_DONE の条件は変えない。",
+      "phase": "planning",
+      "iteration": 2
+    },
+    {
+      "by": "pm",
+      "text": "iteration 2 の review の結論: T7 はすべての受け入れ条件を満たし、ユーザーに見せられる。T6 は公開を除くすべての条件を満たし、ユーザーに見せられる。GitHub Pages は持ち主の許可が出るまで公開しない。今回の受け入れは DEMO の出力とスクショで判定してもらい、実機・LINE・Excel の確認 (①〜⑦) は翌週にずらす。T6・T7 は、公開と3点の確認が済むまで TASK_DONE にしない。",
+      "phase": "review",
+      "iteration": 2
+    },
+    {
+      "by": "pm",
+      "text": "iteration 2 の受け入れの結論: 林ひなた・岡田先生ともに ACCEPT。T6・T7 は、GitHub Pages の公開と実機の確認 (①〜⑦) が済むまで TASK_DONE にしない。職員室の PC で github.io が開けない、または Excel で文字化けする場合は、学校で使えないものとして最優先で見直す。次の回は、公開と確認 → T8 (組の入力例) → T9 (提出時刻) の順に進める。事前入力の URL は、使い回せると分かってから決める。ボタンを下に移すことと「今週◯個」は見送る。",
+      "phase": "acceptance",
+      "iteration": 2
+    }
+  ],
+  "verdicts": [
+    {
+      "by": "user-student",
+      "verdict": "accept",
+      "reason": "登録なし・広告なし・片手で操作できる・連続記録で責めない、の4つがそろってて、これなら通学の15分で続けられそう。累計が減らんのもいい。ただ「控え」の分かりにくさと、空っぽの画面で貼り付けを頼まれるのは直してほしい。iPhone で本当にデータが残るかは、実機で見るまで分からん。",
+      "iteration": 1
+    },
+    {
+      "by": "user-teacher",
+      "verdict": "reject",
+      "reason": "リンク作成と集計の操作は分かりやすく、採点の手間は減りそうです。ただ、ニックネームだけでは成績簿のどの生徒か分からず、110人分を手で照らし合わせる手間が残ります。採点を減らすという私の目的を、まだ果たせていません。組・出席番号の欄を足して、CSV に番号の列が出れば受け入れます。校内フィルタと Excel の確認は私がやります。",
+      "iteration": 1
+    },
+    {
+      "by": "user-student",
+      "verdict": "accept",
+      "reason": "前回お願いした2つ（空っぽの画面で貼り付けを頼まれること、「控え」が分かりにくいこと）は、どっちも直ってる。登録なし・広告なし・連続記録なしもそのまま。組と番号は前の分が残るから、入れるのは1回で済む。テストの提出もボタン1個でいける。気になるのは、テストのボタンが上のほうにあることと、「長押しで」の1行がいつ出るかが分からんことくらい。iPhone でデータが残るか、LINE で開けるかは、実機で見るまで分からん。",
+      "iteration": 2
+    },
+    {
+      "by": "user-teacher",
+      "verdict": "accept",
+      "reason": "前回 REJECT にした理由は、ニックネームだけでは成績簿と照らし合わせられないことでした。これは解消しています。組・番号が結果コードと CSV に入り、組→番号の順に並び、番号は数値の列です。これならそのまま成績簿に貼れます。集め方も Google フォームの列を貼るだけで、ふだんの作業の範囲です。採点の手間を減らすという私の目的は果たせると判断します。ただし、職員室の PC で github.io が開けるかと、Excel で文字化けしないかはまだ確かめていません。どちらかが駄目なら学校では使えないので、URL が出たらすぐ確認し、結果を報告します。",
+      "iteration": 2
+    }
+  ],
+  "demos": [
+    {
+      "by": "eng-backend",
+      "text": "T2: 先生が5行のリストを貼る (3行目は壊れた行) と、リンクができる。そのリンクのハッシュを生徒側の `decodeTest` で開くと、同じ問題が戻る。実行コマンドは `node demo/e2e.mjs` (workspace/trial-tango/ 内)。実際の出力:\n```\nリンク: true ID fzd0ll 問題数 5 無効行 [ '3行目: カンマがありません' ]\n```",
+      "phase": "build",
+      "iteration": 1
+    },
+    {
+      "by": "eng-backend",
+      "text": "T4: 生徒3人分の結果コードを貼る。1行目の重複と、壊れたコード1行も混ぜた。同じ `node demo/e2e.mjs` の実際の出力:\n```\n結果コード:\nfzd0ll-3-5-ひなた-tj5n\nfzd0ll-5-5-=SUM(A1)-cckj\nfzd0ll-0-5-けん-v3v6\n集計: rows [\"ひなた 3/5\",\"=SUM(A1) 5/5\",\"けん 0/5\"], average 2.67 (5点満点)\nskipped: 4行目「同じコードがすでにあります」, 5行目「形式が違います (…5つに分かれていません)」\nCSV先頭BOM: true CRLF: true\nニックネーム,点数,問題数\nひなた,3,5\n'=SUM(A1),5,5\nけん,0,5\n```\n「断念する」「よく考える」のように、複数の意味のうち1つだけ書いた答えも正解になった。`=` で始まるニックネームには `'` が付いた。",
+      "phase": "build",
+      "iteration": 1
+    },
+    {
+      "by": "eng-backend",
+      "text": "T2: 先生が PC 幅で `teacher.html` に9行のリストを貼る (3行目は壊れた行)。「リンクを作る」を押す。実ブラウザ (Chromium) で `node demo/browser.mjs` を実行した出力:\n```\n[T2] msg: 8問のリンクができました。無効な 1 行は除いてあります。\n[T2] errors: [ '3行目: カンマがありません' ]\n[T2] link: http://127.0.0.1:8765/test.html#Tc3LCoJgEAXgd5n1_0bSwtRIKDW7… hash長 251\n[T2] オフラインで再読み込み: 先生用 - 小テスト / 入力が残る: 9 行\n[T2] オフラインでリンク作成: 8問のリンクができました。無効な 1 行は除いてあります。\n[T2] オフラインで test.html を開けた: 8問 (4択)\n```\n画面: `workspace/trial-tango/demo/screens/t2-teacher-link.png`。sw.js のオフライン動作は、ネットワークを切った Chromium で確認した。LINE と実機のスマホは未確認。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "eng-backend",
+      "text": "T4: 先生が結果コード6行を貼る。内容は、生徒が実際に解いたコード、その貼り重ね、他の2人、末尾が切れたコード、チェックが合わないコード。続けて「CSV で書き出す」を押す。同じスクリプトの出力:\n```\n[T4] summary: 3人 / 平均 5.7 点 (8点満点)\n[T4] rows: [ 'ひなた6 / 8', 'けん8 / 8', '=SUM(A1)3 / 8' ]\n[T4] skipped: 2行目: 同じコードがすでにあります / 5行目・6行目: コピーミスか、途中で切れているようです。もう一度送ってもらってください\n[T4] CSV: result-szme4y.csv BOM true CRLF true\nニックネーム,点数,問題数\nひなた,6,8\nけん,8,8\n'=SUM(A1),3,8\n```\nダウンロードされた実ファイル: `workspace/trial-tango/demo/screens/result-szme4y.csv`、画面: `demo/screens/t4-aggregate.png`。Excel で開いたときに文字化けしないかは、まだ確認していない。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "eng-backend",
+      "text": "T5: T2 と T4 の流れは、どちらも T5 の関数を実ブラウザから呼んで動いた。生徒が解いた結果コード `szme4y-6-8-ひなた-w2vj` を、先生側でそのまま集計できた。`npm test` は pass 42 / fail 0 で、修正後に100回続けて回して100回とも通った。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T1: 生徒が、テストリンクの「この単語を学習画面で使う」から学習画面を開く。360px 幅の Chromium で `node demo/browser.mjs` を実行した出力 (README の手順どおり):\n```\n[T1] card: abandon / count: 覚えた単語: 0 /「覚えた」ボタン位置 { top: 568, bottom: 624, h: 56 } 画面高 740\n[T1] hidden なのに見える: [] / 横はみ出し px: 0\n[T1] めくった: abandon断念する、捨てる\n[T1] 2つ覚えて1つまだ: 覚えた単語: 2 次のカード acquire\n[T1] 開き直し後: 覚えた単語: 2 次のカード acquire\n[T1] 入れ替え欄: true / カードを隠す: true / 横はみ出し px: 0\n[T1] 2語のリストに入れ替え: 覚えた単語: 2 / 残り 2 / カード bring\n[T1] ぜんぶ覚えた: 覚えた単語: 4 / ぜんぶ覚えました 🎉下の「単語リストを入れ替える」から、新しい単語で続けられます。 / 入れ替えボタン見える: true\n[T1] さらに入れ替えて開き直し: 覚えた単語: 4 / カード decide\n```\n画面: `workspace/trial-tango/demo/screens/t1-card-360.png`、`t1-change-360.png`、`t1-done-360.png`、`t1-empty-360.png`。「めくる」「まだ」「覚えた」は、画面の下 504〜624px (画面の高さは 740px) に収まっている。登録画面も広告もない。連続記録や責める文言も出ない。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T3: 生徒が 360px 幅で 8問のテストリンクを開く。ニックネーム「ひなた」で始め、2問をわざと間違える。同じスクリプトの出力:\n```\n[T3] start: 8問 (4択) / hidden なのに見える: [] / 横はみ出し px: 0\n[T3] score: 8問中 6問 正解\n[T3] wrong: [ 'acquire = 獲得する (あなた: 適応させる)', 'admit = 認める (あなた: よく考える、みなす)' ]\n[T3] code: szme4y-6-8-ひなた-w2vj / hidden なのに見える: [] / 横はみ出し px: 0\n```\nこの結果コードを先生側に貼ると、そのまま集計された (田中さんの T4 の DEMO の「ひなた 6 / 8」がこれ)。画面: `demo/screens/t3-start-360.png`、`t3-question-360.png`、`t3-result-360.png`。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T7: 生徒が 360px 幅でテストリンクを開き、組と番号を空のまま「はじめる」を押す。次に番号を 0 にして押し、最後に正しく入れて解く。手順は README のとおりで、`python3 -m http.server 8765` を起動してから `PLAYWRIGHT=… CHROME=… node demo/browser.mjs` を実行した。出力は次のとおり。\n```\n[T7] 空で押す: [ '組を入れてください', '出席番号を入れてください' ] / フォーカス: kumi / 始まった: false\n[T7] 番号 0: [ '出席番号は1〜99の数字にしてください' ] / フォーカス: no / 始まった: false\n[T3] code: szme4y-2B-14-6-8-ひなた-px60 / hidden なのに見える: [] / 横はみ出し px: 0\n[T7] 結果コードを読む: 組 2B / 番号 14 / 6/8 / ひなた\n[T7] フォームのボタン: true { href: 'https://forms.gle/AbC123xyz', target: '_blank', h: 56 } / コピーだけのボタン: false\n[T7] 押した後: 開いたタブ chrome-error://chromewebdata/ / クリップボード: szme4y-2B-14-6-8-ひなた-px60 / コピーしました。フォームの欄に貼って送ってください。\n[T7] コピー失敗時: 長押しでコピーしてください / 選択中: szme4y-2B-14-6-8-ひなた-px60\n[T7] 開き直し: 組 2B / 番号 14 / フォーカス: begin\n[T7] フォームなしのテスト: コピーのボタン true / フォームのボタン false / この結果コードを先生に送ると提出になります。 / 横はみ出し px: 0\n[T1] 単語なし: 先生のテストリンクから開いてください / 貼り付け欄は閉じている: true / hidden なのに見える: [] / 横はみ出し px: 0\n[T1] 進捗の見出し: 進捗をコピー / 説明: スマホを替えたり、データが消えたときに戻せます。\n[T1] card: abandon / count: 覚えた単語: 0 /「覚えた」ボタン位置 { top: 568, bottom: 624, h: 56 } 画面高 740\n[T4] rows: [ '120=SUM(A1)3 / 8', '2B3けん8 / 8', '2B14ひなた6 / 82回以上', '2B14ひなた8 / 82回以上' ]\n```\n- 開いたタブが chrome-error になるのは、この環境から外のサイトにつながらないためです。開く先の URL (forms.gle) とコピーした内容は正しいです。\n- 生徒の画面で出た結果コード `szme4y-2B-14-6-8-ひなた-px60` を、田中さんの集計にそのまま貼れました。組→番号の順に並んでいます。\n- 画面: `workspace/trial-tango/demo/screens/t7-seat-error-360.png`、`t7-result-form-360.png`、`t1-empty-360.png`",
+      "phase": "build",
+      "iteration": 2
+    },
+    {
+      "by": "eng-backend",
+      "text": "T6: 先生が Google フォームの回答列 (見出し・タイムスタンプ・前後の空白入り) をそのまま集計画面に貼り、CSV を書き出す流れです。実際に流した出力を下に貼ります。\n- `npm test`: pass 62 / fail 0。\n- 30問のリンクに forms.gle を入れた場合、`#` の後ろは 306文字でした (同じ形の短い単語で計測)。Google 以外の URL を入れると、作らずに「Google フォームの URL (https://docs.google.com/forms/… か https://forms.gle/…) を入れてください」と出ます。\n- 組と番号の検査: `２ｂ` は `2B` で通ります。`2B-1` は「組は3文字までの数字か英字にしてください」、`07` は 7 で通り、`100` は「出席番号は1〜99の数字にしてください」で止まります。\n- フォームの列を貼った結果 (Node):\n```\nタイムスタンプ\t結果コード\n2026/10/19 8:01:02\t  9qme2n-2B-14-22-30-ひなた-px9j  \n2026/10/19 8:02:10\t9qme2n-2B-3-28-30-けん-rzn5\n2026/10/19 8:03:00\t9qme2n-2B-14-22-30-ひなた-px9z   ← 最後の1文字を壊した\n2026/10/19 8:04:00\t9qme2n-1-20-15-30-=SUM(A1)-i1lh\n2026/10/19 8:05:00\tわかりません\n2026/10/19 8:06:00\t9qme2n-2B-14-27-30-ひなた-93pi\n--- 集計 --- 4件 / 平均 23 / 30問\n1 20 =SUM(A1) 15/30\n2B 3 けん 28/30\n2B 14 ひなた 22/30 2回以上\n2B 14 ひなた 27/30 2回以上\nスキップ: 4行目 コピーミスか、途中で切れているようです。もう一度送ってもらってください\nスキップ: 6行目 結果コードが見つかりません\n--- CSV --- BOM: true CRLF: true\n組,番号,ニックネーム,点数,問題数,同じ番号\n1,20,'=SUM(A1),15,30,\n2B,3,けん,28,30,\n2B,14,ひなた,22,30,2回以上\n2B,14,ひなた,27,30,2回以上\n```\n- 見出しの行は黙って飛ばします。並びは組→番号の順です。番号と点数は数値の列で、`=` で始まるニックネームには `'` を付けています。\n- 画面での確認: `node scripts/dist.mjs <出力先>` で公開するファイルだけを集め、静的サーバーで配りました (Pages と同じ状態)。そこで `demo/browser.mjs` を通すと、次のとおり出ました。\n  - T4: 4件 / 平均 6.3点 (8点満点)。スキップは「3行目: 同じコードがすでにあります」「7行目: コピーミスか…」「8行目: 結果コードが見つかりません」の3件。\n  - T2: オフラインで再読み込みしても、8問のリンクを作れました。`test.html` もオフラインで開けました。\n- 生成したファイル: `workspace/trial-tango/demo/screens/t4-aggregate.png`、`t2-teacher-link.png`、`result-szme4y.csv`\n- 未完了: GitHub Pages の公開 (README 先頭は「公開 URL: まだありません」のまま)。実機・LINE・Excel の確認も済んでいません。",
+      "phase": "review",
+      "iteration": 2
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T8: 生徒が 360px 幅でテストリンクを開く。組に `2-3`、次に `2年3組` を入れて「はじめる」を押す。`python3 -m http.server 8765` を起動してから `PLAYWRIGHT=… CHROME=… node demo/browser.mjs` を実行した。出力は次のとおり。\n```\n[T8] 組の例: 組は数字か英字だけ（例: 3、2B） / 組の欄 top: 206 / はじめる top: 366\n[T8] 組 2-3: [ '組は3文字までの数字か英字にしてください（例: 3、2B）' ] / フォーカス: kumi / 始まった: false / 横はみ出し px: 0\n[T8] 組 2年3組: [ '組は3文字までの数字か英字にしてください（例: 3、2B）' ] / フォーカス: kumi / 始まった: false / 横はみ出し px: 0\n```\n- 組の欄 (206px) と「はじめる」(366px) の位置は、T8 の前に測った値と同じです。\n- 画面: `workspace/trial-tango/demo/screens/t8-kumi-hint-360.png`",
+      "phase": "wrapup",
+      "iteration": 2
+    }
+  ],
+  "notes": {
+    "pm": [
+      "ひなた: 通学15分(座れず片手スマホ)。最初の5分はSNS、実質10分。アプリ3つとも1週間未満で挫折(登録・広告・連続記録が途切れると消したくなる)。小テスト前日に詰め込み、終わると忘れる。英検2級に関心あり。朝練の日は眠くて無理。",
+      "岡田先生: 2年3クラス約110枚を手で採点(1時間強)+名簿転記+Excel打ち直し。問題作成は毎週約30分(ターゲット1900から30問)。つまずく生徒の発見が1〜2週間遅れる。学校の制約: 生徒の端末・個人情報、外部サービスはフィルタで止まることがある。",
+      "ひなた: 最後にアプリを消したのは先月末。連続記録が4日で、文化祭準備と朝練で2日開けず、ゼロに戻って消した。「さぼった自分を責められる感じが嫌」「1日抜けただけで全部なかったことになるのが一番やる気をなくす」。通知は見ると罪悪感が出るのでスルーしている。友達が続けているのも地味にへこむ。",
+      "岡田先生: つまずきに気づいたのは2週間前。名簿に点数を並べて書いたとき、3回連続30点台の生徒に気づいた。仕組みではなく偶然で、気づけるのは数人だけ。校内は授業中スマホ禁止、学校Wi-Fiは生徒に非開放(モバイル回線のみ)。Googleフォームで冬休み課題を出したときの回答率は約2/3。生徒の名前と成績を外部に置くには、管理職の許可と保護者への説明が要る。",
+      "岡田先生への確認 (改ざんの運用、複数の意味の採点) は、返事待ちのまま「進める」で決めた。違うと言われたら直す。T5 完了時に、田中さんから30問の実測リンク長を受け取る。次の確認点は、T1・T3・T2 の実機確認 (360px、LINE で開けること)。",
+      "レビュー1回目: T1〜T5 は 360px の headless Chromium で受け入れ条件を満たした。残る確認は、実機の親指の届き方・クリップボード・7日でデータが消える件、LINE で30問のリンク (816文字) を開くこと、Excel での文字化け、校内フィルタで github.io が開けるか。配布は GitHub Pages に決めた。T4 で別のテストIDのコードがチェックで落ちたときに「コピーミス」と出る件は保留。",
+      "受け入れ1回目: ひなたさんは ACCEPT。直してほしい点は、空の画面で貼り付けを頼まれることと「控え」が分かりにくいこと。「今週◯個」を見たいとも言ったが、今回は見送った。岡田先生は REJECT。理由はニックネームだけでは成績簿と照らし合わせられないことで、組・出席番号の欄と CSV の列があれば受け入れる。集め方は Google フォームに貼らせて列ごと貼る。複数の意味の採点、小数1桁の平均点、改ざんを本人の前で確認する運用は OK。月曜に職員室の PC で github.io と Excel の文字化けを確認してもらう。iteration 2 は T6 (田中さん) と T7 (ひかりさん)。",
+      "iteration 2 計画1回目: T6 と T7 は結果コードの形式でつながっている。田中さんが形式を先に決めて共有し、ひかりさんは文言の修正を並行で進める。GitHub Pages に公開できるか (権限・許可) を田中さんに確認中。結果画面の「フォームを開く」ボタンは、半日以内で作れるなら T7 に入れ、無理なら見送る。",
+      "iteration 2 計画で決めたこと: コードの形式 (組・番号入り)、checkKumi/checkNo の共通化、フォームへの導線 (URL は Google フォームのものだけ受け付ける、コピーできないときは長押しの代わりの表示) を T6・T7 に入れた。事前入力した URL は見送り、岡田先生の手間を聞く。Pages は別の公開リポジトリに置き、持ち主の許可は私が取る。許可が遅れたら実機確認は翌週にずらす。月曜にひなたさんが確かめるのは、LINE で開けることと「コピーしてフォームを開く」ボタン。見積もりは二人とも約1日。",
+      "レビュー2回目: T7 はすべての条件を満たした。T6 は Pages の公開だけが残っている (持ち主の許可を私がまだ取れていない)。30問＋フォームのリンクは最長 1052文字。実機確認の①〜⑦ (ひなたさんは iPhone と LINE で5項目、岡田先生は職員室の PC で github.io と Excel) は翌週にずらす。二人への連絡は私がする。受け入れはスクショと DEMO の出力で判定してもらう。",
+      "受け入れ2回目: 二人とも ACCEPT。岡田先生が REJECT にした理由は組・番号で解消した。学校で使えるかどうかは、職員室で github.io が開けるかと Excel の文字化けで決まる (URL が出たら私から連絡する)。「長押しで」の1行はコピー失敗時だけ出る (test.js:91)。次は T8 (組の入力例。「2-3」で止まる件)、T9 (CSV に提出時刻)、田中さんの事前入力 URL の使い回し調査。ひなたさんは提出率に事前入力が効くと言っている。見送ったのは、ボタンを下に移すことと「今週◯個」。",
+      "iteration 2 の wrapup: T8 (組の例) と T9 (CSV の提出時刻) を実装した (pass 66)。TASK_DONE は1つもない。残っているのは、Pages 公開の持ち主の許可、実機確認の ①〜⑤ (ひなたさん) と ⑥⑦ (岡田先生)、事前入力 URL の使い回しの確認 (長い docs.google.com の URL が要り、forms.gle ではできない)。公開する前に dist を作り直す。見送ったのは、ボタンを下に移すことと「今週◯個」。"
+    ],
+    "user-student": [
+      "ひなたは連続記録が途切れた瞬間に「もういいや」となってアプリを消す。直近は先月末、文化祭準備と部活で2日開けなかったのが原因。友達に勧められたアプリは今は未使用。友達が続けているのが地味にへこむ。",
+      "受け入れ1回目: 学習画面とテストのスクショを見て accept。気に入ったのは、登録なし・広告なし・下にボタン・連続記録なし・累計が減らないこと。不満は、「控え」の意味が分からないこと、空の画面で貼り付けを頼まれること、全部覚えたあとの手応えが弱いこと。iPhone の実機と LINE で開けるかは未確認。",
+      "受け入れ2回目 (iteration 2): スクショで accept。空っぽの画面と「進捗をコピー」は直った。組と番号は前の分が残るので、入れるのは1回。残っている要望は、テストと結果画面のボタンが上半分にあること、「長押しでコピー」がコピー成功時にも出ていないかの確認、フォームを最初からコードが入った状態で開くこと、「今週◯個覚えた」(前日に詰め込む週こそ見たい)。実機と LINE は URL がもらえ次第 5 分で試すと約束した。"
+    ],
+    "eng-backend": [
+      "結果コードのチェックサムは、コピーミスを見つけるためのもの。改ざんは防げない。UI や README で「改ざん防止」と書かない。",
+      "iPhone の Safari は、7日間開かないとサイトのデータを消す。T1 の進捗は、コードで書き出し・読み込みできるようにして対応する。ひかりさんに確認する。",
+      "CSV は BOM つき UTF-8 にする。先頭が `=` `+` `-` `@` のセルは、前に `'` を付ける。",
+      "リンクの長さは、30問で 1500文字以内を目標にする。完了前に、実機のスマホで LINE から共有して確認する。",
+      "encodeTest/decodeTest は async (CompressionStream)。テストID は単語内容から作る6文字ハッシュ。ニックネームは `-` と改行を除き12文字まで、空なら「名無し」。30問の実測リンク長を T5 完了時に報告する。",
+      "T5 の errors.reason は、先生にそのまま見せられる文言にする (「カンマがありません」「英語が空です」「日本語が空です」)。行番号は line に別で持つ。key の作り方は parseWordList の1か所に集める。T4 の CSV 書き出しは、結果コード解析とは別の小さな関数にする。",
+      "T5 完了。`src/tango.js` に parseWordList / encodeTest / decodeTest / testId / makeResultCode / parseResultCode / cleanNick がある。30問の実測リンク長は816文字 (現実的なデータ)。実機スマホでの LINE 確認は未実施。次は T2 (先生用リンク作成画面) と T4 (集計画面と CSV 書き出し)。",
+      "T2 と T4 は完了 (npm test: pass 35)。関数は `src/teacher.js` にあり、`buildTestLink` / `aggregateResults` / `toCsv` / `csvCell`。画面は `teacher.html` と `teacher.js`、オフライン用は `sw.js`。画面とオフライン動作は、ブラウザがなく未確認。`app.js` の import 先 (`./src/words.js`) が誤りで、ひかりさんに連絡済み。`file://` では ES モジュールが動かない。T2 のリンク先は仮に `index.html` で、T3 の置き場所が決まったら `TEST_PAGE` を直す。",
+      "T3 取り込み後も `npm test` は pass 42。`sw.js` の `FILES` と `TEST_PAGE` (`test.html`) は整合している。残る未確認は、画面の動き、sw のオフライン動作、LINE で30問のリンクを開くこと、CSV の Excel 文字化け。配布方法 (`file://` では ES モジュールが動かない) は美咲さんの決定待ち。",
+      "最終ラウンド (build iter1) で `demo/e2e.mjs` を追加した。先生→生徒→先生の流れを Node で通し、決定どおり動くことを確認した。import 先、sw の FILES、静的サーバーでの配信も確認済み。npm test は pass 42。残りは実機確認の5点 (画面、360px と親指の範囲、LINE、オフライン、Excel)。配布方法は、静的ホスティング (https) を美咲さんに提案した。決定待ち。",
+      "review iter1: /opt/pw-browsers (Chromium) と /opt/node-tools/node_modules/playwright で、実ブラウザ確認ができる。`demo/browser.mjs` (PLAYWRIGHT=… で指定、http.server 8765) で全画面を通し、スクショは demo/screens/ に出る。直したもの: style.css の `[hidden]` 漏れ、test.js の IME Enter、tango テストの console.log による不安定な失敗 (→t.diagnostic)。npm test は pass 42 で安定。T1 は、単語を入れた後に新しいリストを入れる場所がない (ひかりさんに依頼済み)。残りの未確認は実機・LINE・Excel・配布方法。",
+      "iteration 2 で提案した結果コードの形式は `テストID-組-番号-点数-問題数-ニックネーム-チェック4文字`。引数は `makeResultCode({id,kumi,no,score,total,nick})` で、`checkKumi` / `checkNo` は `{ok,value,reason}` を返し、T7 と共通にする。組は全角を半角に、英字を大文字にそろえる。フォームから貼った行は、タブ区切りのセルごとに読む。1行目にコードがなければ見出しとして黙って飛ばす。git のリモートは `n-seiji/team` (エンジンと同じリポジトリ)。Pages は、`trial-tango` だけの別リポジトリを作る案で、持ち主の許可待ち。許可なしにリポジトリを作ったり push したりしない。フォームの URL は docs.google.com/forms と forms.gle に限る。",
+      "build iter2 round1: T6 のコード部分は完了 (npm test pass 62)。sw.js の FILES に src/seat.js が漏れていたので直した (CACHE v3)。漏れを検出する test/files.test.js を追加した。`node scripts/dist.mjs <出力先>` で作った dist を静的サーバーで配り、`BASE=http://127.0.0.1:8766/ CHROME=/opt/pw-browsers/chromium-1194/chrome-linux/chrome PLAYWRIGHT=/opt/node-tools/node_modules/playwright/index.mjs node demo/browser.mjs` で全画面が通ることを確認した。30問の実測は、フォームなし 866 / forms.gle 948 / docs.google.com 1052 文字。残りは Pages の公開 (許可待ち、README 先頭の URL も未記入) と、実機・LINE・Excel の確認。pkill -f は自分のシェルも落とすので使わない。",
+      "build iter2 round2: T7 を取り込んだ状態で、dist から demo/browser.mjs を通した (T7・T4・T2 のオフライン動作まで全部 OK)。npm test は pass 62。CSV の列は「組,番号,ニックネーム,点数,問題数,同じ番号」で、BOM と CRLF つき、番号は数値。T6 の残りは Pages の公開 (許可待ち、README 先頭の URL は未記入) と、実機・LINE・Excel の確認だけ。サーバーを止めるときは `fuser -k <port>/tcp` を使う。",
+      "build iter2 round2 (2回目): コードは変えていない。npm test pass 62。README には公開手順が書いてある (15行目と94行目)。T6 で残っているのは Pages の許可待ちだけで、README 先頭の URL はまだ書いていない。許可が出なければ、実機・LINE・Excel の確認は翌週に回す。",
+      "build iter2 の最終ラウンド: コードは変えていない。npm test pass 62 / fail 0。T6 は Pages の許可待ちで、TASK_DONE にしていない。README 先頭の URL は未記入。公開の手順は `node scripts/dist.mjs dist` → 公開用リポジトリの main に置く → Pages で main / root を選ぶ → 3画面を確認して README に URL を書く。ひかりさんでも出せる。翌週も許可が出ない場合の代わりの手は Cloudflare Pages などだが、どれもアカウントが要るので持ち主の判断が要る。",
+      "build iter2 round3 (最終): コードは変えていない。npm test pass 62 / fail 0。README 先頭の URL は未記入のまま。T6 は Pages の許可待ちで、TASK_DONE にしていない。",
+      "review iter2: npm test pass 62。dist から browser.mjs を通して、T7・T4・T2 のオフライン動作まで OK。T6 の DEMO は Node スクリプトで出した (フォームの列を貼る、30問+forms.gle のハッシュ 306文字、壊れたコード・コードなしの行はスキップ)。T7 のレビューで指摘はなし。T6 は Pages の許可待ちで、TASK_DONE にしていない。",
+      "wrapup iter2: T9 を実装した (npm test pass 65)。findResultCode が同じ行のタイムスタンプを `at` に入れる (TIME 正規表現は `YYYY/M/D H:MM(:SS)`)。aggregateResults は `hasTime` を返し、同じ組・番号の中を時刻の順に並べる。CSV の最後に「提出時刻」の列を足した。一覧では、時刻がないときに `table.no-time` で列を隠す。dist から browser.mjs を通して確認済み。事前入力の URL は、形式 (`viewform?usp=pp_url&entry.N=値`) から見て、同じ質問なら使い回せるはず。ただし実物では確かめていない (forms.gle は不可、質問を作り直すと N が変わる)。T6 は Pages の許可待ちで、T9 は事前入力の実確認待ち。どちらも TASK_DONE にしていない。"
+    ],
+    "eng-frontend": [
+      "T1 に進捗コードの書き出し/読み込みを追加する (足し合わせ復元)。単語キーは英語を小文字化して trim したもの。T5 に key / truncated / decodeTest の {ok,reason} 戻りを依頼中。入力式の複数意味の採点は岡田先生に確認中。",
+      "T1/T3 は T5 の型 (async の encodeTest/decodeTest、{ok,reason}、key、truncated) に合わせて作る。進捗の保存は画面と分けた関数にし、T3 のやり直しからは呼ばない。parseWordList の errors.reason は先生に見せられる文言にしてもらうよう依頼済み。30問のリンク長の実測待ち。完了前に実機 (360px、LINE で開く) で確認する。",
+      "T1 は `src/progress.js` とそのテスト、`index.html` / `style.css` / `app.js` まで作成済み。残りは T5 (`./src/words.js` の想定パス) との結合と実機確認（360px、親指が届く範囲）。T3 は T5 後に着手し、`progress.js` を呼ばない。",
+      "T1 は結合済み (`app.js` は `./src/tango.js` を import)。T3 は `src/quiz.js`、`test.html`、`test.js` と、`test/quiz.test.js` の 7 件まで実装済みで、`npm test` は 42 件通った。テストリンクは `test.html#<データ>`。どちらも画面をブラウザで動かしていない。残りは実機確認 (360px、親指が届く範囲、LINE で30問のリンクを開く、`sw.js` のオフライン) の後に TASK_DONE にすること。",
+      "2回目のビルド: `npm test` は 42 件通った。この環境にブラウザはなく、T1・T3 は実機確認待ちで TASK_DONE にしていない。確認する点は、360px、親指が届く範囲、LINE で30問のリンクを開く、`sw.js` のオフライン。",
+      "3回目のビルド終了時点で、`npm test` は 42 件通過。この環境にブラウザはなく、T1・T3 は TASK_DONE にしていない。次にやることは、実機確認 (360px、親指が届く範囲、LINE で30問のリンクを開く、`sw.js` のオフライン) と、その結果の修正。美咲さんの配布方法の決定と、岡田先生への確認 (複数の意味の採点、結果コードの運用) の返事も待っている。",
+      "レビュー1回目: T1 に「単語リストを入れ替える」を追加した (`index.html`/`app.js`/`style.css`)。360px の Chromium で `PLAYWRIGHT=/opt/node-tools/node_modules/playwright/index.mjs CHROME=/opt/pw-browsers/chromium-1194/chrome-linux/chrome node demo/browser.mjs` を実行し、`python3 -m http.server 8765` を先に起動する。T1・T3 は受け入れ条件を満たした。npm test は pass 42。実機 (iOS Safari・Android)、LINE、クリップボードは未確認で、TASK_DONE にしていない。",
+      "iteration 2 で合意した結果コードの形式: `テストID-組-番号-点数-問題数-ニックネーム-チェック4文字`。関数は `makeResultCode({id,kumi,no,score,total,nick})`。T7 の入力チェックは田中さんの `checkKumi` / `checkNo` (`{ok,value,reason}`) を使う。組・番号は進捗とは別のキーで localStorage に保存する。「コピーしてフォームを開く」は `<a target=_blank>` を押したときに同時にコピーし、失敗したらコードを全選択して見せる。フォームの URL がないテストではコピーボタンだけ出す。Google フォームの事前入力 URL は次の回の候補。T7 の見積もりは約1日。作業順は、文言 → 組・番号 → フォームのボタン → browser.mjs。",
+      "iteration 2 のビルドで T7 を実装し、360px の Chromium で確かめた。組・番号の欄 (エラーは各欄の下に出す)、`seat:v1` への保存、フォームのボタンとコピーできないときの全選択、フォーム URL がないテスト、空の状態、「進捗をコピー」。`npm test` は pass 62。`demo/browser.mjs` に [T7] の出力を足した。実機 (iOS Safari・LINE) で「開く＋コピー」を確かめていないので、TASK_DONE にしていない。",
+      "iteration 2 ビルドの2ラウンド目の時点で、`npm test` は pass 62。`sw.js` の FILES に `src/seat.js` が入っている。`src/` にファイルを足すときは、`sw.js` の FILES にも足す (漏れると files.test.js が落ちる)。T7 の TASK_DONE は、ひなたさんの実機5項目が通ってから。5項目は、LINE で30問を開いて組・番号を入れて始める、フォームを開く＋コピー (失敗したら長押し)、組・番号が残る、片手で操作できる、進捗をコピー。",
+      "iteration 2 のビルド終了時点で、`npm test` は pass 62、コードの変更はない。T6・T7 は Pages の許可待ち。月曜に確かめる7項目: ひなたさん (①LINE で30問を開いて組・番号を入れて始める ②フォームを開く＋コピー/長押し ③組・番号が残る ④片手で操作できる ⑤進捗をコピー)、岡田先生 (⑥職員室の PC で github.io の teacher.html が開ける ⑦CSV を Excel で開いて文字化けしない、番号順に並べ替えられる)。田中さんが不在のときは、README の手順で私が公開する (許可が出てから)。",
+      "wrapup (iteration 2): T8 を実装した。`checkKumi` の reason は「組は3文字までの数字か英字にしてください（例: 3、2B）」で、開始画面の `#kumi-hint` は「組は数字か英字だけ（例: 3、2B）」。組の欄 (top 206) と「はじめる」(top 366) の位置は前と同じ (`#start .note{margin-bottom:0}#start #kumi-hint{margin:0 0 14px}`)。`npm test` は pass 66。T1・T3・T7・T8 は実機確認 (①〜⑤) が済むまで TASK_DONE にしない。公開の前に `dist/` を作り直す。`node --test` を引数なしで実行すると `test.js` を拾って落ちるので、テストは `npm test` で流す。"
+    ],
+    "user-teacher": [
+      "先生側の必須要望: ニックネームでなく「組・出席番号」で結果を識別し、CSV に組・番号の列を出すこと。結果コードは Google フォームで集める想定。月曜に校内 PC で GitHub Pages の URL と Excel の文字化けを確認すると約束した。",
+      "iteration 2 の受け入れで ACCEPT（組・番号つき CSV で要望は満たされた）。残りは公開 URL が出たあとの校内フィルタ (github.io) と Excel の文字化けの確認で、私がやる。次の回への要望は3つ。同じ番号の重複がどちらの提出か分かること（タイムスタンプ）、組の入力例を開始画面に出すこと、事前入力 URL を毎週使い回せるか教えてもらうこと。"
+    ]
+  },
+  "historyWindow": 40
+}

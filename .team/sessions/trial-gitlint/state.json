@@ -1,0 +1,744 @@
+{
+  "version": 1,
+  "name": "trial-gitlint",
+  "brief": "チームの Git コミットメッセージを規約 (Conventional Commits) に沿ってチェックし、直し方を提案する CLI",
+  "language": "ja",
+  "workspace": "workspace/trial-gitlint",
+  "createdAt": "2026-10-17T08:38:51.739Z",
+  "status": "done",
+  "members": [
+    {
+      "id": "pm",
+      "role": "pm",
+      "persona": {
+        "name": "佐藤 美咲",
+        "age": 36,
+        "occupation": {
+          "title": "Product Manager",
+          "organization": "小さなSaaSスタートアップ",
+          "description": "ユーザーインタビューから課題を言語化し、最小のスコープで価値を届けることに責任を持つ。"
+        },
+        "long_term_goals": [
+          "ユーザーが本当に使い続けるプロダクトを作る",
+          "チームが迷わず動ける判断を素早く下す"
+        ],
+        "style": "質問が具体的で短い。『最後にそれが起きたのはいつですか？』のように事実を掘る。決めるときは理由とトレードオフを一言添える。",
+        "personality": {
+          "traits": [
+            "好奇心が強い",
+            "スコープを削るのが得意",
+            "ユーザーの言葉をそのまま引用する"
+          ],
+          "big_five": {
+            "openness": "高",
+            "conscientiousness": "高",
+            "extraversion": "中",
+            "agreeableness": "中",
+            "neuroticism": "低"
+          }
+        },
+        "skills": [
+          "ユーザーインタビュー (The Mom Test)",
+          "ジョブ理論",
+          "受け入れ基準の記述",
+          "優先順位付け"
+        ],
+        "beliefs": [
+          "ユーザーが言う解決策より、ユーザーの過去の行動を信じる",
+          "最初のリリースは恥ずかしいくらい小さくていい"
+        ]
+      }
+    },
+    {
+      "id": "eng-backend",
+      "role": "engineer",
+      "persona": {
+        "name": "田中 健",
+        "age": 41,
+        "occupation": {
+          "title": "Senior Backend Engineer",
+          "description": "データモデル、API、CLI、テストを担当。シンプルで壊れにくい設計を好む。"
+        },
+        "style": "結論から話す。リスクは数字や具体例で示す。不明点はその場で確認する。",
+        "personality": {
+          "traits": [
+            "慎重",
+            "テストを先に書く",
+            "依存を増やすのが嫌い"
+          ],
+          "big_five": {
+            "openness": "中",
+            "conscientiousness": "高",
+            "extraversion": "低",
+            "agreeableness": "中",
+            "neuroticism": "低"
+          }
+        },
+        "skills": [
+          "TypeScript",
+          "Go",
+          "SQL",
+          "API設計",
+          "自動テスト"
+        ],
+        "preferences": {
+          "likes": [
+            "標準ライブラリ",
+            "小さな関数",
+            "README に動かし方を書くこと"
+          ],
+          "dislikes": [
+            "根拠のない見積もり",
+            "巨大なフレームワーク"
+          ]
+        }
+      }
+    },
+    {
+      "id": "eng-frontend",
+      "role": "engineer",
+      "persona": {
+        "name": "鈴木 ひかり",
+        "age": 29,
+        "occupation": {
+          "title": "Frontend / UX Engineer",
+          "description": "画面・CLI の使い勝手、アクセシビリティ、初回体験を担当。ユーザー視点で仕様に意見を言う。"
+        },
+        "style": "フレンドリーで提案型。『ユーザーはここで迷いそう』と体験ベースで話す。",
+        "personality": {
+          "traits": [
+            "共感力が高い",
+            "手を動かして試作するのが早い",
+            "細部にこだわる"
+          ],
+          "big_five": {
+            "openness": "高",
+            "conscientiousness": "中",
+            "extraversion": "高",
+            "agreeableness": "高",
+            "neuroticism": "中"
+          }
+        },
+        "skills": [
+          "TypeScript",
+          "HTML/CSS",
+          "React",
+          "アクセシビリティ",
+          "プロトタイピング"
+        ],
+        "preferences": {
+          "likes": [
+            "空状態やエラー時の丁寧なメッセージ",
+            "キーボードだけで操作できるUI"
+          ],
+          "dislikes": [
+            "説明が必要なUI"
+          ]
+        }
+      }
+    },
+    {
+      "id": "user-yamada",
+      "role": "user",
+      "persona": {
+        "name": "山田 恵子",
+        "age": 52,
+        "nationality": "日本",
+        "residence": "埼玉県",
+        "occupation": {
+          "title": "地域の小さな会計事務所の事務スタッフ",
+          "description": "Excel と紙の書類で日々の業務を回している。"
+        },
+        "long_term_goals": [
+          "残業を減らして家族との時間を増やす",
+          "ミスで先生(所長)に迷惑をかけない"
+        ],
+        "style": "丁寧だが遠慮がち。専門用語が出ると『それはどういう意味ですか？』と聞き返す。具体的な日常のエピソードで話す。",
+        "personality": {
+          "traits": [
+            "几帳面",
+            "新しいツールには慎重",
+            "一度慣れたら長く使う"
+          ],
+          "big_five": {
+            "openness": "低",
+            "conscientiousness": "高",
+            "extraversion": "中",
+            "agreeableness": "高",
+            "neuroticism": "中"
+          }
+        },
+        "preferences": {
+          "likes": [
+            "文字が大きくて分かりやすい画面",
+            "紙に印刷できること"
+          ],
+          "dislikes": [
+            "アカウント登録が面倒なサービス",
+            "英語だらけの画面",
+            "勝手に変わるUI"
+          ]
+        },
+        "tech_literacy": "スマホ(LINE)と Excel の基本操作はできる。インストール作業や黒い画面(ターミナル)は苦手。"
+      }
+    },
+    {
+      "id": "user-garcia",
+      "role": "user",
+      "persona": {
+        "name": "Daniel García",
+        "age": 31,
+        "nationality": "スペイン",
+        "residence": "東京 (在住5年)",
+        "occupation": {
+          "title": "フリーランスのWebデザイナー",
+          "description": "複数のクライアント案件を並行して抱えている。"
+        },
+        "long_term_goals": [
+          "自分のスタジオを持つ",
+          "事務作業を自動化して制作に集中する"
+        ],
+        "style": "率直でテンポが速い。日本語は流暢だがときどき英語が混じる。気に入らないものははっきり言う。",
+        "personality": {
+          "traits": [
+            "効率重視",
+            "新しいツールをすぐ試す",
+            "飽きっぽい"
+          ],
+          "big_five": {
+            "openness": "高",
+            "conscientiousness": "低",
+            "extraversion": "高",
+            "agreeableness": "中",
+            "neuroticism": "低"
+          }
+        },
+        "preferences": {
+          "likes": [
+            "キーボードショートカット",
+            "連携(API, Zapier)",
+            "ミニマルなデザイン"
+          ],
+          "dislikes": [
+            "5分以上かかるセットアップ",
+            "サブスクの値上げ",
+            "遅いアプリ"
+          ]
+        },
+        "tech_literacy": "高い。ターミナルも使えるが、本業ではないので凝った設定はしたくない。"
+      }
+    }
+  ],
+  "phases": [
+    {
+      "id": "discovery",
+      "goal": "PM interviews the users to uncover their real situation, pains and jobs-to-be-done. Users answer strictly in character, with concrete episodes. No solutions yet.",
+      "speakers": [
+        "pm",
+        "user"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 2
+    },
+    {
+      "id": "planning",
+      "goal": "PM turns findings into a small, shippable scope: [TASK] items with clear acceptance criteria, each assigned to an engineer. Engineers challenge feasibility, split or re-assign tasks, and agree on tech choices.",
+      "speakers": [
+        "pm",
+        "engineer"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 2,
+      "iterationStart": true
+    },
+    {
+      "id": "build",
+      "goal": "Engineers implement their own tasks in the workspace (real files, runnable code, tests when sensible), coordinate interfaces with each other, and mark finished work with [TASK_DONE].",
+      "speakers": [
+        "engineer"
+      ],
+      "mode": "parallel",
+      "maxRounds": 3,
+      "untilTasksDone": true,
+      "editors": [
+        "engineer"
+      ]
+    },
+    {
+      "id": "review",
+      "goal": "Engineers review each other's work against the acceptance criteria and fix issues. Before users judge it, each engineer posts a [DEMO] for their tasks: what a user would do and what they would see, with output you really produced (run the command, render the page or email, paste the result or the path of the generated file or screenshot). Never describe output you did not produce. PM checks every task against its acceptance criteria and states what is ready for users.",
+      "speakers": [
+        "engineer",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1,
+      "editors": [
+        "engineer"
+      ]
+    },
+    {
+      "id": "acceptance",
+      "goal": "Users try what was built — start from the team's demos, open the files they point to, run it if possible — and judge it from their own needs. Each user gives a [VERDICT accept|reject] with reasons. PM summarizes and decides next steps.",
+      "speakers": [
+        "user",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1
+    },
+    {
+      "id": "wrapup",
+      "goal": "The session is about to end. Engineers apply every decision made during review and acceptance and finish their open tasks ([TASK_DONE]); a task that cannot be finished here gets one line saying why and what is left. PM then confirms what shipped and lists, for the real human, anything still open or needing their decision.",
+      "speakers": [
+        "engineer",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1,
+      "editors": [
+        "engineer"
+      ],
+      "finale": true
+    }
+  ],
+  "phaseIndex": 5,
+  "iteration": 2,
+  "maxIterations": 2,
+  "round": 0,
+  "turn": 49,
+  "queue": [],
+  "pending": [],
+  "insertions": 1,
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "コミットメッセージのチェックと直し案の提案(コア)",
+      "acceptance": "- `node src/main.ts check \"メッセージ\"` で1件をチェックできる。問題がなければ終了コード0、問題があれば1を返す。\n- Conventional Commits の `type(scope)?: 説明` 形式を判定する。type は feat/fix/docs/style/refactor/test/chore などの標準セットとする。\n- \"fix\"、\"update\"、\"wip2\" のような曖昧なメッセージは、問題ありと判定する。\n- 問題があるときは、何が足りないかと直し案を1つ以上返す。たとえば \"fix\" なら \"fix: <何を直したか>\" を返す。\n- 直し案は、メッセージの語から type を推定できる場合だけ type を埋める。推定できない場合は `<type>: <説明>` の雛形を返す。\n- テストを書く。正常なもの3件、異常なもの5件(曖昧語、type なし、コロン後の空白なし、説明が空、type が不正)を含める。",
+      "owner": "eng-backend",
+      "status": "todo",
+      "createdBy": "pm"
+    },
+    {
+      "id": "T2",
+      "title": "リポジトリ内ルール設定 (.commitrules.json)",
+      "acceptance": "- リポジトリ直下の `.commitrules.json` を読み、`{\"style\": \"conventional\" | \"free\"}` に従う。\n- `free` のときは、type なしでも通す。ただし、\"fix\" や \"wip\" のような1語だけのメッセージは警告する。\n- 設定ファイルがない場合は、`conventional` として動く。\n- `init --style free` と `init --style conventional` で、設定ファイルを1コマンドで作れる。\n- 設定ファイルは Git にコミットして共有する前提で、`init` の最後に「このファイルをコミットすると、チーム全員に同じルールが伝わります」と表示する。",
+      "owner": "eng-backend",
+      "status": "todo",
+      "createdBy": "pm"
+    },
+    {
+      "id": "T3",
+      "title": "初心者向けの出力表示と commit-msg フック導入",
+      "acceptance": "- チェックの出力は、1画面5行以内にする。「どこが悪い・どう直す・そのままコピーできる例」の順に並べる。\n- 出力に Conventional Commits の仕様用語(footer、BREAKING CHANGE など)を出さない。\n- `install-hook` を1コマンド実行すると、`.git/hooks/commit-msg` が入る。以後 `git commit` のたびにチェックが走る。\n- ルール違反のときは、コミットを止めずに警告して、Enter で続行するか、直し案を選んで置き換えるかを選べる(強制しない)。\n- README の冒頭に「導入手順」を書く。クローンからフック導入までのコマンドが3行以内で、初見の人が通しで試して5分以内に終わる。\n- 既存の `commit-msg` フックがあれば上書きせず、その旨を表示して終了する。",
+      "owner": "eng-frontend",
+      "status": "todo",
+      "createdBy": "pm"
+    },
+    {
+      "id": "T4",
+      "title": "コミットメッセージのチェックと直し案の提案(コア)",
+      "acceptance": "- `node src/main.ts check \"メッセージ\"` で1件をチェックできる。終了コードは 0=OK、1=問題あり、2=使い方の誤り。\n- `check(message, {style})` を純関数として実装する。style の既定値は conventional。\n- Conventional Commits の `type(scope)?: 説明` 形式を判定する。type は feat/fix/docs/style/refactor/test/chore などの標準セット。\n- 曖昧語は、`^(fix|update|wip|tmp|test|misc|changes?)\\d*$` に1語だけ一致する場合に問題ありとする。リストはコード内の定数1か所に置く。\"fix\"、\"update\"、\"wip2\" は問題あり。\"fix: ログイン画面の余白を直す\" は問題なし。\n- 問題があるときは、where と why を初心者向けの言い回しで返す。例: 「先頭に『何をしたか』の種類(feat や fix)がありません」。仕様用語は出さない。\n- 直し案は1つ以上返す。先頭の語を辞書で引いて type を推定できるときだけ type を埋める(add/追加→feat、fix/修正→fix、doc/readme→docs)。当たらなければ `<type>: <説明>` の雛形を返す。\n- `check --json` は `{ok, problems:[{where, why}], suggestions:[string]}` を返す。\n- テストは `node:test`。正常3件、異常5件(曖昧語、type なし、コロン後の空白なし、説明が空、type が不正)を含める。依存は増やさない。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "`check` のコアを実装しました。\n- ファイルは `src/check.ts` と `src/main.ts` の check 部分です。\n- `check(message, {style})` は純関数で、設定は読みません。style の既定値は conventional です。\n- 曖昧語の正規表現は `VAGUE` に1か所だけ置きました。type の一覧は `TYPES` です。\n- where と why は初心者向けの言い回しで、仕様用語は出しません。この点もテストしています。\n- 終了コードは 0=OK、1=問題あり、2=使い方の誤りです。\n- `check --json` は `{ok, problems:[{where,why}], suggestions}` を返します。キーの並びもテストで固定しました。\n- `--file <path>` を足しました。コミットメッセージのファイルを読み、`#` で始まる行は除きます。鈴木さんはフックから `$1` をそのまま渡せます。\n- merge、revert、fixup、squash の自動生成メッセージは通します。通さないとフックが毎回警告を出すためです。\n- 複数行のメッセージは1行目だけ見ます。\n- テストは `test/check.test.ts` で、正常3件と異常5件を含みます。type の推定、仕様用語が出ないこと、free、自動生成メッセージ、空メッセージも見ています。\n- 実行は `cd workspace/trial-gitlint && node --test test/check.test.ts test/config.test.ts` で、全部通ります。"
+    },
+    {
+      "id": "T5",
+      "title": "リポジトリ内ルール設定 (.commitrules.json)",
+      "acceptance": "- リポジトリ直下の `.commitrules.json` を読み、`{\"style\": \"conventional\" | \"free\"}` に従う。\n- `free` のときは type なしでも通す。ただし \"fix\" や \"wip\" のような1語だけのメッセージは警告を出し、終了コードは 0 のままにする。\n- 設定ファイルがないときは `conventional` として動く。\n- 壊れた JSON や不正な style 値のときは、`.commitrules.json を読めません: <理由>` を表示して終了コード2にする。conventional に黙って落とさない。\n- `init --style free` と `init --style conventional` で、設定ファイルを1コマンドで作れる。\n- `init` の最後に「このファイルをコミットすると、チーム全員に同じルールが伝わります」と表示する。\n- 上記の読み込みとエラー処理のテストを書く(設定なし、free、壊れた JSON、不正な style)。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "設定ファイルの読み込みと `init` を実装しました。\n- ファイルは `src/config.ts` と `src/main.ts` の init 部分です。\n- `.commitrules.json` は、cwd から上へたどって `.git` のあるリポジトリ直下を探します。サブディレクトリからでも見つかります。\n- 設定なし、または style キーなしのときは conventional です。\n- free のときは type なしでも通ります。1語だけのメッセージは警告を stderr に出し、終了コードは 0 のままです。\n- 壊れた JSON や不正な style は、`.commitrules.json を読めません: <理由>` を stderr に出して終了コード2にします。`--json` のときも同じです。\n- `init --style free|conventional` で設定ファイルを作ります。最後の行に「このファイルをコミットすると、チーム全員に同じルールが伝わります」を出します。\n- `init` は git リポジトリの外では「git リポジトリの中で実行してください」を出して終了コード2にします。\n- テストは `test/config.test.ts` です。設定なし、free、壊れた JSON、不正な style を含みます。終了コード 0/1/2 の確認もしています。"
+    },
+    {
+      "id": "T6",
+      "title": "初心者向けの出力表示と commit-msg フック導入",
+      "acceptance": "- チェックの出力は5行以内(選択肢の行を含む)。「どこが悪い」「どう直す・そのままコピーできる例(同じ行)」の順に並べる。直し案は画面に最大1つだけ出す。\n- 文言は T1 の where / why をそのまま並べる。出力に Conventional Commits の仕様用語(footer、BREAKING CHANGE など)を出さない。\n- `install-hook` を1コマンド実行すると `.git/hooks/commit-msg` が入る。以後 `git commit` のたびにチェックが走る。\n- フックは、終了コード 1 のときだけ対話を試みる。TTY がないときは警告を stderr に出して 0 で通す。0 と 2 は何も聞かずに通し、2 のときはメッセージだけ表示する。\n- 対話できるときは `[Enter] そのまま続ける / [1] 直し案で置き換える` を1行で出す。置き換えは `$1` のファイルだけを書き換え、履歴には触れない。強制ブロックはしない。\n- 既存の `commit-msg` フックがあれば上書きせず、その旨と手動で追記する方法を表示して、終了コード1で終了する。\n- README の冒頭に「導入手順」を書く。クローンからフック導入までのコマンドは3行以内で、初見の人が通しで試して5分以内に終わる。\n- フックの動作(TTY なし、終了コード 0/1/2、既存フックあり)を、一時ディレクトリの git リポジトリで確認するテストを書く。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "実装しました。`src/render.ts`(5行整形)、`src/hook.ts`(フック本体)、`src/install-hook.ts`、`src/main.ts`(`install-hook`/`hook` を配線し、`check` の素の出力を整形に差し替え)、`test/hook.test.ts`、README の「導入手順」。`node --test \"test/*.test.ts\"` は田中さんのテストと合わせて 33 件通りました。\n- フックは `check --json --file $1` を呼びます。終了コード 0 は何も聞かずに通し、free の警告があるときだけ表示します。1 は表示して対話し、TTY がなければ警告を stderr に出して通します。2 はメッセージだけ表示して通します。\n- 対話は `/dev/tty` を直接読みます。テストでは `COMMITCHECK_TTY` で差し替えています。\n- 雛形(`<type>: <説明>`)は置き換えると履歴に残るので、その場合は `[1]` を出しません。代わりに「Ctrl+C でやめる」を案内します。\n- Node が 22.18 未満だと「Node 22.18 以上が必要です」と表示して通します。\n- テストは、終了コード 0/1/2、TTY なし、Enter、`[1]`、雛形、Node が古い場合、既存フック(終了コード1)、リポジトリ外(終了コード2)を、一時ディレクトリの git リポジトリで確認しています。"
+    },
+    {
+      "id": "T7",
+      "title": "README の URL と cd の例、free の警告の印",
+      "acceptance": "- README 1行目を `git clone /home/claude/team/workspace/trial-gitlint ~/commitcheck` にし、そのままコピーして貼れる形にする。\n- README 2行目に「普段コミットしているフォルダ(例: `cd ~/projects/site`)」を添える。コマンドは3行のまま。\n- free の警告(ok:true で problems があるとき)は先頭を「!」にする。終了コード1のエラーは「✗」のまま。\n- 画面の5行制限は変えない。テストで「!」と「✗」の出し分けを確認する。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "README と free の警告の印を直しました。\n- `README.md` の1行目を `git clone /home/claude/team/workspace/trial-gitlint ~/commitcheck` にしました。2行目は `cd ~/projects/site` で、コマンドは3行のままです。「普段コミットしているフォルダ(例: `cd ~/projects/site`)に変えてください」は、コードブロックのすぐ下に1文で置きました。行末にコメントを付けると、zsh の初期設定では貼ったときにエラーになるからです。\n- README の雛形の説明も `<種類(feat=追加 / fix=修正)>: <説明>` に直しました。\n- `src/render.ts` は、`ok:true` で problems があるとき(free の警告)だけ、先頭を「!」にします。終了コード1は「✗」のままです。行数は変わりません。\n- テストは `test/render.test.ts` で、「!」と「✗」の出し分けと5行以内を確かめる2件です。`cd workspace/trial-gitlint && node --test \"test/*.test.ts\"` を実行して、37件すべて通りました。"
+    },
+    {
+      "id": "T8",
+      "title": "init で既存の設定を上書きしない",
+      "acceptance": "- 既存の `.commitrules.json` があるとき、`init` は書き換えずに「すでに .commitrules.json があります。上書きするには --force を付けてください」を表示し、終了コード1で終わる。\n- `init --style free --force` なら上書きして、最後の行に「このファイルをコミットすると、チーム全員に同じルールが伝わります」を出す。\n- 既存ありで止まる場合と、--force で上書きする場合のテストを、それぞれ1件以上足す。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "`init` が既存の設定を上書きしないようにしました。\n- 変えたのは `src/main.ts` の `runInit` です。既存の `.commitrules.json` があると、書き換えずに stderr へ「すでに .commitrules.json があります。上書きするには --force を付けてください」を出し、終了コード1で終わります。\n- `--force` を付けたときは上書きします。最後の行には「このファイルをコミットすると、チーム全員に同じルールが伝わります」を出します。USAGE にも `[--force]` を足しました。\n- テストは `test/config.test.ts` に2件足しました。1件は既存ありで止まる場合で、終了コード1になり、ファイルの中身が変わらないことを見ます。もう1件は --force で上書きする場合で、終了コード0、style が free になること、最後の行の文言を見ます。既存のテストのうち、2回目の init が成功する前提だった2行は削りました。\n- 確かめ方: `cd workspace/trial-gitlint && node --test test/config.test.ts` (12件すべて成功)"
+    },
+    {
+      "id": "T9",
+      "title": "T9: 日本語の末尾から type を推定し、雛形に種類の説明を付ける",
+      "acceptance": "- 「ヘッダー修正」は `fix: ヘッダー`、「ボタン追加」は `feat: ボタン` を直し案として返す。どちらも終了コードは1で、フックで [1] が出る。\n- 末尾の語の辞書は、先頭の語の辞書と同じ定数にまとめる(修正→fix、追加→feat を含む)。\n- 推定できないときの雛形は `<種類(feat=追加 / fix=修正)>: <説明>` にする。\"update\"、\"wip2\" ではこの雛形になり、[1] は出ない。\n- `check --json` のキー(ok / problems / suggestions、where / why)は変えない。\n- 出力に仕様用語を出さない。画面の5行制限も守る。\n- テストを足す。末尾の「修正」と「追加」を1件ずつ、辞書にない末尾を1件、新しい雛形の文言を1件。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "日本語の末尾から type を推定するようにしました。雛形には種類の説明を付けました。\n- 変えたのは `src/check.ts` だけです。\n- 雛形は定数 `TYPE_HINT = \"<種類(feat=追加 / fix=修正)>\"` の1か所に置きました。TEMPLATE、本文付きのとき、不正な type のとき、の3か所ともここから作ります。\n- 末尾の推定は、前方一致と同じ辞書 `GUESS_JA` を引きます。直前が「を」のときは対象にしません。\n- 「ヘッダー修正」は `fix: ヘッダー`、「ボタン追加」は `feat: ボタン` になります。どちらも終了コードは1です。\n- \"update\" と \"wip2\" は `<種類(feat=追加 / fix=修正)>: <説明>` になります。\n- `--json` のキーは変えていません。render.ts も触っていません。`[<>]` の判定がそのまま効いて、雛形のときは [1] が出ません。\n- テストは `test/check.test.ts` に4件足しました(末尾の修正、末尾の追加、辞書にない末尾、雛形の文言)。既存のテストで `<type>` を期待していた5か所は、`TYPE_HINT` を使う形に書き換えました。"
+    },
+    {
+      "id": "T10",
+      "title": "T10: T9 の補足(`<type>` が出るすべての場所と、1語だけの場合)",
+      "acceptance": "- `check \"ログイン画面直した\"` の直し案は `<種類(feat=追加 / fix=修正)>: ログイン画面直した` になる。\n- `check \"feature: x\"` は直し案が `feat: x` のまま変わらない。別名にない不正な type (例: `foo: x`)では、直し案が `<種類(feat=追加 / fix=修正)>: x` になる。\n- `check \"修正\"` は `fix: <説明>`、`check \"追加\"` は `feat: <説明>` を返す。終了コードは1で、`<>` を含むので [1] は出ない。\n- `check \"ヘッダーを修正\"` は今までどおり雛形を返す(末尾の推定の対象外)。\n- `check --json` の suggestions にも、半角の `<type>` という文字列が1つも出ない。キーは変えない。\n- 上の各ケースについて、テストを1件ずつ足す。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "T10 の各ケースは、T9 と同じ変更で対応しました(`src/check.ts`)。\n- テストは `test/check.test.ts` に6件足しました。\n  - 「ログイン画面直した」は雛形+本文になります。\n  - `feature: x` は `feat: x` のままです。\n  - `foo: x` は `<種類(…)>: x` になります。\n  - 1語だけの「修正」は `fix: <説明>`、「追加」は `feat: <説明>` です。\n  - 「ヘッダーを修正」は雛形のままです。\n  - 最後の1件は、12通りのメッセージで suggestions を含む JSON 全体に `<type>` が出ないこと、キーの並びが ok/problems/suggestions のままであることを確かめます。\n- 全体の確認は `cd workspace/trial-gitlint && node --test \"test/*.test.ts\"` で、47件すべて成功しました(fail 0)。"
+    },
+    {
+      "id": "T11",
+      "title": "T11: 配布用リポジトリを用意し、README の3行が通しで動くことを示す",
+      "acceptance": "- `workspace/trial-gitlint` を `git init` し、`.gitignore` で不要なものを除いたうえで、T7〜T10 を入れた状態をコミットする。\n- 新しい一時ディレクトリで、README の3行を上から順にそのまま貼る。`git clone` から `install-hook` まで、エラーや確認で止まらずに終わる。\n- 続けて `git commit -m fix` で警告が出る。`git commit -m ヘッダー修正` で `fix: ヘッダー` の直し案と [1] が出る。この2つの画面を、実際の出力として [DEMO] に貼る。\n- `COLUMNS=80` のときに `<種類(feat=追加 / fix=修正)>` の行が折り返すかどうかを、DEMO に書く。\n- 止まる箇所があれば、受け入れより前に直す。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "配布用リポジトリを用意し、README の3行が通しで動くことを確かめました。\n- `workspace/trial-gitlint` は git init 済みです。最新のコミットは 7afa6e8 で、T7〜T10 がすべて入っています。`git status` に差分はありません。`.gitignore` では node_modules、*.tmp、.DS_Store、.commitrules.json を除いています。\n- 新しい一時ディレクトリを作り、HOME を空にしてから、README の3行をそのまま上から順に実行しました。clone 先は 7afa6e8 で、`git clone` から `install-hook` まで、エラーも確認も出ずに 0.13 秒で終わりました。3行とも終了コードは0です。\n- 続けて `git commit` を、`script` で作った本物の端末(pty)から打ちました。fix、ヘッダー修正、update の3つで、想定どおりの画面になりました。画面は DEMO に貼ります。\n- 80桁の折り返しは、`stty cols 80` と `COLUMNS=80` にして確かめました。どの行も折り返しません。\n- テストは `cd workspace/trial-gitlint && node --test \"test/*.test.ts\"` で、47件すべて通りました(fail 0)。"
+    },
+    {
+      "id": "T12",
+      "title": "末尾の推定の辞書を広げる(調整・変更・差し替え・対応)",
+      "acceptance": "- 「レイアウト調整」は `fix: レイアウト`、「画像差し替え」は `fix: 画像`、「文言変更」は `fix: 文言`、「ログイン対応」は `feat: ログイン` を返す。どれも終了コードは1で、フックで [1] が出る。\n- 辞書は今の `GUESS_JA` の1か所に足す。直前が「を」のときは今までどおり対象外にする(「画像を差し替え」は雛形のまま)。\n- `--json` のキー、5行の制限、選択肢の1行は変えない。\n- 4語それぞれに1件ずつテストを足し、「を」付きのテストも1件足す。配布用リポジトリにもコミットする。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "末尾の推定の辞書を広げました。\n- 変えたのは `src/check.ts` 13行目の `GUESS_JA` の1か所だけです。中身は `{ 追加: \"feat\", 対応: \"feat\", 修正: \"fix\", 調整: \"fix\", 変更: \"fix\", 差し替え: \"fix\" }` です。「を」を除く処理は今までのままです。`--json` のキー、render.ts、選択肢の1行には触っていません。\n- テストは `test/check.test.ts` に5件足しました。4語に1件ずつと、「画像を差し替え」が雛形のままになることを確かめる1件です。T9 の「辞書にない末尾」のテストは「ヘッダー変更」を例にしていて、変更が辞書に入ったので、例を「ヘッダー削除」に替えました。\n- 配布用リポジトリには、この2ファイルだけをコミットしました(7b05364)。新しく clone した先で `node --test \"test/*.test.ts\"` を実行し、52件すべて成功しました(fail 0)。"
+    },
+    {
+      "id": "T13",
+      "title": "check が OK のとき ✓ を1行出す",
+      "acceptance": "- 手で `check \"fix: x\"` を打ったときは `✓ 問題ありません` を1行出し、終了コードは0のまま。\n- フック経由で OK のときは、今までどおり何も出さない。\n- `--json` の出力は変えない。\n- テストを2件足す(手で打った場合と、フック経由の場合)。配布用リポジトリにもコミットする。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "手で `check` を打って問題がないときに、`✓ 問題ありません` を1行出すようにしました。\n- 変えたのは `src/main.ts` の `runCheck` の1か所です。`--json` を付けずに打って、problems が空のときだけ stdout に出します。終了コードは0のままです。\n- フックは `check --json --file $1` を呼ぶので、✓ は出ません。今までどおり何も表示されません。`--json` の出力も変えていません。free の警告(「!」)のときも、今までどおり警告だけを出します。\n- テストは `test/ok.test.ts` に2件足しました。1件目は手で打った場合で、stdout が `✓ 問題ありません` の1行だけになることと、`--json` の出力が変わらないことを確かめます。2件目はフック経由の場合です。本物のエンジンで一時リポジトリにフックを入れて `git commit -m \"fix: x\"` を実行し、✓ が出ないことを確かめます。\n- 配布用リポジトリには、7b05364 の上に c1d5908 として、この2ファイルだけをコミットしました。`git status` に差分はありません。新しく clone した先で `node --test \"test/*.test.ts\"` を実行し、54件すべて通りました(fail 0)。"
+    }
+  ],
+  "decisions": [
+    {
+      "by": "pm",
+      "text": "第一ターゲットは、規約を覚える余裕がなく、案件ごとにルールが変わる、コミット初心者〜非開発職寄りの書き手(ガルシアさん像)とする。理由: 過去の行動(適当に書く、真似する、3分で諦める)が最も明確だから。トレードオフ: 山田さんのような非コミット利用者は今回の対象外にする。",
+      "phase": "discovery",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "第1リリースでは、チェックは「コミット前に本人へ伝える」ことに限る。履歴の自動書き換えと、強制ブロックはやらない。理由は、後から黙って直される嫌さを本人の気づきに置き換えるのが目的で、強制すると5分以内に使い始める人が減るから。トレードオフは、守らない人は守らないままになること。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "終了コードは 0=OK、1=問題あり、2=使い方の誤りまたは設定ファイルが読めない、で固定する。`free` の警告は「通すが終了コードは 0、警告だけ出す」。理由: フックを止めない方針と一致し、ガルシアさんの導入を止めないため。トレードオフ: 警告は流れて見落とされることがある。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "壊れた `.commitrules.json` は、黙って conventional に落とさず `.commitrules.json を読めません: <理由>` を表示して終了コード2にする。フックは 2 のときも表示だけしてコミットは止めない。理由: ルールが効いていないことに誰も気づかない状況が、いちばん避けたいから。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "フックは、終了コード 1 のときだけ対話を試みる。TTY がないとき(IDE のコミットボタンなど)は、警告を stderr に出して 0 で通す。0 と 2 は何も聞かずに通す。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "画面は5行以内に収める。直し案は画面には最大1つだけ出し、「どう直す」と「そのままコピーできる例」は同じ行にまとめる。選択肢の行は5行に含める。`check --json` は他の案も含めて返す。判定の文言(where と why)は T1 側に置き、T3 は並べるだけにする。文言は初心者向けの言い回しにして、仕様用語は出さない。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "`install-hook` が既存の `commit-msg` を見つけたときは、上書きせず終了コード1で終了する。README に、手動で追記する方法を1行で書く。理由: 何も起きなかったことをスクリプトからも判別できるようにするため。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "T1〜T3 は T4〜T6 の旧版なので閉じる。以後は T4・T5・T6 だけを見る。理由: 同じ内容のタスクが2つ並ぶと、どちらが正か迷うため。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "`check --json` のキー `ok / problems / suggestions` と、problems 内の `where / why` は固定する。フックはこの JSON に依存する。変えるときは、必ず佐藤に先に相談する。理由: 形が変わるとフックが黙って壊れるため。トレードオフ: 後から項目を足しにくくなる。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "5行の制限は「チェック結果の画面」に適用する。`[1]` を選んだ後の確認1行(`→ fix: <説明> に置き換えました`)は5行の外に置いてよい。README の `node -v` 確認も、3行の外の前提として1行だけ置いてよい。理由: どちらも、本人が何が起きたかを知るための行だから。トレードオフ: 置き換え後は最大6行になる。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "`install-hook` は、いま居るリポジトリに入れ、エンジンの絶対パスをフックに書き込む。git リポジトリの外で実行したときは「git リポジトリの中で実行してください」と表示し、終了コード2にする。フック実行時に Node が 22.18 未満なら「Node 22.18 以上が必要です」と表示し、コミットは通す。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "「5分以内」の根拠は実測値で示す。実装後、一時ディレクトリで README の3行を通しで打った時間を、鈴木さんと田中さんが数字で報告する。数字がなければ、受け入れの場で「5分以内」とは言わない。5分を超えたら、README の手順から削る。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "受け入れテストでは、README 1行目の `<URL>` を、配布用ローカルパス `git clone /home/claude/team/workspace/trial-gitlint ~/commitcheck` に置き換えて使う。公開 URL は公開先を決めてから差し替える。理由: 計測が `<URL>` で止まるのを避け、そのままコピーして貼れる3行で測るため。トレードオフ: clone の実時間はネットワーク経由より短く出る。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "README 2行目に例を添えて `cd <普段コミットしているフォルダ>  (例: cd ~/projects/site)` とする。3行のままにする。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "free の警告の印は「✗」ではなく「!」にする。止めるものと見た目で分けるため。行数は変えない。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "`init` は、既存の `.commitrules.json` があれば上書きしない。終了コード1で止めて、`--force` を案内する。理由: コミット済みのチームのルールを、1人が黙って書き換えられないようにするため。山田さんやガルシアさんが話した「黙って直される」を、ツールで繰り返さないため。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "直し案の雛形には、種類の意味を日本語で添える。`<type>: <説明>` は `<種類(feat=追加 / fix=修正)>: <説明>` に変える。雛形は引き続き `<>` を含むので、[1] は出さない。理由: 山田さんとガルシアさんの2人が、同じ「type」で手を止めたから。トレードオフ: 1行が長くなる。",
+      "phase": "acceptance",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "type の推定は、先頭の語に加えて、日本語の末尾の「修正」「追加」も見る。「ヘッダー修正」は `fix: ヘッダー`、「ボタン追加」は `feat: ボタン` にする。理由: ガルシアさんは動詞を後ろに書くので、今のままだと毎回 Ctrl+C になり、フックを消されるおそれがあるから。トレードオフ: 辞書にない語尾は、引き続き雛形のまま。",
+      "phase": "acceptance",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "iteration 2 の受け入れでは、T7 を直した README で、ガルシアさんが README を開いてから `git commit -m fix` で警告が出るまでの時間を、ストップウォッチで計る。この数字が出るまで「5分以内」とは言わない。",
+      "phase": "acceptance",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "直し案と画面に出る `<type>` は、すべて `<種類(feat=追加 / fix=修正)>` に置き換える。雛形のとき、本文付きのとき(例: `<種類(…)>: ログイン画面直した`)、type が不正なときの3つとも対象にする。理由: 2人が止まったのは「type」という言葉そのもので、出る場所によって残ると同じ所で止まるから。トレードオフ: 1行が長くなる。",
+      "phase": "planning",
+      "iteration": 2
+    },
+    {
+      "by": "pm",
+      "text": "末尾の推定は、語の最後が「修正」「追加」で終わる場合だけにする。「を」付きや、ほかの語尾は今回はやらない。1語だけの「修正」「追加」は `fix: <説明>` / `feat: <説明>` を返す。理由: ガルシアさんの実際の書き方が「ヘッダー修正」「ボタン追加」だから。トレードオフ: 「ヘッダーを修正」は雛形のまま。",
+      "phase": "planning",
+      "iteration": 2
+    },
+    {
+      "by": "pm",
+      "text": "受け入れの前に、鈴木さんが新しい一時ディレクトリで README の3行をそのまま貼り、止まらずに `git commit -m fix` の警告まで出ることを [DEMO] で示す。止まる箇所があれば、受け入れより先にそこを直す。理由: 前回は権限確認で止まり、時間を計れなかったから。",
+      "phase": "planning",
+      "iteration": 2
+    },
+    {
+      "by": "pm",
+      "text": "配布元は A 案にする。`workspace/trial-gitlint` を `git init` してコミットし、README 1行目は `git clone /home/claude/team/workspace/trial-gitlint ~/commitcheck` のままにする。理由: 公開 URL に差し替えるときも書き方が変わらず、受け入れで測る3行と公開後の3行が同じになるから。トレードオフ: 変更のたびに、配布用リポジトリへのコミットが必要になる。",
+      "phase": "planning",
+      "iteration": 2
+    },
+    {
+      "by": "pm",
+      "text": "末尾の推定は「語の最後が『修正』『追加』で終わり、その直前が『を』ではない」場合に限る。「ヘッダーを修正」は雛形のまま。",
+      "phase": "planning",
+      "iteration": 2
+    },
+    {
+      "by": "pm",
+      "text": "iteration 2 で、T7〜T11 をユーザーの受け入れに出す。README 15行目に「git リポジトリであること」が書かれていない件は、今回は口頭で補う。計測の前に佐藤が「README 2行目の cd は、普段 git commit しているフォルダに書き換えてください」と伝える。理由: コードの変更なしで止まる所を避けられ、配布用リポジトリを再コミットする手間も要らないから。トレードオフ: README だけを読む初見の人には伝わらない。計測で止まる人が出たら、README を直す。",
+      "phase": "review",
+      "iteration": 2
+    },
+    {
+      "by": "pm",
+      "text": "7afa6e8 を第1リリースとする。「5分以内」は実測が出るまで言わない。測るときは、権限確認の入らない本人の端末で行う。次の優先は (1) 末尾の推定の辞書を広げること、(2) check が OK のとき ✓ を1行出すこと。英語のエラー文と README の「git リポジトリ」の追記は、その後に回す。選択肢の1行の形は変えない。",
+      "phase": "acceptance",
+      "iteration": 2
+    },
+    {
+      "by": "pm",
+      "text": "末尾の「調整」「変更」「差し替え」は fix に、「対応」は feat に推定する。style は使わない。理由: Conventional Commits の style はコードの整形を指すので、パートナーがリリースノートを書くときに誤解するから。トレードオフ: 見た目の調整と不具合の修正が、同じ fix にまとまる。",
+      "phase": "acceptance",
+      "iteration": 2
+    }
+  ],
+  "verdicts": [
+    {
+      "by": "user-yamada",
+      "verdict": "reject",
+      "reason": "私の仕事(Excel と紙、コミットはしない)では使う場面がなく、導入も黒い画面が前提なので、私自身は受け入れるとは言えません。ただ、これは製品の出来が悪いという意味ではありません。そもそも私が今回の対象外だからです。伝え方の方針(黙って直さない、止めない、責めない言い方)には賛成です。直してほしい点は1つだけです。直し案の「<type>」「feat」が英語のままで意味が分からないので、日本語の短い説明を添えてください。判断はガルシアさんの結果を優先してください。",
+      "iteration": 1
+    },
+    {
+      "by": "user-garcia",
+      "verdict": "accept",
+      "reason": "条件付きで accept です。「止めずに、コミット前に、短く言う」という核はちゃんとできていて、僕の「適当に書く」問題には効きそうです。速さも文言も問題ありません。ただし、次の2点が終わるまでは、チームの人に勧められません。\n- T7 で README の URL を実際に使えるパスに直すこと\n- 末尾の「修正/追加」から type を推定すること\n\n5分以内かどうかは、README が直った状態で僕がもう一度打って、数字で出します。",
+      "iteration": 1
+    },
+    {
+      "by": "user-yamada",
+      "verdict": "reject",
+      "reason": "私の仕事(Excel と紙)には使う場面がなく、導入も黒い画面が前提なので、自分では使えません。品質が悪いからではありません。前回指摘した英語の「type」は日本語の説明が付いて改善しており、責めない文言、止めない方針、押すキーが1行で分かる選択肢も良いと思います。対象のガルシアさんの評価を優先してください。",
+      "iteration": 2
+    },
+    {
+      "by": "user-garcia",
+      "verdict": "accept",
+      "reason": "前回出した条件2つが、どちらも満たされたので accept にします。1つは README 1行目がそのまま貼れる clone になったこと、もう1つは日本語の末尾の「修正/追加」から type を推定して、[1] で1キーで置き換えられること。止めない方針、5行以内、押すキーが1行で分かる点も、自分の使い方に合っています。ただし留保が2つあります。①この環境では今回も実行の権限確認で止まったので、自分の手で時間を計れていません。「5分以内」は未確認のままです。②「調整」「変更」「差し替え」「対応」のような、デザイン案件でよく使う語尾は雛形になって Ctrl+C が続きます。次のイテレーションでは、辞書を広げることを強く希望します。",
+      "iteration": 2
+    }
+  ],
+  "demos": [
+    {
+      "by": "eng-frontend",
+      "text": "T6: 一時ディレクトリで、実際に `install-hook` をして `git commit` を打った結果です。\n```\n$ node ~/…/src/main.ts check wip2     (終了コード 1)\n✗ メッセージ全体: 「wip2」だけでは、何をしたのか後から分かりません\n→ こう直す: <type>: <説明>\n$ git commit -m wip2   (TTYなし。終了コード 0 でコミットは通る)\n(上と同じ2行)\n(対話できないため、警告だけ出してコミットは通します)\n$ git commit -m \"追加 ログイン\"   ([1] を入力)\n✗ メッセージの先頭: 先頭に『何をしたか』の種類(feat や fix)がありません\n→ こう直す: feat: ログイン\n[Enter] そのまま続ける / [1] 直し案で置き換える\n→ feat: ログイン に置き換えました\n$ git log -1 --format=%s\nfeat: ログイン\n```\n\"fix\" と \"update\" も、どちらも2行で出て、終了コードは 1 でした。",
+      "phase": "build",
+      "iteration": 1
+    },
+    {
+      "by": "eng-backend",
+      "text": "T5: README の導入手順どおりに、空の一時リポジトリで通しました(clone の代わりにローカルコピーを使用)。\n```\n$ node ~/commitcheck/src/main.ts install-hook\n✓ commit-msg フックを入れました。次の git commit からチェックが走ります   (終了コード 0、コピー込み 0.14 秒)\n$ git commit -m fix        (TTY なし)\n✗ メッセージ全体: 「fix」だけでは、何をしたのか後から分かりません\n→ こう直す: fix: <説明>\n(対話できないため、警告だけ出してコミットは通します)\n(コミットは通り、終了コード 0)\n$ git commit -m \"fix: ログイン画面の余白を直す\"   → 警告なしで通る\n```\n`node --test \"test/*.test.ts\"` は 33 件すべて通りました(失敗 0)。",
+      "phase": "build",
+      "iteration": 1
+    },
+    {
+      "by": "eng-backend",
+      "text": "T4: 空の一時リポジトリで `node src/main.ts check` を実際に実行しました。ガルシアさんの3語と、異常系5種類の結果です。\n```\n$ check \"fix\"      → ✗ メッセージ全体: 「fix」だけでは、何をしたのか後から分かりません / → こう直す: fix: <説明>   (exit 1)\n$ check \"update\"   → 同じ文言 / → こう直す: <type>: <説明>   (exit 1)\n$ check \"wip2\"     → 同じ文言 / → こう直す: <type>: <説明>   (exit 1)\n$ check \"fix: ログイン画面の余白を直す\"   → 出力なし (exit 0)\n$ check \"追加 ログイン\"  → ✗ メッセージの先頭: 先頭に『何をしたか』の種類(feat や fix)がありません / → こう直す: feat: ログイン (exit 1)\n$ check \"feat:ログイン\"  → ✗ 「:」のあと: 「:」のあとに半角スペースがありません / → こう直す: feat: ログイン (exit 1)\n$ check \"feat: \"        → ✗ 「:」のあと: 何をしたかの説明が空です / → こう直す: feat: <説明> (exit 1)\n$ check \"feature: x\"    → ✗ 先頭の「feature」: 「feature」は使える種類ではありません(feat、fix、docs など) / → こう直す: feat: x (exit 1)\n$ check --json fix\n{\"ok\":false,\"problems\":[{\"where\":\"メッセージ全体\",\"why\":\"「fix」だけでは、何をしたのか後から分かりません\"}],\"suggestions\":[\"fix: <説明>\"]}  (exit 1)\n$ check            → メッセージを指定してください + 使い方 (exit 2)\n```\n`node --test \"test/*.test.ts\"` の結果は、tests 33、pass 33、fail 0 でした。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "eng-backend",
+      "text": "T5: 同じ一時リポジトリで、設定ファイルの動作を実際に確かめました。\n```\n$ init --style free\n.commitrules.json を作りました (style: free)\nこのファイルをコミットすると、チーム全員に同じルールが伝わります          (exit 0)\n$ check fix (free)       → ✗ メッセージ全体: 「fix」だけでは… / → こう直す: fix: <説明>   (exit 0)\n$ check \"ログイン修正\" (free) → 出力なし (exit 0)\n$ .commitrules.json を '{\"style\":' にして check \"feat: x\"\n.commitrules.json を読めません: Unexpected end of JSON input               (exit 2)\n$ {\"style\":\"loose\"} にして check\n.commitrules.json を読めません: style は \"conventional\" か \"free\" にしてください (現在: \"loose\")   (exit 2)\n$ 設定が壊れたまま git commit -m \"feat: x\"   (フック導入後)\n.commitrules.json を読めません: Unexpected end of JSON input\n(コミットは止めません)                                                     (exit 0、コミットは通る)\n$ init --style loose      → --style に \"conventional\" か \"free\" を指定してください (exit 2)\n$ リポジトリの外で init   → git リポジトリの中で実行してください (exit 2)\n```",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "eng-backend",
+      "text": "T9: 空の一時リポジトリで `install-hook` を入れ、`git commit` を実際に実行した出力です(対話の入力は `COMMITCHECK_TTY` で渡しています)。\n```\n$ node src/main.ts install-hook\n✓ commit-msg フックを入れました。次の git commit からチェックが走ります\n$ git commit -m ヘッダー修正      (1 を押す)\n✗ メッセージの先頭: 先頭に『何をしたか』の種類(feat や fix)がありません\n→ こう直す: fix: ヘッダー\n[Enter] そのまま続ける / [1] 直し案で置き換える\n→ fix: ヘッダー に置き換えました\n$ git log -1 --format=%s\nfix: ヘッダー\n$ git commit -m ヘッダーを修正    (Enter)\n✗ メッセージの先頭: 先頭に『何をしたか』の種類(feat や fix)がありません\n→ こう直す: <種類(feat=追加 / fix=修正)>: ヘッダーを修正\n[Enter] そのまま続ける (やめる: Ctrl+C)\n$ check \"ボタン追加\"   → こう直す: feat: ボタン   (exit 1)\n$ check \"update\"      → こう直す: <種類(feat=追加 / fix=修正)>: <説明>   (exit 1)\n$ check --json wip2\n{\"ok\":false,\"problems\":[{\"where\":\"メッセージ全体\",\"why\":\"「wip2」だけでは、何をしたのか後から分かりません\"}],\"suggestions\":[\"<種類(feat=追加 / fix=修正)>: <説明>\"]}\n```",
+      "phase": "build",
+      "iteration": 2
+    },
+    {
+      "by": "eng-backend",
+      "text": "T10: ```\n$ check \"ログイン画面直した\" → こう直す: <種類(feat=追加 / fix=修正)>: ログイン画面直した (exit 1)\n$ check \"foo: x\"            → こう直す: <種類(feat=追加 / fix=修正)>: x (exit 1)\n$ check \"feature: x\"        → こう直す: feat: x (exit 1)\n$ check \"修正\"              → こう直す: fix: <説明> (exit 1)\n$ check \"ヘッダーを修正\"    → こう直す: <種類(feat=追加 / fix=修正)>: ヘッダーを修正 (exit 1)\n$ init --style conventional        → 作成 (exit 0)\n$ init --style free                → すでに .commitrules.json があります。上書きするには --force を付けてください (exit 1、中身は conventional のまま)\n$ init --style free --force        → .commitrules.json を作りました (style: free) / このファイルをコミットすると、チーム全員に同じルールが伝わります (exit 0)\n```",
+      "phase": "build",
+      "iteration": 2
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T11: 新しい一時 HOME で、README の3行をそのまま実行した結果です。`~/projects/site` には、空の git リポジトリを用意しておきました。\n```\n$ git clone /home/claude/team/workspace/trial-gitlint ~/commitcheck\nCloning into '.../home/commitcheck'...\ndone.\n$ cd ~/projects/site\n$ node ~/commitcheck/src/main.ts install-hook\n✓ commit-msg フックを入れました。次の git commit からチェックが走ります\n(3行で 0.13 秒、止まる箇所なし)\n\n$ git commit -m fix          (Enter)\n✗ メッセージ全体: 「fix」だけでは、何をしたのか後から分かりません\n→ こう直す: fix: <説明>\n[Enter] そのまま続ける (やめる: Ctrl+C)\n\n$ git commit -m ヘッダー修正   (1)\n✗ メッセージの先頭: 先頭に『何をしたか』の種類(feat や fix)がありません\n→ こう直す: fix: ヘッダー\n[Enter] そのまま続ける / [1] 直し案で置き換える\n→ fix: ヘッダー に置き換えました\n\n$ git commit -m update       (Enter)\n✗ メッセージ全体: 「update」だけでは、何をしたのか後から分かりません\n→ こう直す: <種類(feat=追加 / fix=修正)>: <説明>\n[Enter] そのまま続ける (やめる: Ctrl+C)\n\n$ git log --format=%s\nupdate\nfix: ヘッダー\nfix\n```\n80桁(`stty cols 80` / `COLUMNS=80`)では、どの行も折り返しません。全角の文字を2桁として数えた結果です。\n- `→ こう直す: <種類(feat=追加 / fix=修正)>: <説明>` は 49 桁です。\n- 田中さんが挙げた、いちばん長くなる直し案 `→ こう直す: <種類(feat=追加 / fix=修正)>: ログイン画面直した` は 61 桁です。\n- 画面でいちばん長いのは、`✗ メッセージの先頭: 先頭に『何をしたか』の種類(feat や fix)がありません` の 72 桁です。\n- → と ✗ を2桁で表示する端末でも、最大 74 桁に収まります。ただし、直し案の本文が長いと、本文の長さに応じて折り返します。",
+      "phase": "build",
+      "iteration": 2
+    },
+    {
+      "by": "eng-backend",
+      "text": "T9: 新しい一時 HOME に 7afa6e8 を clone し、README の3行を流しました(0.136 秒)。そのあと `check` を実行した、そのままの出力です。\n```\n$ check \"ヘッダー修正\"\n✗ メッセージの先頭: 先頭に『何をしたか』の種類(feat や fix)がありません\n→ こう直す: fix: ヘッダー\n(exit 1)\n$ check \"ボタン追加\"\n✗ メッセージの先頭: 先頭に『何をしたか』の種類(feat や fix)がありません\n→ こう直す: feat: ボタン\n(exit 1)\n$ check \"fix: ログイン画面の余白を直す\"\n(exit 0)\n```\n「ヘッダー修正」で [1] を選ぶと `fix: ヘッダー` に置き換わり、履歴にもそのまま残ります。これは build のときに撮った DEMO と、鈴木さんの T11 の DEMO で確かめています。",
+      "phase": "review",
+      "iteration": 2
+    },
+    {
+      "by": "eng-backend",
+      "text": "T10: 同じ clone 先で実行した出力です。\n```\n$ check \"ヘッダーを修正\"\n✗ メッセージの先頭: 先頭に『何をしたか』の種類(feat や fix)がありません\n→ こう直す: <種類(feat=追加 / fix=修正)>: ヘッダーを修正\n(exit 1)\n$ check \"foo: x\"\n✗ 先頭の「foo」: 「foo」は使える種類ではありません(feat、fix、docs など)\n→ こう直す: <種類(feat=追加 / fix=修正)>: x\n(exit 1)\n```\nsrc・README・test を grep して半角の `<type>` を探しました。見つかったのは、それが出ないことを確かめるテストのコメントと assert だけです。",
+      "phase": "review",
+      "iteration": 2
+    },
+    {
+      "by": "eng-backend",
+      "text": "T8: 同じ clone 先の git リポジトリで実行した出力です。\n```\n$ init --style free\n.commitrules.json を作りました (style: free)\nこのファイルをコミットすると、チーム全員に同じルールが伝わります\n(exit 0)\n$ init --style conventional\nすでに .commitrules.json があります。上書きするには --force を付けてください\n(exit 1)\n$ cat .commitrules.json\n{ \"style\": \"free\" }        ← 書き換わっていない\n$ check wip            (free)\n! メッセージ全体: 「wip」だけでは、何をしたのか後から分かりません\n→ こう直す: <種類(feat=追加 / fix=修正)>: <説明>\n(exit 0)\n$ check \"feat: x\"      (.commitrules.json を {bad に壊した状態)\n.commitrules.json を読めません: Expected property name or '}' in JSON at position 1 (line 1 column 2)\n(exit 2)\n```\n`--force` で上書きする場合は、build のときの DEMO とテストで確かめています。",
+      "phase": "review",
+      "iteration": 2
+    },
+    {
+      "by": "eng-backend",
+      "text": "T12: 7b05364 で実行した実際の出力です。\n```\n$ check \"レイアウト調整\"  → こう直す: fix: レイアウト   (exit 1)\n$ check \"画像差し替え\"    → こう直す: fix: 画像         (exit 1)\n$ check \"文言変更\"        → こう直す: fix: 文言         (exit 1)\n$ check \"ログイン対応\"    → こう直す: feat: ログイン    (exit 1)\n$ check \"画像を差し替え\"  → こう直す: <種類(feat=追加 / fix=修正)>: 画像を差し替え (exit 1)\n$ check --json ログイン対応\n{\"ok\":false,\"problems\":[{\"where\":\"メッセージの先頭\",\"why\":\"先頭に『何をしたか』の種類(feat や fix)がありません\"}],\"suggestions\":[\"feat: ログイン\"]}\n\n(一時リポジトリで install-hook を入れて、git commit を実行。[1] を選択)\n$ git commit -m レイアウト調整\n✗ メッセージの先頭: 先頭に『何をしたか』の種類(feat や fix)がありません\n→ こう直す: fix: レイアウト\n[Enter] そのまま続ける / [1] 直し案で置き換える\n→ fix: レイアウト に置き換えました\n$ git log -1 --format=%s\nfix: レイアウト\n```",
+      "phase": "wrapup",
+      "iteration": 2
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T13: c1d5908 を新しい一時ディレクトリに clone して実行した、実際の出力です。\n```\n$ check \"fix: x\"\n✓ 問題ありません\n(exit 0)\n$ check --json \"fix: x\"\n{\"ok\":true,\"problems\":[],\"suggestions\":[]}\n(exit 0)\n$ check fix\n✗ メッセージ全体: 「fix」だけでは、何をしたのか後から分かりません\n→ こう直す: fix: <説明>\n(exit 1)\n$ node ~/commitcheck/src/main.ts install-hook\n✓ commit-msg フックを入れました。次の git commit からチェックが走ります\n$ git commit -m \"fix: x\"\n(exit 0、何も表示されない)\n$ git log -1 --format=%s\nfix: x\n```",
+      "phase": "wrapup",
+      "iteration": 2
+    }
+  ],
+  "notes": {
+    "user-yamada": [
+      "山田さんの事務所では今年4月にパートが入り、ファイル名ルールの紙は壁に貼っただけで口頭説明はなし。間違いは本人に言わず黙って直しており、指摘すると角が立つのを心配している。",
+      "受け入れ1回目。私は対象外なので reject にした(使う場面がなく、黒い画面が前提)。評価したのは、責めない文言と、止めない方針。指摘したのは、「<type>」「feat」が英語のままで意味が分からないこと。",
+      "受け入れ2回目も、対象外なので reject にした。「type」が日本語になった点と、「ヘッダー修正」が fix に変わる点は評価した。押すキーが1行で分かる選択肢を変えないでほしいとお願いした。"
+    ],
+    "pm": [
+      "ガルシア(本命・フリーランスのデザイナー)の事実:\n- 先週、コミットが \"fix\"/\"update\"/\"wip2\" ばかりで、開発者パートナーが「リリースノート書けない」と言った。\n- 対処は、パートナーが git log を見ながら聞き、ガルシアが記憶で答え、パートナーが書き直す、というやり方だった。約30分かかった。\n- そのせいでパートナーは週末に約1時間余計に作業した。ガルシアは「ごめん」と言っただけ。\n- 案件ごとに規約が違う。A社は「feat:」あり、B社はなし。ルールは Slack で聞くか、過去ログから察する。聞き逃すことが多い。\n- B社で「feat:」なしで出したら、パートナーが黙って直していた。ガルシアは後で履歴を見て気づき、それが「地味に嫌」。\n- 2か月前に Conventional Commits のページを3分見て閉じた。「デザイナーの僕に必要な部分がどこか分からない」。結局、前の人のコミットを真似した。\n- 「5分以上かかるものは、たぶん僕はやりません」。\n山田(非ターゲット寄り・コミットは書かない)の事実:\n- ファイル名規則を紙に貼ったが、4月に入ったパートの方には「あそこに書いてあります」と言っただけで、守られなかった。\n- 直すのは黙って自分でやり、相手には言えない。夜に約1時間の残業になった。\n- 「黙って直す側」の立場から、ガルシアの嫌な気持ちが分かると話した。\n共通点: 規約を知らせる手段(紙・ページ)は読まれない。指摘は角が立つので言えず、誰かが黙って直して時間を失う。",
+      "iteration 1 の受け入れ結果。ガルシアさんは条件付きで ACCEPT。条件は、README の URL を直すことと、末尾の「修正/追加」から type を推定すること。ガルシアさんの事実: 普段は「ヘッダー修正」「ボタン追加」のように動詞を後ろに書く。よく打つのは fix/update/wip。「毎回 Ctrl+C だと2週間で飽きてフックを消すかも」と言った。今回は git clone が権限確認で止まり、時間は計れていない。山田さんは対象外として REJECT。2人とも「type」「feat」が分からないと言った。iteration 2 では T7・T8・T9 をやり、直した README でガルシアさんの時間を計る。",
+      "iteration 2 の計画。trial-gitlint の直下には .git がない(佐藤が確認済み)。A 案(git init してコミットし、git clone のまま)に決めた。担当は鈴木さんで、T11 とした。末尾の推定は「直前が『を』ではない」場合に限る。順番は T8 → T9・T10(田中さんがまとめて出す) → T7・T11 の DEMO。受け入れでは、ガルシアさんの時間をストップウォッチで計る。",
+      "iteration 2 の review。T7〜T11 は受け入れ条件をすべて満たした(7afa6e8、テスト47件成功、3行で0.13秒)。未解決は3つ。(1) README 15行目に「git リポジトリであること」が書かれていない。今回は口頭で補う。(2) 壊れた設定のとき、英語のエラー文がそのまま出る。(3) check が OK のとき何も表示しない。(2) と (3) は、ガルシアさんの反応を見て次に決める。受け入れでは、ガルシアさんが README を開いてから `git commit -m fix` で警告が出るまでの時間をストップウォッチで計る。",
+      "iteration 2 の受け入れ。ガルシアさんは ACCEPT で、留保が2つある。①権限確認で止まり、今回も時間を計れていない。②よく書く語尾は「調整」「差し替え」「変更」「〇〇対応」。「デザイナーは修正より調整が多い」と言った。山田さんは対象外として REJECT し、品質は評価した。2人とも、選択肢の1行の形は変えないでと言った。7afa6e8 を第1リリースにした。次は辞書を広げることと、OK のときの ✓。「5分以内」は、本人の端末で実測するまで言わない。",
+      "iteration 2 の wrapup。T12 は出荷済み(7b05364、52件成功、GUESS_JA を確認)。T1〜T3 は旧版として閉じた。T13 は wrapup の時点で未実装。人間に渡した未決事項は5つ。①「5分以内」の実測 ②公開 URL ③辞書が先頭の語にも効く件(「調整した」→`fix: した`) ④英語のエラー文と README の git リポジトリの追記 ⑤T13 の残り。",
+      "iteration 2 の wrapup 完了。T13 も出荷済み(src/main.ts 54行目を確認、c1d5908、54件成功)。未完のタスクはない。人間に渡した未決事項は5つ。①「5分以内」の実測 ②公開 URL ③辞書が先頭の語にも効く件 ④英語のエラー文と README の git リポジトリの追記 ⑤長い直し案は80桁で折り返す件。"
+    ],
+    "eng-backend": [
+      "田中の設計方針: 終了コードは 0=OK、1=問題あり、2=使い方・設定の誤り。曖昧語は正規表現 `^(fix|update|wip|tmp|test|misc|changes?)\\d*$`。壊れた .commitrules.json は黙って conventional に落とさず、エラーにして終了コード2。check は `--json` で `{ok, problems, suggestions}` を返す。依存ゼロ、`node:test` を使う。",
+      "5分手順の前提: エンジンは Node 22.18 以上が必要。`install-hook` はフックにエンジンの絶対パスを書き込み、いま居るリポジトリに入れる。README 先頭に `node -v` の確認を1行入れる。Node が古いときは、フックは案内だけ出してコミットを通す。T1〜T3 は T4〜T6 の旧版なので閉じる。T4・T5 を田中が担当する。5分の実測は一時ディレクトリで取って示す。",
+      "T4・T5 は実装済みで、check と config のテストは全て通っている。free の警告は `ok:true` のまま `problems` に1件入れる方式で、JSON のキーは増やしていない。`--file <path>` はコミットメッセージのファイル用で、`#` 行は除く。type 推定不可のときは、曖昧語1語なら純粋な雛形、それ以外は本人の文面を残す。残りは鈴木さんの hook テスト3件の失敗確認と、5分の実測。",
+      "全体で 33 件のテストが通っている。`install-hook` は 0.12 秒で完了する。人が3行を打つ時間は未計測なので、受け入れ時に数字で出す。数字がなければ「5分以内」とは言わない。",
+      "README の3行での E2E を確認済み(install-hook は 0.14 秒、TTY なしの fix は警告を出して通る、テスト 33 件すべて成功)。\"fix: <説明>\" も replaceable の対象外なので `[1]` は出ない。受け入れ前に残っているのは、README の `<URL>` を実際の URL に置き換えることと、人が打つ時間の実測。",
+      "build iteration 1 の終わりの状態: テスト 33 件すべて成功、T4・T5・T6 は完了。iteration 2 に持ち越すのは、README 10行目の `<URL>` を決めることと、人が3行を打つ時間の実測。",
+      "review iteration 1 で確かめたこと:テストは 33 件とも成功。T4・T5・T6 は、受け入れ条件をすべて満たしている。条件の外の懸念を2つ、佐藤さんに出した。①free の警告にエラーと同じ「✗」が付く(鈴木さんの render 側)。②`init` が既存の .commitrules.json を黙って上書きする(田中の担当。既存ファイルがあれば終了コード1で止め、`--force` を案内する案)。README の `<URL>` は未決のまま。",
+      "iteration 2 の計画: T9 と T10 は check.ts の同じ箇所(16行目 TEMPLATE、32行目 guess、65行目の不正 type)なので、1回の変更でまとめる。雛形は定数 `TYPE_HINT=\"<種類(feat=追加 / fix=修正)>\"` に1か所で置く。末尾の推定は「末尾が修正/追加で、直前が『を』ではない」とする(「ヘッダーを修正」は雛形のまま)。[1] が出ないことは render の PLACEHOLDER=/[<>]/ で満たせるので、render.ts は変えない。既存テストのうち `<type>` を期待する5件は書き換える。README 17行目の `<type>` は、鈴木さんの T7 で直してもらう。T8 を先にやる。",
+      "build iteration 2 の状態: T8(init は既存の設定を上書きしない、--force で上書き)、T9、T10 は完了。テストは 47 件すべて成功。`TYPE_HINT` は check.ts の定数1か所。末尾の推定は GUESS_JA を使い、直前が「を」のときは除外する。render.ts は変えていない。残りは鈴木さんの T7・T11(README 17行目と render.ts 8行目のコメントに残る `<type>`、git init、DEMO、80桁での折り返しの確認)と、ガルシアさんの時間の実測。",
+      "配布用リポジトリ workspace/trial-gitlint の HEAD は 7afa6e8 で、T9・T10(check.ts、check.test.ts)をコミット済み。clone した先でもテストは 47 件すべて成功し、「ヘッダー修正」は fix: ヘッダー になる。check.ts を変えたら、配布用リポジトリへのコミットを忘れないこと(A 案のトレードオフ)。残りは鈴木さんの T11 の DEMO(fix・ヘッダー修正・80桁)と、ガルシアさんの時間の実測。",
+      "build iteration 2 の終わりの状態: 配布用リポジトリの HEAD は 7afa6e8、差分なし、テストは 47 件すべて成功。T4〜T11 はすべて完了。受け入れの注意点は2つ。①README 2行目の cd は自分のフォルダに書き換える。②そのフォルダは git リポジトリであること(違うと install-hook が終了コード2で止まる)。「5分以内」は、ガルシアさんの実測が出るまで言わない。",
+      "build iteration 2 の最終確認をした。HEAD は 7afa6e8、差分なし、テストは 47 件すべて成功。受け入れでガルシアさんの実測が出るまで、「5分以内」とは言わない。",
+      "review iteration 2 で確かめたこと: 7afa6e8 を新しく clone して確認し、テストは 47 件すべて成功、T7〜T11 はすべて受け入れ条件を満たしている。条件の外の改善案を2つ佐藤さんに出した。①壊れた JSON の `<理由>` に Node の英語のエラー文がそのまま出る。②`check` が OK のとき何も表示しない。どちらも次の iteration 以降の候補。",
+      "wrapup iteration 2: T12 が完了。GUESS_JA に 対応→feat、調整・変更・差し替え→fix を追加した。配布用リポジトリの HEAD は 7b05364 で、テストは52件すべて成功。T9 の「辞書にない末尾」のテストの例は「ヘッダー削除」に変えた。前方一致にも効くので、「調整した」は fix: した になる(PM に共有済み)。T1・T2 は旧版なので閉じる。残っているのは鈴木さんの T13 と、本人の端末での5分の実測。"
+    ],
+    "eng-frontend": [
+      "T3 の方針: フックは check の終了コード 1 のときだけ対話し、TTY がなければ警告を stderr に出して 0 で通す。0 と 2 は何も聞かずに通す。出力は5行以内で、直し案は画面に1つだけ。`check --json` を整形して並べる。文言は T1 側で初心者向けに作る。置き換えはコミットメッセージのファイルの書き換えのみで、履歴には触れない。",
+      "T6 の前提: install-hook は今いるリポジトリに入れ、エンジンの絶対パスをフックに書く。リポジトリ外は終了コード2。置き換え後の確認1行は5行の外(PM に確認中)。フックは `check --json` のキー ok/problems/suggestions に依存する。5分の根拠は実装後に一時ディレクトリで実測する。T1〜T3 は T4〜T6 の旧版。",
+      "T6 実装済み。`src/render.ts`、`src/hook.ts`、`src/install-hook.ts`、`test/hook.test.ts`、README 冒頭の導入手順。フックは `check --json --file $1` に依存する。TTY は `/dev/tty`(テストでは `COMMITCHECK_TTY` で差し替え)。5分の実測は、機械側は 1.5 秒。人が打つ時間は未測定。",
+      "README に1文足した。直し案が雛形のときは `[1]` が出ないので、`Ctrl+C` でやめて書き直す、という案内。テストは33件すべて通過。受け入れのときに、ガルシアさんが README を開いてから `git commit -m fix` で警告が出るまでの時間を計る。",
+      "README 1行目の `git clone <URL>` は仮の書き方のまま。配布 URL を佐藤さんに決めてもらい、決まったら置き換える。初見の人が詰まりやすいのはここ。テストは33件すべて通過(round 2 で再確認)。",
+      "build round 3 時点: テストは33件すべて通過。README に残っている仮の書き方は `git clone <URL>` と `cd <自分のリポジトリ>`。URL と、cd の例を足すかどうかを佐藤さんに確認中。決まったら README の2行だけ直す。",
+      "iteration 2 planning: `workspace/trial-gitlint` に `.git` がない。README 1行目の `git clone <ローカルパス>` は失敗するおそれがある。A(配布用に git init してコミット)か B(`cp -r`)かを佐藤さんに確認中。T7 では README の1・2行目と17行目の `<type>` を直し、render.ts 15行目で ok:true のときだけ「!」にして、テストを足す。DEMO は T9・T10 が入ってから撮る(fix とヘッダー修正、80桁の折り返し)。",
+      "iteration 2 build round 1: T7 完了。テストは37件すべて通過。`workspace/trial-gitlint` は git init 済みで、a51b853 と a2639f7 をコミットした。一時 HOME で README の3行を試し、clone から install-hook まで止まらず 0.14 秒、`commit -m fix` で警告が出た。README 2行目は `cd ~/projects/site` で、置き換えの案内はブロックの外(zsh だと行末のコメントが効かないため)。残りは T11: T9・T10 が入ったら配布用リポジトリにコミットし直し、fix とヘッダー修正の画面と COLUMNS=80 の折り返しを DEMO に貼る。",
+      "iteration 2 build round 1(後半): T11 完了。配布用リポジトリの最新は 7afa6e8 で、差分はない。一時 HOME で README の3行を通して 0.13 秒、止まらずに終わった。pty で確かめた画面は、fix は警告、ヘッダー修正は `fix: ヘッダー` と [1] が出て、置き換えると履歴に残る。update は雛形が出て [1] は出ない。80桁ではどの行も折り返さない(最長 72 桁)。テストは 47 件すべて通過。今後 src を変えたら、配布用リポジトリへのコミットを忘れないこと。受け入れでは、README 2行目の cd を自分のフォルダに書き換えて打ってもらう。",
+      "iteration 2 build round 2: 受け入れの前に再確認した。配布用リポジトリは 7afa6e8 で差分なし、テストは47件すべて通過。自分の担当(T7・T11)は完了。受け入れで直したときは、配布用リポジトリにもコミットし直すこと。",
+      "iteration 2 build round 3: 状態は変わらず、HEAD は 7afa6e8 で差分なし、テストは47件すべて通過。受け入れの前に伝える一言は「README 2行目の cd は、普段 git commit しているフォルダに書き換える」。",
+      "iteration 2 wrapup: T13 完了。`src/main.ts` の runCheck で、`--json` なしで problems が空のときだけ `✓ 問題ありません` を出す。テストは `test/ok.test.ts` の2件(手で打った場合と、本物のエンジンのフック経由の場合)。配布用リポジトリの HEAD は c1d5908(7b05364 の上)で、テストは54件すべて通過。私の担当で残っているものはない。"
+    ],
+    "user-garcia": [
+      "受け入れ1回目は条件付き accept。この環境では git clone の権限で止まり、3行の計測はできなかった。条件は2つ。README 1行目の `<URL>` 置き換え(T7)と、日本語末尾の「修正/追加」から type を推定すること。fix/update/wip は雛形になり [1] が出ないので、Ctrl+C が続くと飽きるリスクがある。",
+      "受け入れ2回目は accept。条件だった README の clone 行と「修正/追加」の末尾推定は満たされた。ただ、環境の権限確認でまた実行できず、時間は計れていない(5分以内は未確認)。次に求めること: 調整/変更/差し替え/対応 を辞書に足すこと、check で OK のときに ✓ を表示すること。"
+    ]
+  },
+  "historyWindow": 40
+}

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QRの印刷</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body class="admin print-page">
+<main>
+  <div class="no-print">
+    <h1>QRの印刷</h1>
+    <p id="lead" aria-live="polite">読み込んでいます…</p>
+    <fieldset class="layout" id="layout" hidden>
+      <legend>紙の使い方</legend>
+      <label><input type="radio" name="per" value="1" checked> A4に1世帯</label>
+      <label><input type="radio" name="per" value="2"> A4に2世帯（半分に切って配る）</label>
+    </fieldset>
+    <div class="print-bar">
+      <button id="print" type="button" hidden>印刷する</button>
+      <a class="back" href="/admin">班長画面にもどる</a>
+    </div>
+    <p id="msg" class="error" role="alert"></p>
+  </div>
+  <div id="sheets"></div>
+</main>
+<script src="/print.js"></script>
+</body>
+</html>

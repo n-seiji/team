@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>単語カード</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="app" aria-live="polite">
+  <header>
+    <p id="count" class="count"></p>
+    <p id="pos" class="pos"></p>
+  </header>
+  <section id="card" class="card" tabindex="0" aria-label="単語カード"></section>
+  <section id="empty" class="empty" hidden>
+    <div id="welcome">
+      <h1>先生のテストリンクから開いてください</h1>
+      <p>テストの最後の「この単語を学習画面で使う」を押すと、ここに単語カードが出ます。</p>
+    </div>
+    <details id="paste-box" class="paste-box">
+      <summary>単語リストを自分で貼る</summary>
+      <p class="note">「英語,日本語」の行を貼ります。</p>
+      <textarea id="paste" rows="6" aria-label="単語リスト"></textarea>
+      <p id="msg" class="msg"></p>
+      <button id="load" class="btn primary">この単語で始める</button>
+      <p class="note">入れ替えても、覚えた単語の数は減りません。</p>
+    </details>
+    <button id="cancel" class="btn" hidden>やめて戻る</button>
+  </section>
+  <nav id="actions" class="actions" aria-label="操作">
+    <button id="flip" class="btn primary">めくる</button>
+    <div class="row">
+      <button id="again" class="btn">まだ</button>
+      <button id="known" class="btn good">覚えた</button>
+    </div>
+  </nav>
+  <details class="backup">
+    <summary>進捗をコピー</summary>
+    <p class="note">スマホを替えたり、データが消えたときに戻せます。</p>
+    <button id="copy" class="btn">進捗をコピー</button>
+    <textarea id="restore" rows="2" aria-label="進捗コード" placeholder="コピーした進捗を貼る"></textarea>
+    <button id="apply" class="btn">貼って復元</button>
+    <p id="bmsg" class="msg"></p>
+  </details>
+  <button id="change" class="link" hidden>単語リストを入れ替える</button>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>

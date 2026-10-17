@@ -1,0 +1,765 @@
+{
+  "version": 1,
+  "name": "trial-receipts",
+  "brief": "領収書をスマホで撮るだけで、月末の経費精算の表ができるツール。小さな会計事務所や個人事業主向け",
+  "language": "ja",
+  "workspace": "workspace/trial-receipts",
+  "createdAt": "2026-10-17T08:38:51.628Z",
+  "status": "done",
+  "members": [
+    {
+      "id": "pm",
+      "role": "pm",
+      "persona": {
+        "name": "佐藤 美咲",
+        "age": 36,
+        "occupation": {
+          "title": "Product Manager",
+          "organization": "小さなSaaSスタートアップ",
+          "description": "ユーザーインタビューから課題を言語化し、最小のスコープで価値を届けることに責任を持つ。"
+        },
+        "long_term_goals": [
+          "ユーザーが本当に使い続けるプロダクトを作る",
+          "チームが迷わず動ける判断を素早く下す"
+        ],
+        "style": "質問が具体的で短い。『最後にそれが起きたのはいつですか？』のように事実を掘る。決めるときは理由とトレードオフを一言添える。",
+        "personality": {
+          "traits": [
+            "好奇心が強い",
+            "スコープを削るのが得意",
+            "ユーザーの言葉をそのまま引用する"
+          ],
+          "big_five": {
+            "openness": "高",
+            "conscientiousness": "高",
+            "extraversion": "中",
+            "agreeableness": "中",
+            "neuroticism": "低"
+          }
+        },
+        "skills": [
+          "ユーザーインタビュー (The Mom Test)",
+          "ジョブ理論",
+          "受け入れ基準の記述",
+          "優先順位付け"
+        ],
+        "beliefs": [
+          "ユーザーが言う解決策より、ユーザーの過去の行動を信じる",
+          "最初のリリースは恥ずかしいくらい小さくていい"
+        ]
+      }
+    },
+    {
+      "id": "eng-backend",
+      "role": "engineer",
+      "persona": {
+        "name": "田中 健",
+        "age": 41,
+        "occupation": {
+          "title": "Senior Backend Engineer",
+          "description": "データモデル、API、CLI、テストを担当。シンプルで壊れにくい設計を好む。"
+        },
+        "style": "結論から話す。リスクは数字や具体例で示す。不明点はその場で確認する。",
+        "personality": {
+          "traits": [
+            "慎重",
+            "テストを先に書く",
+            "依存を増やすのが嫌い"
+          ],
+          "big_five": {
+            "openness": "中",
+            "conscientiousness": "高",
+            "extraversion": "低",
+            "agreeableness": "中",
+            "neuroticism": "低"
+          }
+        },
+        "skills": [
+          "TypeScript",
+          "Go",
+          "SQL",
+          "API設計",
+          "自動テスト"
+        ],
+        "preferences": {
+          "likes": [
+            "標準ライブラリ",
+            "小さな関数",
+            "README に動かし方を書くこと"
+          ],
+          "dislikes": [
+            "根拠のない見積もり",
+            "巨大なフレームワーク"
+          ]
+        }
+      }
+    },
+    {
+      "id": "eng-frontend",
+      "role": "engineer",
+      "persona": {
+        "name": "鈴木 ひかり",
+        "age": 29,
+        "occupation": {
+          "title": "Frontend / UX Engineer",
+          "description": "画面・CLI の使い勝手、アクセシビリティ、初回体験を担当。ユーザー視点で仕様に意見を言う。"
+        },
+        "style": "フレンドリーで提案型。『ユーザーはここで迷いそう』と体験ベースで話す。",
+        "personality": {
+          "traits": [
+            "共感力が高い",
+            "手を動かして試作するのが早い",
+            "細部にこだわる"
+          ],
+          "big_five": {
+            "openness": "高",
+            "conscientiousness": "中",
+            "extraversion": "高",
+            "agreeableness": "高",
+            "neuroticism": "中"
+          }
+        },
+        "skills": [
+          "TypeScript",
+          "HTML/CSS",
+          "React",
+          "アクセシビリティ",
+          "プロトタイピング"
+        ],
+        "preferences": {
+          "likes": [
+            "空状態やエラー時の丁寧なメッセージ",
+            "キーボードだけで操作できるUI"
+          ],
+          "dislikes": [
+            "説明が必要なUI"
+          ]
+        }
+      }
+    },
+    {
+      "id": "user-yamada",
+      "role": "user",
+      "persona": {
+        "name": "山田 恵子",
+        "age": 52,
+        "nationality": "日本",
+        "residence": "埼玉県",
+        "occupation": {
+          "title": "地域の小さな会計事務所の事務スタッフ",
+          "description": "Excel と紙の書類で日々の業務を回している。"
+        },
+        "long_term_goals": [
+          "残業を減らして家族との時間を増やす",
+          "ミスで先生(所長)に迷惑をかけない"
+        ],
+        "style": "丁寧だが遠慮がち。専門用語が出ると『それはどういう意味ですか？』と聞き返す。具体的な日常のエピソードで話す。",
+        "personality": {
+          "traits": [
+            "几帳面",
+            "新しいツールには慎重",
+            "一度慣れたら長く使う"
+          ],
+          "big_five": {
+            "openness": "低",
+            "conscientiousness": "高",
+            "extraversion": "中",
+            "agreeableness": "高",
+            "neuroticism": "中"
+          }
+        },
+        "preferences": {
+          "likes": [
+            "文字が大きくて分かりやすい画面",
+            "紙に印刷できること"
+          ],
+          "dislikes": [
+            "アカウント登録が面倒なサービス",
+            "英語だらけの画面",
+            "勝手に変わるUI"
+          ]
+        },
+        "tech_literacy": "スマホ(LINE)と Excel の基本操作はできる。インストール作業や黒い画面(ターミナル)は苦手。"
+      }
+    },
+    {
+      "id": "user-garcia",
+      "role": "user",
+      "persona": {
+        "name": "Daniel García",
+        "age": 31,
+        "nationality": "スペイン",
+        "residence": "東京 (在住5年)",
+        "occupation": {
+          "title": "フリーランスのWebデザイナー",
+          "description": "複数のクライアント案件を並行して抱えている。"
+        },
+        "long_term_goals": [
+          "自分のスタジオを持つ",
+          "事務作業を自動化して制作に集中する"
+        ],
+        "style": "率直でテンポが速い。日本語は流暢だがときどき英語が混じる。気に入らないものははっきり言う。",
+        "personality": {
+          "traits": [
+            "効率重視",
+            "新しいツールをすぐ試す",
+            "飽きっぽい"
+          ],
+          "big_five": {
+            "openness": "高",
+            "conscientiousness": "低",
+            "extraversion": "高",
+            "agreeableness": "中",
+            "neuroticism": "低"
+          }
+        },
+        "preferences": {
+          "likes": [
+            "キーボードショートカット",
+            "連携(API, Zapier)",
+            "ミニマルなデザイン"
+          ],
+          "dislikes": [
+            "5分以上かかるセットアップ",
+            "サブスクの値上げ",
+            "遅いアプリ"
+          ]
+        },
+        "tech_literacy": "高い。ターミナルも使えるが、本業ではないので凝った設定はしたくない。"
+      }
+    }
+  ],
+  "phases": [
+    {
+      "id": "discovery",
+      "goal": "PM interviews the users to uncover their real situation, pains and jobs-to-be-done. Users answer strictly in character, with concrete episodes. No solutions yet.",
+      "speakers": [
+        "pm",
+        "user"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 2
+    },
+    {
+      "id": "planning",
+      "goal": "PM turns findings into a small, shippable scope: [TASK] items with clear acceptance criteria, each assigned to an engineer. Engineers challenge feasibility, split or re-assign tasks, and agree on tech choices.",
+      "speakers": [
+        "pm",
+        "engineer"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 2,
+      "iterationStart": true
+    },
+    {
+      "id": "build",
+      "goal": "Engineers implement their own tasks in the workspace (real files, runnable code, tests when sensible), coordinate interfaces with each other, and mark finished work with [TASK_DONE].",
+      "speakers": [
+        "engineer"
+      ],
+      "mode": "parallel",
+      "maxRounds": 3,
+      "untilTasksDone": true,
+      "editors": [
+        "engineer"
+      ]
+    },
+    {
+      "id": "review",
+      "goal": "Engineers review each other's work against the acceptance criteria and fix issues. Before users judge it, each engineer posts a [DEMO] for their tasks: what a user would do and what they would see, with output you really produced (run the command, render the page or email, paste the result or the path of the generated file or screenshot). Never describe output you did not produce. PM checks every task against its acceptance criteria and states what is ready for users.",
+      "speakers": [
+        "engineer",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1,
+      "editors": [
+        "engineer"
+      ]
+    },
+    {
+      "id": "acceptance",
+      "goal": "Users try what was built — start from the team's demos, open the files they point to, run it if possible — and judge it from their own needs. Each user gives a [VERDICT accept|reject] with reasons. PM summarizes and decides next steps.",
+      "speakers": [
+        "user",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1
+    },
+    {
+      "id": "wrapup",
+      "goal": "The session is about to end. Engineers apply every decision made during review and acceptance and finish their open tasks ([TASK_DONE]); a task that cannot be finished here gets one line saying why and what is left. PM then confirms what shipped and lists, for the real human, anything still open or needing their decision.",
+      "speakers": [
+        "engineer",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1,
+      "editors": [
+        "engineer"
+      ],
+      "finale": true
+    }
+  ],
+  "phaseIndex": 5,
+  "iteration": 2,
+  "maxIterations": 2,
+  "round": 0,
+  "turn": 51,
+  "queue": [],
+  "pending": [],
+  "insertions": 0,
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "領収書画像から日付・金額・支払先・カテゴリを読み取る",
+      "acceptance": "- 領収書の画像を1枚渡すと、日付・金額・支払先・カテゴリの4項目と、各項目の「確からしさ」が返る。\n- 読み取れない項目は空欄にし、推測で値を埋めない（山田さんの「たぶんこの金額」を作らない）。\n- 感熱紙が薄い、ピンボケの画像では、該当項目が「要確認」になる。\n- 手元のサンプル領収書5枚（コンビニ、カフェ、タクシー、サブスク、薄い感熱紙）で、結果を一覧で確認できる。\n- カテゴリは固定の候補（交通費・会議費・消耗品費・通信費・その他）から選ぶ。自信がなければ「その他」＋要確認。",
+      "owner": "eng-backend",
+      "status": "todo",
+      "createdBy": "pm"
+    },
+    {
+      "id": "T2",
+      "title": "保存した領収書を月ごとの表にまとめ、CSVで出力する",
+      "acceptance": "- 読み取った領収書が日付順の表（日付・金額・支払先・カテゴリ・要確認）として一覧になる。\n- 月を指定すると、その月の分だけの表と合計金額が表示される。\n- 表をCSVでダウンロードでき、Excelで開いても文字化けしない。\n- 要確認の項目が1件でもある場合、合計の横に「未確認が○件あり、合計は確定ではありません」と表示される。\n- 画像と表の行が1対1でひも付き、行から元の写真をすぐ開ける（税理士に聞かれたときの確認用）。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "月の表とCSVを `src/table.mjs` に実装した。\n- `GET /receipts?month=YYYY-MM` は日付順の行、合計、`unconfirmed_count`、`total_note` を返す。未確認があるときだけ `total_note` に「未確認が○件あり、合計は確定ではありません」が入る。\n- `needs_review_count` は月に関係なく全体の件数。読み取り中と失敗の行も含める。\n- 日付が空の行は月指定の表に入らない。`undated_count` で数える。全件表示では末尾に出す。\n- `GET /export.csv?month=` は UTF-8 の BOM 付きで、列は日付・金額・支払先・カテゴリ・要確認・id・画像。画像は `/receipts/:id/image` へのパス。支払先が `=` などで始まる場合は先頭に `'` を付ける。\n- 行の `image_url` と `GET /receipts/:id/image` で元の写真を開ける。"
+    },
+    {
+      "id": "T3",
+      "title": "スマホで撮って、読み取り結果を確認・修正できる画面",
+      "acceptance": "- スマホのブラウザで「撮影」ボタンを押すとカメラが開き、撮った領収書が1タップで登録される。インストール不要。\n- 読み取り後、4項目が元の写真の隣に表示され、その場で直せる。\n- 要確認の項目は色と文言（色だけに頼らない）で一目で分かり、直すと要確認が消える。\n- 要確認の行だけに絞り込める。\n- 一覧画面で、要確認の件数が常に先頭に表示される。",
+      "owner": "eng-frontend",
+      "status": "todo",
+      "createdBy": "pm"
+    },
+    {
+      "id": "T4",
+      "title": "T1a: 領収書の保存（画像1枚1ファイル＋JSON、DBなし）",
+      "acceptance": "- 画像を1枚登録すると、すぐ id が返り、状態は reading / done / failed のどれかになる。\n- 保存される内容は、日付・金額・支払先・カテゴリの4項目（それぞれ value・confidence・needs_review・reason）と、edited、画像パスである。\n- 項目を直すと、その項目の要確認が消え、edited が true になる。\n- 画像と記録は1対1で、id から元の写真を開ける。\n- 10MBを超える画像は、理由つきで断る。\n- サーバーを再起動しても、登録済みの領収書が残っている。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "領収書の保存を `workspace/trial-receipts/src/store.mjs` と `src/server.mjs` に実装した。画像1枚が1ファイル（`data/images/<id>.<ext>`）、記録が1つのJSON（`data/records/<id>.json`）で、DBは使っていない。\n- `POST /receipts` は読み取りを待たず、すぐ id と `status:\"reading\"` を返す。読み取りが終わると done、例外が出ると failed になる。\n- 保存するのは4項目（`value`・`confidence`・`needs_review`・`reason`）と `edited`、`image_path`。\n- `PATCH` で直した項目は要確認が消え、`edited` が true になる。不正な値は 400 で理由を返す。\n- 10MB超は 413 で理由を返す。画像以外は 400。\n- 再起動しても記録は残る。reading のまま残ったものは起動時に読み直す。\n- 確認は `node --test test/*.test.mjs`。8件が通った。"
+    },
+    {
+      "id": "T5",
+      "title": "T1b: 読み取りアダプタ（差し替え可能な部品）",
+      "acceptance": "- 最初の実装は、4項目すべてを空欄＋要確認（reason「未読み取り」）で返す。\n- 実エンジンに差し替えても、API、保存形式、画面を変えなくて済む。\n- 金額と日付は形式を検証し、通らなければ要確認にする。\n- カテゴリは固定5候補（交通費・会議費・消耗品費・通信費・その他）から選ぶ。自信がなければ「その他」＋要確認にする。\n- ローカルOCRを1つ試した結果（読めた項目、誤読、要確認になった項目）を、サンプル画像の一覧で報告する。精度の数字は測った実測値だけを書く。\n- 外部APIには画像を送らない。",
+      "owner": "eng-backend",
+      "status": "doing",
+      "createdBy": "pm"
+    },
+    {
+      "id": "T6",
+      "title": "T3改: スマホで撮って、読み取り結果を確認・修正できる画面",
+      "acceptance": "- 「撮影」ボタンを押すとOS標準カメラが開き、アプリ側のタップ1回で登録される。インストール不要。\n- 登録は一覧に行が追加されるだけで、画面は切り替わらない。10枚続けて撮れる。読み取り待ちの行は「読み取り中…」と出る。\n- 読み取り後、4項目が元の写真の隣に出て、その場で直せる。\n- 要確認の項目は、色＋文言（例:「要確認：金額が薄くて読めません」）＋アイコンで分かる。直すと要確認が消える。\n- 要確認の行だけに絞り込める。\n- 一覧の先頭に、全体の「要確認 ○件」が常に出る（月で絞っても変わらない）。\n- 1枚もないときは、「領収書を撮ると、ここに表ができます」と大きな撮影ボタンだけを出す。\n- 先にモックで進め、アダプタが入ったら実物につなぐ。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "画面をモックで作りました。まだ実物にはつないでいません。ブラウザでの動作確認は、この環境にブラウザがなく、未実施です。ロジックのテストは通っています。\n- 場所: `workspace/trial-receipts/`\n- ファイル:\n  - `web/index.html`\n  - `web/style.css`\n  - `web/app.js`\n  - `web/logic.js`\n  - `web/api.js`（実 API 用）\n  - `web/mock-api.js`\n  - `serve.mjs`\n  - `test/logic.test.mjs`\n  - `README.md`\n- 起動: `node serve.mjs 8080` を実行し、`http://localhost:8080/?mock=1` を開きます。スマホからは `http://<PCのIP>:8080/?mock=1` で開けます。\n- テスト: `node --test test/*.test.mjs`（15件通過）\n- 実装した内容:\n  - 撮影は OS 標準カメラ（`capture=environment`）です。アプリ側のタップは1回で、撮影後は一覧に行が増えるだけです。画面は切り替わらず、続けて10枚撮れます。\n  - 送信前に長辺2000pxへ縮小します。\n  - 読み取り待ちの行には「読み取り中…」と出ます。\n  - 4項目は元の写真の隣に出て、その場で直せます。写真をタップすると原寸で開きます。\n  - 要確認の項目は、色、⚠アイコン、「要確認：金額が薄くて読めません」の文言で示します。直して保存すると消えます。\n  - 「要確認だけ見る」で絞り込めます。\n  - 先頭の「要確認 ○件」は、API の全体の件数です。絞り込んでも変わりません。\n  - 0枚のときは「領収書を撮ると、ここに表ができます」と大きな撮影ボタンだけを出します。\n  - サーバーにつながらないときは、自動でモックに切り替わります。その場合は黄色の「デモ表示」バナーを出します。見本データを本物に見せないためです。"
+    },
+    {
+      "id": "T7",
+      "title": "T7: URL を開くだけで試せる受け入れテスト環境",
+      "acceptance": "- tesseract を入れたテスト用マシンでチームが `node src/server.mjs` を起動し、ユーザーには URL と QR コードだけを渡す。ユーザーは PC 操作もインストールもしない。\n- 山田さんと Daniel さんのスマホ（iOS Safari / Android Chrome のどちらか）で URL を開くと、撮影ボタンが出て、OS 標準カメラが開く。結果は機種名つきで報告する。\n- 撮った写真は、そのマシンの `data/images/` にだけ残り、外部送信もコミットもされない。\n- 始める前に、URL を開いてから1枚目を登録するまでの手順が、ユーザー向けに3行以内で書かれている。",
+      "owner": "eng-backend",
+      "status": "doing",
+      "createdBy": "pm"
+    },
+    {
+      "id": "T8",
+      "title": "T8: 字の大きさと印刷用の表",
+      "acceptance": "- 項目名（日付・金額・支払先・カテゴリ）と入力欄の字が 16px 以上になる。スマホで拡大しなくても読める。\n- 月の表に「印刷」ボタンがあり、印刷すると 日付・金額・支払先・カテゴリ・要確認 の5列と、月の合計だけが出る。id や `/receipts/…` は出ない。\n- 未確認が残っているときは、印刷物にも「未確認が○件あり、合計は確定ではありません」が出る。\n- 実際に印刷プレビュー（またはPDF保存）した結果を、DEMO に画像かファイルのパスで示す。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "項目名・入力欄・⚠ の文言を 16px 以上にしました。月の表に「🖨 印刷（先生に渡す表）」ボタンを付けました。印刷用の CSS は `@media print` の A4 で、5列と合計、未確認の注記だけが出ます。Ctrl+P でも同じ紙になります。ファイルは `web/index.html`・`web/style.css`・`web/app.js`・`web/logic.js`（`printSheet`）・`test/logic.test.mjs` です。コミットは 05a915c です。PDF は上の DEMO のパスにあります。"
+    },
+    {
+      "id": "T9",
+      "title": "T9: 日付か金額で元の写真を探す",
+      "acceptance": "- 一覧の検索欄に金額（例: 5000）か日付（例: 10/3）を入れると、一致する行だけが写真つきで出る。\n- 行の写真をタップすると原寸で開く。先生に「この5,000円は何？」と聞かれてから、写真が出るまで1分以内。\n- 一致する行がないときは「見つかりません。日付が入っていない領収書が○枚あります」と出し、日付のない行を見られるようにする。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "一覧の上に検索欄「写真を探す（金額か日付）」を付けました。金額（`5000`・`5,000円`・`¥5000`、全角も可）は完全一致で、日付（`10/3`・`10月3日`・`2026-10-03`。年は省ける）は月日で探します。月と「要確認だけ」には関係なく、全件から一致する行だけを写真つきで出します。写真をタップすると原寸で開きます。見つからないときは「見つかりません。日付が入っていない領収書が○枚あります」と「日付のない領収書を見る（○枚）」ボタンを出します。Esc で一覧に戻ります。ファイルは `web/logic.js`（`parseQuery`・`searchReceipts`・`searchText`）、`web/app.js`（`renderSearch`）、`web/index.html`、`web/style.css`、`test/logic.test.mjs`（6件追加）、`README.md` です。コミットは 4952a66 です。確認方法: `timeout 120 node --test test/*.test.mjs` で48件が通ります。`node src/server.mjs` を起動し、`http://localhost:3000/` の検索欄に 5000 と打ってください。「1分以内」は、受け入れテストで山田さんが使ったときの秒数を測って確かめます。"
+    },
+    {
+      "id": "T10",
+      "title": "T7b: QRコードとユーザー向けの3行の手順",
+      "acceptance": "- テスト機の画面で `/start` を開くと、LAN の URL の QR コードと、同じ URL が大きな字（24px以上）で出る。npm の依存は増やさない。\n- スマホのカメラで QR を読むと、撮影ボタンのある画面が開く（T7 の実機確認で、機種名つきで確かめる）。\n- `/start` と README に、「URLを開いてから1枚目を登録するまで」の手順が3行以内で書かれている。\n- 読み取りの順番を待っている行は「順番待ち（前に○枚）」、読み取り中の行は「読み取り中…」と出る。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "eng-frontend",
+      "summary": "`web/qr.js`（依存なしの QR 生成。バイトモード・誤り訂正 M・1〜10型）、`web/start.html`、`web/start.js` を追加しました。`/start` で LAN の URL の QR と、同じ URL を 40px で出します。`?url=` で URL を指定することもできます。3行の手順は `/start` と README の両方に書きました。順番待ちの表示は「順番待ち（前に○枚）」と「読み取り中…」です（`statusText`・`isPending`）。待っている間も手で入力でき、⚠ は読み取りが終わってから出ます。コミットは 05a915c です。確認方法: `timeout 90 node --test test/*.test.mjs` で41件が通ります。`node src/server.mjs` を起動し、`http://localhost:3000/start` を開いてください。`/start` のルートの1行は、田中さんの未コミットの server.mjs に入っています。「スマホのカメラで QR を読む」の実機確認は、T7 で機種名つきで行います。"
+    },
+    {
+      "id": "T11",
+      "title": "T11: 先生に渡す紙で、合計に入っていない行と、怪しい項目が分かるようにする",
+      "acceptance": "- 金額が空欄の行がある月は、印刷物と画面の合計の横に「金額が入っていない領収書 ○枚（合計に入っていません）」と出る。\n- 印刷物の要確認の列に、怪しい項目名が出る（例:「分類」「金額・日付」）。「要確認」の一語だけにはしない。\n- カテゴリが要確認のままの行は、紙では「その他」ではなく「未分類（要確認）」と出る。CSV も同じにする。\n- 実際に印刷した PDF（タクシーの金額が空欄、ローソンの分類が要確認の月）のパスを DEMO で示す。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "先生に渡す紙を直しました（3369de0）。`timeout 180 node --test test/*.test.mjs` で53件すべて通り、作業ツリーはクリーンです。\n- 合計に入っていない行: 金額が空欄の行がある月は、画面の合計の横と紙の合計の下に「金額が入っていない領収書 ○枚（合計に入っていません）」と出ます。読み取り待ちの行も、金額がまだないので数えます（`noAmountCount`・`noAmountText`）。\n- 紙の要確認の列: 「要確認」の一語ではなく、怪しい項目名を出します（「分類」「金額」「日付・金額」など。`PRINT_FLAG_LABELS`）。\n- カテゴリが要確認のままの行は、紙と CSV の両方で「未分類（要確認）」と出ます。T12 で候補が入った行（要確認なし）は、その名前のまま出ます。\n- ついでに CSV の文も直しました。「カテゴリが未読み取り」だったものを、画面と同じ「カテゴリはまだ読み取られていません」にしています。\n- 変えたファイル: `web/logic.js`（`printSheet`）、`web/app.js`、`src/table.mjs`（`toCsv`）、`test/logic.test.mjs`、`test/api.test.mjs`（テストを2件追加）、`README.md`\n- 確認方法: `node src/server.mjs` を起動し、月を選んで「🖨 印刷」を押します。"
+    },
+    {
+      "id": "T12",
+      "title": "T12: 支払先の語からカテゴリの候補を出す",
+      "acceptance": "- 支払先に決まった語（例: 珈琲・カフェ・コーヒー → 会議費、タクシー・交通 → 交通費、ローソン・ファミリーマート → 消耗品費）が入っていると、その候補がカテゴリに入る。\n- 支払先が要確認の行（誤読の疑いがある行）や、語が当たらない行は、これまでどおり「その他」＋要確認にする。推測を確定扱いにしない。\n- 語と候補の対応は1つのファイルにまとめ、あとから足せるようにする。\n- 合成画像3枚で、カテゴリが「候補あり（要確認なし）／要確認」のどちらになったかを件数で出す。当日の本物の写真でも同じ形で出す。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "支払先の語からカテゴリの候補を出すようにしました（c1459c8）。`timeout 180 node --test test/*.test.mjs` で51件すべて通り、作業ツリーはクリーンです。\n- 語と候補の対応は `src/category-words.json` の1ファイルにまとめました。語を足すときは、このファイルだけ直します。大文字と小文字、全角と半角は区別しません。\n- 判定は `src/reader.mjs` の `normalize()` で、エンジンに依存しません。支払先が要確認の行は、候補を出さずに「その他」＋要確認（「カテゴリが決まりません（支払先が要確認です）」）のままにします。語が当たらない行と、2つ以上のカテゴリに当たる行も同じ扱いです。\n- `src/tesseract.mjs` では、本文全体の語でカテゴリを決める処理をやめました。本文で決めると、店名を誤読した行でも、カテゴリが確定に見えてしまうためです。\n- `scripts/sample-report.mjs` に「カテゴリ：候補あり（要確認なし）○／要確認○（○枚中）」の行を足しました。当日の本物の写真での件数は、T5 と同じコマンドで出します。\n- 既知の制限: 支払先を手で直しても、カテゴリの候補は出し直しません。\n- テストを足しました。支払先が要確認なら、本文に「コーヒー」があっても候補を出さないことと、全角の支払先でも語が当たることを確かめます。README も更新しました。"
+    }
+  ],
+  "decisions": [
+    {
+      "by": "pm",
+      "text": "最初のリリースで解く課題は「撮った領収書から、日付・金額・支払先・カテゴリの表ができ、読み取れない・怪しい項目が一目で分かること」に絞る。理由: 両ユーザーの時間の大半は入力ではなく確認と探し直しで、先生や税理士が実際に見る列もこの4つだから。トレードオフとして、クライアント別ひも付けやメール・Dropbox取り込みは後回しにする。",
+      "phase": "discovery",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "精度の方針は「金額・日付を誤って確定扱いにしない」を最優先にする。読めた率は二の次。読み取れない項目は空欄＋要確認、確からしさが閾値未満や形式検証に通らない項目も要確認にする。推測で埋めない。理由: 山田さんが鉛筆で印を付けて何度も見返した不安は、「確定に見える誤り」から生まれるから。トレードオフとして、初回は要確認が多く出ても許容する。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "領収書画像は、確認が取れるまで外部のOCR APIに送らない。初回は「全項目が要確認の空欄」を返すアダプタで出し、実エンジンはローカルOCRを1つ試して、サンプルで測ってから採用する。精度の数字は測定前に約束しない。理由: お客様の領収書を含むため。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "API 方針は次のとおりにする。\n- `POST /receipts` は読み取りを待たず、すぐ id を返す。状態は reading / done / failed。\n- 項目ごとに `{value, confidence, needs_review, reason}` を返す。\n- `GET /receipts` には、月に関係なく全体の `needs_review_count` を入れる。\n- `PATCH` で直した項目は `edited: true` を残し、その項目の要確認は消す。\n- 画像上限は10MB。ブラウザ側の縮小は、薄い感熱紙の字が潰れないか確認してから決める。\n理由: 読み取りが遅くなっても画面が固まらず、別の月の未確認も見落とさないため。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "「1タップ」は「アプリ側のタップが1回」の意味にする。OS標準カメラの「使う」は数に入れない。撮影は標準カメラ（capture）に任せ、アプリ側に撮影画面は作らない。理由: 実装が軽く、利用者も迷わないから。トレードオフは、OS側の確認が1回増えること。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "T3 は T6（T3改）に置き換えたので閉じる。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "tesseract（日本語データ込み）は、受け入れテストを動かすマシンにだけ入れてよい。画像は `data/images/` と `samples/` だけに置き、外部送信もコミットもしない。理由: お客様の領収書を守りつつ、T5 の実測を止めないため。トレードオフとして、測れるのはそのマシン上の実測値だけになる。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "受け入れテストのサンプルは、山田さんがコンビニ・タクシー・薄い感熱紙（既定と `?maxside=0` で2回）、Daniel さんがカフェ・サブスク（メール領収書の画面写真でよい）を撮る。ユーザーには先に「今は読み取らない。手で入れるテスト」と伝える。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "CSV の画像列は相対パスのままにする。理由: 2人とも Excel から写真を開いておらず、元の写真を求められたときは紙やアプリで探しているから。代わりに、アプリで日付か金額から写真を探せるようにする。トレードオフとして、CSV だけを受け取った人は写真を開けない。",
+      "phase": "acceptance",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "iteration 2 の範囲は次の4つに絞る。T5（OCR の試行と実測）、URL を開くだけで試せる受け入れテスト環境、字の大きさと印刷、日付・金額で写真を探す機能。PDF・メールの取り込み、クライアント列、キーボードショートカットは後回しにする。理由: 2人の REJECT の中心は「読み取りがない」と「試せない」だから。トレードオフとして、Daniel さんの領収書の半分（メール・PDF）は今回入らない。",
+      "phase": "acceptance",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "iteration 2 は T7 → T5 → T8 → T9 の順に着手する。時間が足りないときは T9 から削る。理由: T7 がないとユーザーが試せず、T5 の実測に使う写真も集まらないから。トレードオフとして、山田さんの「写真を探す」は入らない可能性がある。",
+      "phase": "planning",
+      "iteration": 2
+    },
+    {
+      "by": "pm",
+      "text": "T5 のサンプル一覧には、カフェのレシートについて、金額と日付がそれぞれ「要確認なしで通った／誤読／要確認」のどれだったかを件数で出す。％は出さない。理由: Daniel さんの次の判定条件そのものだから。",
+      "phase": "planning",
+      "iteration": 2
+    },
+    {
+      "by": "pm",
+      "text": "T5 の受け入れ条件に次の2つを足す。①サンプル一覧で、金額と日付の「誤読（要確認なしの不正解）」が0件であること。件数は母数つきで書く（例：「金額：通過1／誤読0／要確認0（1枚中）」）。②1枚読むのにかかった秒数の実測値を書く。正解は `samples/answers.json` に置き、コミットしない。理由: 「確定に見える誤り」を作らないことが最優先だから。トレードオフとして、閾値を上げると通過の件数が減る。0件になってもそのまま報告する。",
+      "phase": "planning",
+      "iteration": 2
+    },
+    {
+      "by": "pm",
+      "text": "読み取りは1件ずつ順番に処理する。行には `status:\"queued\"` と `queue_position` を入れ、画面には「順番待ち（前に○枚）」と出す。待っている間に利用者が手で直した欄（`edited:true`）は、あとから届いた読み取り結果で上書きしない。理由: 10枚続けて撮ってもマシンが詰まらず、利用者が待たずに直し始めても直した値が消えないようにするため。",
+      "phase": "planning",
+      "iteration": 2
+    },
+    {
+      "by": "pm",
+      "text": "T7 は分担する。田中さんがサーバーの起動（LAN の URL を表示する）、tesseract の導入、写真を外に出さないことの確認を、鈴木さんが T10（QR、`/start`、3行の手順）を担当する。受け入れテストは、端末同士がつながる Wi-Fi か、テスト機のテザリングで行う。T8 の印刷プレビューは、テスト機のブラウザで PDF に保存したものを DEMO に出す。",
+      "phase": "planning",
+      "iteration": 2
+    },
+    {
+      "by": "pm",
+      "text": "受け入れテストで撮った写真と answers.json は、その日のうちに消す。順番は、記録表の⑦（薄い感熱紙の、既定と `?maxside=0` の差）を書き終える → sample-report の一覧の出力を残す → `rm -rf data samples` → 消したことを2人にその場で伝える、とする。理由: お客様の領収書を手元に残さないため。一覧の出力があれば、Daniel さんに見せる数字には困らない。トレードオフとして、あとから同じ写真で比べ直すことはできない。",
+      "phase": "review",
+      "iteration": 2
+    },
+    {
+      "by": "pm",
+      "text": "受け入れテスト当日の役割は次のとおり。田中さんはサーバー、samples へのコピー、sample-report。鈴木さんは記録表（特に⑤⑥の秒数と⑧の本人の言葉）。佐藤は「この5,000円は何？」の質問役と、紙の要確認の意味が先生に伝わるかを山田さんに聞く役。ユーザーには最初に「今回は読み取りが入っている。⚠ の欄は写真を見て直してほしい」と伝える。",
+      "phase": "review",
+      "iteration": 2
+    },
+    {
+      "by": "pm",
+      "text": "受け入れテストを当日に行い、2人の判定をやり直す。判定条件は上の SAY に書いた2人の言葉のとおりで、記録表①〜⑧と sample-report の一覧で確かめる。それまでに T11・T12 を入れる。T5・T7 は当日の実測が終わるまで doing のまま。理由: 2人の REJECT の中心は「自分のスマホで、本物のレシートで試していない」ことで、これは当日にしか確かめられないから。トレードオフとして、メール・PDF の取り込みとクライアント列は、受け入れが通るまで始めない。",
+      "phase": "acceptance",
+      "iteration": 2
+    },
+    {
+      "by": "pm",
+      "text": "カテゴリは、支払先の語から候補を出してよい。ただし、支払先が要確認の行と、語が当たらない行は「その他（紙では未分類）」＋要確認にする。理由: Daniel さんの「全部の行でドロップダウンを触るなら手入力と大差ない」は確認の手間そのものだが、誤確定させない方針は崩さないため。トレードオフとして、店名の誤読が多いと候補が出る行も少なくなる。",
+      "phase": "acceptance",
+      "iteration": 2
+    }
+  ],
+  "verdicts": [
+    {
+      "by": "user-yamada",
+      "verdict": "reject",
+      "reason": "方向は良いと思います。ただ、今の状態では、実際の仕事に使えるかを私が確かめられていません。理由は3つです。(1) スマホでカメラが開くことを、まだ誰も確認していません。私も自分で起動して試すことができません。(2) 読み取りがなく、全部手入力なので、今のExcelより楽になりません。(3) 印刷して綴じる使い方と、字の大きさが考えられていません。次は、どなたかに準備していただいたURLを私のスマホで開いて、3枚撮って直してみたいです。それで迷わず使えて、薄い感熱紙が読めるかどうかが分かれば、もう一度判断します。",
+      "iteration": 1
+    },
+    {
+      "by": "user-garcia",
+      "verdict": "reject",
+      "reason": "方向は正しいです。要確認を正直に出すところは気に入りました。でも今の状態だと、自分の時間は1分も減りません。理由は次のとおりです。(1) 読み取りがないので、全部手入力になる。(2) 起動に PC とサーバーが必要で、セットアップが重い。(3) メールや PDF の領収書が入らない。次に判断するのは、実際に OCR が動いて、カフェのレシートの金額と日付がどれだけ要確認なしで通るかを見てからです。URL を開くだけで使える状態にしてもらえれば、その場で試します。",
+      "iteration": 1
+    },
+    {
+      "by": "user-yamada",
+      "verdict": "reject",
+      "reason": "前回よりずっと良くなっていて、あと少しだと思います。それでも今回は reject にします。理由は3つです。①自分のスマホで、カメラが開いて1枚目を登録できるかを、まだ試せていません。②本物のレシート、特に薄い感熱紙で、金額や日付を間違えたまま確定にしないかが、まだ確かめられていません。私にとって一番大事なのはここです。③紙の表を見た先生が、合計にタクシー代が入っていないことに気づけません。当日、次の3つができれば accept にします。私のスマホでカメラが開くこと。薄いレシートで誤った金額が確定扱いにならないこと。「この5,000円は何？」と聞かれてから1分以内に写真が出ること。あわせて、紙の合計の横に「金額が入っていない枚数」を書いてもらえれば、と思います。",
+      "iteration": 2
+    },
+    {
+      "by": "user-garcia",
+      "verdict": "reject",
+      "reason": "セットアップの重さと画面の分かりにくさは解決しました。それでも reject にする理由は3つです。①判断の条件にしていた「本物のカフェのレシートで、金額・日付が要確認なしでどれだけ通るか」がまだ測られていません。合成画像の結果はチーム自身も実測に数えていません。②自分のスマホで撮れるかを、まだ試せていません。③今の読み取りではカテゴリがほぼ全部要確認で、確認の手間があまり減っていません。当日、カフェのレシートで誤読0件のまま金額と日付の大半が通り、私の Android でカメラが開けば accept にします。メール・PDF の取り込みとクライアント列は、その次に必要です。",
+      "iteration": 2
+    }
+  ],
+  "demos": [
+    {
+      "by": "eng-frontend",
+      "text": "T6: 実機デモはまだできていません。モックでは、1枚目は全項目が「未読み取り」の要確認、2枚目は金額だけが「薄くて読めません」の要確認、3枚目はすべて読めた状態で返ります。実機で確認する範囲は次のとおりです。\n- iOS Safari と Android Chrome でカメラが開くか。\n- 薄い感熱紙の写真を2000pxに縮小しても、字が潰れないか。",
+      "phase": "build",
+      "iteration": 1
+    },
+    {
+      "by": "eng-backend",
+      "text": "T4: 実APIのスモーク実行の出力です（1×1 の PNG を登録）:\n```\nPOST 87cbeb57-… reading\nGET needs_review_count= 1 row.status= done amount.reason= 未読み取り\nPATCH bad 400 {\"error\":\"金額が形式が不正です\"}   ← 修正後は「金額が不正な形式です」\nGET month {\"total\":1200,\"n\":0,\"note\":\"\",\"edited\":true}\nCSV BOM= efbbbf\n\"日付\",\"金額\",\"支払先\",\"カテゴリ\",\"要確認\",\"id\",\"画像\"\n\"2026-10-03\",\"1200\",\"ローソン\",\"消耗品費\",\"\",\"87cbeb57-…\",\"/receipts/87cbeb57-…/image\"\nGET /  200 text/html; charset=utf-8\n```",
+      "phase": "build",
+      "iteration": 1
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T6: 実サーバー（`createApp`、一時データ）に2枚登録しました。2枚目は読み取りエンジンが例外で落ちる設定です。その後、画面と同じ API 呼び出しを流しました。出力は次のとおりです。\n```\nstatuses [ 'done', 'failed' ] count 2\npatch done 200                       ← 1枚目の4項目を直した（ローソン 1200円 10/3）\npatch failed-row 200 {…\"needs_review\":true…}   ← 失敗行は直しても要確認のまま（田中さんに相談中）\nmonth {\"n\":1,\"total\":1200,\"note\":\"\",\"undated\":1,\"nrc\":1}\nindex has monthbar true\n```\n画面には次のように出ます。\n- 先頭:「⚠ 要確認 1件」\n- 10月を選んだとき:「2026年10月の合計 1,200円」と「日付が入っていない領収書が1枚あり、この月の表に入っていません」\n- 失敗した行:「要確認：読み取れませんでした。写真を見て金額を入力してください」\nテストは `node --test test/*.test.mjs` で19件すべて通りました。ブラウザでの表示確認は、この環境にブラウザがないため、まだしていません。",
+      "phase": "build",
+      "iteration": 1
+    },
+    {
+      "by": "eng-backend",
+      "text": "T4: 失敗行を直したときの API の動きです（新しく追加したテストの流れ）:\n```\nPOST → reader が例外 → status=failed, needs_review_count=1\nPATCH {date:\"2026-10-05\", amount:\"880\", payee:\"タクシー\", category:\"交通費\"} → 200\n  status=failed, needs_review=false\nGET /receipts?month=2026-10 → needs_review_count=0, unconfirmed_count=0, total=880\nnode --test test/*.test.mjs → tests 20 / pass 20 / fail 0\n```",
+      "phase": "build",
+      "iteration": 1
+    },
+    {
+      "by": "eng-backend",
+      "text": "T5: 一覧スクリプトに疑似画像を通した実際の出力です。本物のサンプルではありません。今のアダプタは全項目を空欄＋要確認で返します。\n```\n画像\t日付\t金額\t支払先\tカテゴリ\na.png\t要確認(未読み取り)\t要確認(未読み取り)\t要確認(未読み取り)\t要確認(未読み取り) その他\nconv.jpg\t要確認(未読み取り)\t要確認(未読み取り)\t要確認(未読み取り)\t要確認(未読み取り) その他\n\n画像 2 枚 / 要確認の件数: {\"日付\":2,\"金額\":2,\"支払先\":2,\"カテゴリ\":2}\n```",
+      "phase": "build",
+      "iteration": 1
+    },
+    {
+      "by": "eng-backend",
+      "text": "T4: 利用者が4枚撮って、1枚を直し、サーバーを再起動するまでの流れです。実サーバー（`createApp`）に疑似の読み取りエンジンをつないで流した、実際の出力を貼ります（スクリプト: /tmp/claude-0/-home-claude-team/5d2d6959-a854-58ac-b4c4-e24e8889c6b3/scratchpad/e2e.mjs）。4枚の中身は、A=きれいに読めた、B=金額が薄い、C=日付と金額が誤読、D=エンジンが落ちた、です。\n```\nPOST A 201 reading   (B, C, D も同じく、すぐ id と reading が返る)\nneeds_review_count= 3\ndone   2026-10-03 | 1200 | ローソン | 消耗品費\ndone   2026-10-07 | 要確認(不確かです) | カフェ | 要確認(不確かです)\ndone   要確認(不正な形式です) | 要確認(不正な形式です) | 要確認(未読み取り) | 要確認(候補にありません)\nfailed 要確認(未読み取り) | 要確認(未読み取り) | 要確認(未読み取り) | 要確認(未読み取り)\nPATCH B 200 needs_review= false amount.edited= true\n11MB 413 {\"error\":\"画像が10MBを超えています（10.1MB 以上）\"}\nPDF 400 {\"error\":\"画像（JPEG・PNG・WebP・HEIC）だけ登録できます\"}\n再起動後: 件数= 4 needs_review_count= 2\n```\n「2026/10/9」や「1,2O0」のような誤読は、確定扱いになりません。要確認に落ちます。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "eng-backend",
+      "text": "T2: 上と同じ流れで、10月の表と CSV を確認しました。\n```\n10月: total= 2080 unconfirmed= 1 note= 未確認が1件あり、合計は確定ではありません undated= 2\n10月(修正後): total= 2080 unconfirmed= 0 note= \"\"\nCSV 200 text/csv; charset=utf-8 BOM= efbbbf\n\"日付\",\"金額\",\"支払先\",\"カテゴリ\",\"要確認\",\"id\",\"画像\"\n\"2026-10-03\",\"1200\",\"ローソン\",\"消耗品費\",\"\",\"3eab7c32-…\",\"/receipts/3eab7c32-…/image\"\n\"2026-10-07\",\"880\",\"カフェ\",\"会議費\",\"\",\"d5bd1988-…\",\"/receipts/d5bd1988-…/image\"\nimage 200 image/png\n```\n日付が誤読された C と、読み取りに失敗した D は月の表に入らず、`undated=2` と数えられます。画面には「日付が入っていない領収書が2枚あり…」と出ます。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "eng-backend",
+      "text": "T5: 実サンプルでの出力は、まだありません。`samples/` がなく、tesseract も入っていないためです。今のアダプタは4項目すべてを空欄＋要確認（未読み取り）で返します。疑似画像を通した一覧は、前回 DEMO に貼ったとおりです。精度の数字は出しません。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T6: 利用者がすること：まず空の画面を開きます。続けて3枚撮り、1枚目の金額に誤った値を入れて断られたあと、4項目を正しく直します。最後に10月の表と CSV を見ます。実サーバー（`createApp`、一時データ）に、画面と同じ API 呼び出しを流しました。画面の文言は `web/logic.js` の関数でそのまま出しています。スクリプトは /tmp/claude-0/-home-claude-team/5d2d6959-a854-58ac-b4c4-e24e8889c6b3/scratchpad/t6demo.mjs です。実際の出力：\n```\nGET / 空状態の文言: true / capture=environment: true\n0枚: 要確認 0件（すべて確認済み） rows= 0      ← 0枚のときはこの表示自体を隠し、大きな撮影ボタンだけ出す\n撮影1: 201 reading   撮影2: 201 reading   撮影3: 201 reading\n一覧の先頭: 要確認 3件\n   要確認：日付はまだ読み取られていません\n   要確認：金額はまだ読み取られていません\n   要確認：支払先はまだ読み取られていません\n   要確認：カテゴリはまだ読み取られていません\n金額に「1,2O0」: 金額は数字だけで入力してください（例: 1200） / サーバー 400 金額が不正な形式です\n1枚目を4項目直す: 200 needs_review= false 残りの要確認= 0\n一覧の先頭: 要確認 2件 / 要確認だけ見る: 2 行 / 全部: 3 行\n10月: 2026年10月の合計 1,200円 / undated= 2 / 先頭は 要確認 2件\nmaxside=0 で11MB相当: 413 画像が10MBを超えています（10.0MB 以上）\nmaxSideFrom: (なし)→2000 0→Infinity 3000→3000 100→2000 abc→2000\nCSV: 200 BOM= efbbbf\n\"日付\",\"金額\",\"支払先\",\"カテゴリ\",\"要確認\",\"id\",\"画像\"\n\"2026-10-03\",\"1200\",\"ローソン\",\"消耗品費\",\"\",\"55fc92f3-…\",\"/receipts/55fc92f3-…/image\"\n```\n利用者に見えるもの：\n- 撮るたびに一覧に行が1つ増え、画面は切り替わりません。\n- 先頭の「要確認 ○件」は、月で絞っても変わりません。\n- 4項目を直すと、その行の⚠が消えて合計に入ります。\n- 日付のない2枚については、「日付が入っていない領収書が2枚あり…」と案内が出ます。\n\n未確認の点：ブラウザでの見た目と、スマホでカメラが開くかは確認していません（ブラウザがないため）。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "eng-backend",
+      "text": "T5: 実際に動かしたのは合成画像だけです（PIL で作った領収書3枚。`/tmp/claude-0/-home-claude-team/5d2d6959-a854-58ac-b4c4-e24e8889c6b3/scratchpad/synth/`）。お客様の写真ではないので、受け入れ条件の実測には数えません。動作確認の参考として、`READER=tesseract node scripts/sample-report.mjs <dir>` の実際の出力を貼ります。\n```\n読み取り: tesseract（ローカル）\n画像\t日付\t金額\t支払先\tカテゴリ\t秒\ncafe.jpg\t2026-10-03 [通過]\t480 [通過]\t要確認(不確かです) 珈下館渋谷店\t要確認(カテゴリが決まりません) その他\t0.5\ntaxi.jpg\t2026-10-08 [通過]\t要確認(数字が読み取れません) [要確認]\t〇〇交通タクシー\t交通費\t3.4\nthin.jpg\t2026-10-01 [通過]\t1200 [通過]\tローソン新宿店\t要確認(カテゴリが決まりません) その他\n金額：通過2／誤読0／要確認1（3枚中）\n日付：通過3／誤読0／要確認0（3枚中）\n[カフェ] 金額：通過1／誤読0／要確認0（1枚中） / 日付：通過1／誤読0／要確認0（1枚中）\n```\n- 「珈琲館」が「珈下館」と誤読されましたが、確からしさが低いので要確認になりました。\n- 秒数は 0.4〜3.4 秒でした（4コアのマシン、合成画像）。本物のスマホ写真での秒数は、受け入れテストで測ります。",
+      "phase": "build",
+      "iteration": 2
+    },
+    {
+      "by": "eng-backend",
+      "text": "T7: `READER=tesseract PORT=3999 node src/server.mjs` を起動し、合成画像3枚を続けて POST したときの実際の出力です。\n```\n読み取り: tesseract（ローカル）\n写真の保存先: /home/claude/team/workspace/trial-receipts/data/images（このマシンの外には送りません）\nスマホで開く URL:\n  http://192.0.2.2:3999/\nGET /api/info → {\"urls\":[\"http://192.0.2.2:3999/\"],\"reader\":\"tesseract（ローカル）\"}\nPOST queued queue_position=0 / POST queued queue_position=1 / POST queued queue_position=2\n直後の一覧: reading / queued 1 / queued 2\n8秒後: done 2026-10-01 1200 ローソン新宿店 … / done 2026-10-03 480 … / done 2026-10-08 要確認(数字が読み取れません) …\ndata/images/ に3ファイル。src/ に外部へ送る呼び出しなし（grep）\n```\n確認後、data/ は消しました。スマホ実機での確認はまだです。",
+      "phase": "build",
+      "iteration": 2
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T10: 利用者がすること: テスト機で `/start` を開き、スマホで QR を読みます。続けて3枚撮り、待っている間に1枚目の金額を入れます。実サーバーとヘッドレス Chromium で取った実際の出力です（スクリプト: /tmp/claude-0/-home-claude-team/5d2d6959-a854-58ac-b4c4-e24e8889c6b3/scratchpad/chr/demo.mjs）。\n```\n/start URL 表示: http://192.0.2.2:3123/ / 字の大きさ: 40px / 手順: 3 行\nstart.png の QR を読むと: ['http://192.0.2.2:3123/']      ← 画面のスクショを zxing で読んだ結果\n0枚: 📷 領収書を撮る 領収書を撮ると、ここに表ができます / バナー: なし\n撮影直後: 要確認 0件（読み取り待ち 3枚） / 順番待ち（前に2枚） / 順番待ち（前に1枚） / 読み取り中…\n読み取り後: 要確認 1件 / ⚠の文言: ⚠ 要確認：金額が不確かです\n```\n- `qr.js` 単体では、300通りの URL（1〜9型）を生成し、zxing で読み直しました。300件すべて元の URL に戻りました。\n- 画面のスクショ: /tmp/claude-0/-home-claude-team/5d2d6959-a854-58ac-b4c4-e24e8889c6b3/scratchpad/chr/out/start.png（テスト機の画面）、/tmp/claude-0/-home-claude-team/5d2d6959-a854-58ac-b4c4-e24e8889c6b3/scratchpad/chr/out/m2-queue.png（順番待ち）\n- 192.0.2.2 は、この環境の LAN アドレスです。",
+      "phase": "build",
+      "iteration": 2
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T8: 利用者がすること: 「表示する月」で10月を選び、「🖨 印刷（先生に渡す表）」を押します。ヘッドレス Chromium の印刷モードで PDF に保存した実物は /tmp/claude-0/-home-claude-team/5d2d6959-a854-58ac-b4c4-e24e8889c6b3/scratchpad/chr/out/print-2026-10.pdf です（A4、1ページ）。\n```\n項目名の字: 16px / 入力欄の字: 16px\n月: 2026年10月の合計 7,360円（未確認が1件あり、合計は確定ではありません）\n印刷で見えるもの: printout      ← ボタン・一覧・写真は紙に出ない\n2026年10月の経費（領収書 3枚）\n日付        金額     支払先            カテゴリ   要確認\n2026-10-03  5,000円  日本交通          交通費\n2026-10-07    880円  カフェ・ド・ベル  会議費     要確認\n2026-10-12  1,480円  ローソン 新宿店   消耗品費\n            合計 7,360円\n⚠ 未確認が1件あり、合計は確定ではありません\n```\nid と `/receipts/…` は、紙にもデータにも出ません（テストで確認）。読み取りは疑似エンジン、写真は自作の見本画像です。お客様の写真は使っていません。",
+      "phase": "build",
+      "iteration": 2
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T9: 利用者がすること: 10月の表を開いたまま、検索欄に「5000」と打ち、出てきた写真をタップします。続けて「10/3」と「12/24」を試し、「日付のない領収書を見る」を押します。下は、実サーバーとヘッドレス Chromium（390px幅）で取った実際の出力です。スクリプトは /tmp/claude-0/-home-claude-team/5d2d6959-a854-58ac-b4c4-e24e8889c6b3/scratchpad/chr/t9demo.mjs です。\n```\nいま見ている月: 10月 / 1480円 2026-10-03 | 880円 2026-10-07\n「5000」: 5,000円：1枚見つかりました。写真をタップすると原寸で開きます / 5000円 2026-09-18\n写真をタップ → /receipts/926046d3-…/image 200 image/png / 入力から写真まで 0.2秒（入力の打鍵を含む・機械操作）\n「10/3」: 10月3日：1枚見つかりました。写真をタップすると原寸で開きます / 1480円 2026-10-03\n「12/24」: 見つかりません。日付が入っていない領収書が1枚あります / 行: 0 / ボタン: 日付のない領収書を見る（1枚）\n押すと: 3300円  / ⚠: ⚠ 要確認：日付はまだ読み取られていません | ⚠ 要確認：支払先はまだ読み取られていません | ⚠ 要確認：カテゴリが不確かです\n「ローソン」: 金額（例: 5000）か日付（例: 10/3）を入れてください\nEsc 後: 検索欄「」/ 月の表: 出ている / 1480円 2026-10-03 | 880円 2026-10-07\n検索欄の字: 18px / ラベル: 写真を探す（金額か日付）\n```\n- スクショ: /tmp/claude-0/-home-claude-team/5d2d6959-a854-58ac-b4c4-e24e8889c6b3/scratchpad/chr/out/t9-found.png（見つかった状態）、/tmp/claude-0/-home-claude-team/5d2d6959-a854-58ac-b4c4-e24e8889c6b3/scratchpad/chr/out/t9-undated.png（日付のない行）\n- 読み取りは疑似エンジン、写真は自作の見本画像です。お客様の写真は使っていません。0.2秒は機械操作の値で、人が使ったときの秒数ではありません。",
+      "phase": "build",
+      "iteration": 2
+    },
+    {
+      "by": "eng-backend",
+      "text": "T5: 利用者（当日の田中）がすること: 写真を samples/ に置き、`--init` で下書きを作り、カフェの1枚だけ正解を書いて一覧を出す。合成画像3枚（scratchpad、お客様の写真ではない）での実際の出力です。\n```\n$ node scripts/sample-report.mjs --init <dir>\n…/answers.json に 3 枚分を書きました（正解が未記入: 3 枚）。写真を見て kind・date・amount を埋めてください。\n（cafe.jpg に kind=カフェ, date=2026-10-03, amount=480 を記入して再実行）\n…/answers.json に 3 枚分を書きました（正解が未記入: 2 枚）。…   ← 書いた正解は残る\n$ READER=tesseract node scripts/sample-report.mjs <dir>\n正解との比較（samples/answers.json）\n金額：通過1／誤読0／要確認0（1枚中）\n日付：通過1／誤読0／要確認0（1枚中）\n[カフェ] 金額：通過1／誤読0／要確認0（1枚中） / 日付：通過1／誤読0／要確認0（1枚中）\n```\n正解が未記入の taxi・thin は、母数に入りません。実測の数字ではなく、動作確認のための参考です。",
+      "phase": "build",
+      "iteration": 2
+    },
+    {
+      "by": "eng-backend",
+      "text": "T5: 当日の手順を、合成画像（お客様の写真ではありません）で通したときの実際の出力です。参考値で、実測には数えません。\n```\nPOST ×3 → queued queue_position=0 / 1 / 2\n$ node scripts/sample-report.mjs --init samples\nsamples/answers.json に 3 枚分を書きました（正解が未記入: 3 枚）。\n（カフェの1枚に kind=カフェ, date=2026-10-03, amount=480 を記入）\n$ READER=tesseract node scripts/sample-report.mjs samples\n1枚の秒数（実測）: 最短 0.4 / 最長 0.5\n金額：通過1／誤読0／要確認0（1枚中）\n日付：通過1／誤読0／要確認0（1枚中）\n[カフェ] 金額：通過1／誤読0／要確認0（1枚中） / 日付：通過1／誤読0／要確認0（1枚中）\n$ git status --short --ignored data samples\n!! data/\n!! samples/\n$ rm -rf data samples   → 消えたことを確認\n```",
+      "phase": "build",
+      "iteration": 2
+    },
+    {
+      "by": "eng-backend",
+      "text": "T7: 利用者がすること: テスト機で `/start` の QR を読み、3枚続けて撮ります。そのとき画面に出る内容を、サーバー側から見た実際の出力です（`READER=tesseract PORT=3999 node src/server.mjs` に、合成画像3枚を curl で POST しました）。\n```\n読み取り: tesseract（ローカル）\n写真の保存先: /home/claude/team/workspace/trial-receipts/data/images（このマシンの外には送りません）\nスマホで開く URL:\n  http://192.0.2.2:3999/\nQR コード: http://192.0.2.2:3999/start\nGET /api/info → {\"urls\":[\"http://192.0.2.2:3999/\"],\"reader\":\"tesseract（ローカル）\"}\nGET /start → 200 text/html; charset=utf-8\nPOST cafe → queued queue_position=0\nPOST taxi → queued queue_position=1\nPOST thin → queued queue_position=2\n（10秒後）total= 1680 needs_review_count= 3 note= 未確認が3件あり、合計は確定ではありません\n$ git status --short --ignored data samples\n!! data/\n```\ndata/images/ には3ファイルあり、コミット対象外でした。確認後にサーバーを止め、data/ を消しています。スマホの実機ではまだ確かめていません（当日に行います）。",
+      "phase": "review",
+      "iteration": 2
+    },
+    {
+      "by": "eng-backend",
+      "text": "T5: 利用者がすること: 撮った領収書の読み取り結果を見て、⚠ の付いた欄を直し、月末に CSV を出します。012b238 で、同じ3枚（合成画像、お客様の写真ではありません）を tesseract で読んだときの実際の CSV です（先頭5列）。\n```\n\"日付\",\"金額\",\"支払先\",\"カテゴリ\",\"要確認\"\n\"2026-10-01\",\"1200\",\"ローソン新宿店\",\"その他\",\"要確認：カテゴリが決まりません\"\n\"2026-10-03\",\"480\",\"珈下館渋谷店\",\"その他\",\"要確認：支払先が不確かです / カテゴリが決まりません\"\n\"2026-10-08\",\"\",\"〇〇交通タクシー\",\"交通費\",\"要確認：金額がはっきり読めません\"\n```\n- 直す前のこの列は「要確認：カテゴリがカテゴリが決まりません」でした。\n- 誤読された「珈下館」（正しくは珈琲館）は要確認になっていて、確定扱いの行には入っていません。\n- 金額が読めなかったタクシーは空欄＋要確認です。推測で埋めていません。\n- CSV の先頭は BOM（ef bb bf）です。\n- 誤読の件数と秒数の実測は、当日に本物の写真で出します。",
+      "phase": "review",
+      "iteration": 2
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T10: 利用者がすること: テスト機で `/start` を開き、スマホで QR を読みます。続けて3枚撮ります。実サーバーで読み取りを実際の tesseract にし、合成画像（お客様の写真ではありません）をヘッドレス Chromium の390px幅で操作したときの実際の出力です。スクリプト: /tmp/claude-0/-home-claude-team/5d2d6959-a854-58ac-b4c4-e24e8889c6b3/scratchpad/chr/rv2.mjs\n```\n/start: http://192.0.2.2:3124/ 40px / 手順 3 行\n0枚: 📷 領収書を撮る 領収書を撮ると、ここに表ができます\n撮影直後: 要確認 0件（読み取り待ち 3枚） / 順番待ち（前に2枚） / 順番待ち（前に1枚） / 読み取り中…\n読み取り後（2.3秒待ち）: 要確認 3件\n⚠ の文言:\n  ⚠ 要確認：カテゴリが決まりません\n  ⚠ 要確認：支払先が不確かです\n  ⚠ 要確認：カテゴリが決まりません\n  ⚠ 要確認：金額がはっきり読めません\n項目名が二重の文: 0 件\n```\n- スクショ: /tmp/claude-0/-home-claude-team/5d2d6959-a854-58ac-b4c4-e24e8889c6b3/scratchpad/chr/out/rv2-start.png（テスト機の画面）、/tmp/claude-0/-home-claude-team/5d2d6959-a854-58ac-b4c4-e24e8889c6b3/scratchpad/chr/out/rv2-read.png（読み取り後）\n- 2.3秒は、合成画像3枚の読み取りが終わるまでの待ち時間です。本物の写真での値ではありません。写真は一時フォルダに置き、終わってから消しました。",
+      "phase": "review",
+      "iteration": 2
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T9: 利用者がすること: 検索欄に「480」と打ちます。上と同じ実行での実際の出力です。\n```\n「480」: 480円：1枚見つかりました。写真をタップすると原寸で開きます / 480円\n```\n- スクショ: /tmp/claude-0/-home-claude-team/5d2d6959-a854-58ac-b4c4-e24e8889c6b3/scratchpad/chr/out/rv2-search.png\n- 「1分以内」は、当日に山田さんが使った秒数で確かめます（記録表の⑥）。",
+      "phase": "review",
+      "iteration": 2
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T8: 利用者がすること: 「表示する月」で10月を選び、「🖨 印刷（先生に渡す表）」を押します。tesseract で読んだ3枚を印刷モードにしたときの実際の出力です。PDF は /tmp/claude-0/-home-claude-team/5d2d6959-a854-58ac-b4c4-e24e8889c6b3/scratchpad/chr/out/rv2-print-2026-10.pdf です（A4）。\n```\n月: 2026年10月の合計 1,680円（未確認が3件あり、合計は確定ではありません）\n2026年10月の経費（領収書 3枚）\n日付        金額     支払先            カテゴリ  要確認\n2026-10-01  1,200円  ローソン新宿店    その他    要確認\n2026-10-03    480円  珈下館渋谷店      その他    要確認\n2026-10-08           〇〇交通タクシー  交通費    要確認\n            合計 1,680円\n⚠ 未確認が3件あり、合計は確定ではありません\n```\n- 金額が読めなかったタクシーの行は、紙でも空欄のままです。推測した値は入っていません。id と `/receipts/…` は出ていません。",
+      "phase": "review",
+      "iteration": 2
+    },
+    {
+      "by": "eng-backend",
+      "text": "T12: 利用者がすること: 領収書を撮って、カテゴリ欄を見ます。合成画像3枚（お客様の写真ではありません）を、c1459c8 で `READER=tesseract node scripts/sample-report.mjs <dir>` に通したときの実際の出力です。\n```\ncafe.jpg\t2026-10-03 [通過]\t480 [通過]\t要確認(不確かです) 珈下館渋谷店\t要確認(決まりません（支払先が要確認です）) その他\t0.5\ntaxi.jpg\t2026-10-08 [通過]\t要確認(はっきり読めません) [要確認]\t〇〇交通タクシー\t交通費\t0.4\nthin.jpg\t2026-10-01 [通過]\t1200 [通過]\tローソン新宿店\t消耗品費\t0.3\nカテゴリ：候補あり（要確認なし）2／要確認1（3枚中）\n金額：通過2／誤読0／要確認1（3枚中）\n日付：通過3／誤読0／要確認0（3枚中）\n```\n- 前は3枚ともカテゴリが要確認でしたが、今は2枚に候補が入りました。\n- カフェは店名が「珈下館」と誤読され、支払先が要確認になっています。そのため、カテゴリにも会議費の候補は出さず、要確認のままです。誤確定させない方針どおりです。\n- 数字は参考値で、実測には数えません。",
+      "phase": "wrapup",
+      "iteration": 2
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T11: 利用者がすること: 「表示する月」で10月を選び、合計の行を見てから「🖨 印刷（先生に渡す表）」を押します。月の中身は、タクシーの金額が空欄、ローソンの分類が要確認です。実サーバーとヘッドレス Chromium（390px幅）で取った実際の出力です。読み取りは既定のアダプタ（全項目が空欄）にして、人が直したあとの状態を PATCH で作りました。写真は合成画像で、終わってから一時フォルダごと消しています。スクリプト: /tmp/claude-0/-home-claude-team/5d2d6959-a854-58ac-b4c4-e24e8889c6b3/scratchpad/chr/t11demo.mjs\n```\n画面の合計: 2026年10月の合計 1,680円（未確認が2件あり、合計は確定ではありません） ／ 金額が入っていない領収書 1枚（合計に入っていません）\n印刷の中身:\n2026年10月の経費（領収書 3枚）\n日付        金額     支払先            カテゴリ          要確認\n2026-10-01  1,200円  ローソン新宿店    未分類（要確認）  分類\n2026-10-03    480円  珈琲館渋谷店      会議費\n2026-10-08           〇〇交通タクシー  交通費            金額\n            合計 1,680円\n⚠ 金額が入っていない領収書 1枚（合計に入っていません）\n⚠ 未確認が2件あり、合計は確定ではありません\nCSV（先頭5列）:\n\"日付\",\"金額\",\"支払先\",\"カテゴリ\",\"要確認\"\n\"2026-10-01\",\"1200\",\"ローソン新宿店\",\"未分類（要確認）\",\"要確認：カテゴリはまだ読み取られていません\"\n\"2026-10-03\",\"480\",\"珈琲館渋谷店\",\"会議費\",\"\"\n\"2026-10-08\",\"\",\"〇〇交通タクシー\",\"交通費\",\"要確認：金額はまだ読み取られていません\"\n```\n- 印刷の PDF（A4）: /tmp/claude-0/-home-claude-team/5d2d6959-a854-58ac-b4c4-e24e8889c6b3/scratchpad/chr/out/t11-print-2026-10.pdf\n- 画面のスクショ: /tmp/claude-0/-home-claude-team/5d2d6959-a854-58ac-b4c4-e24e8889c6b3/scratchpad/chr/out/t11-screen.png",
+      "phase": "wrapup",
+      "iteration": 2
+    }
+  ],
+  "notes": {
+    "pm": [
+      "山田: 月初に封筒で領収書を受け取り、Excel に手入力。2日かかる。感熱紙が消えて読めず、お客様に電話しても「覚えていない」。合計ズレで夜8時過ぎまで探した。紙は引き出しにファイル保管。写真やメールは印刷して紙に混ぜる。",
+      "Daniel: 6社並行のフリーランス。四半期締めを3週間遅らせた。4時間かかる。Gmail 2つ、Dropbox、Slack DM、カメラロール3000枚に分散。どの経費がどの案件か分からなくなる。探せず諦めた経費が何件かある。紙は撮ったら捨てる。税理士に送る。",
+      "山田の追加情報: 読めないレシートは先月5〜6枚。最後に電話したのは月初3日目の水曜で、「覚えていない」と言われた。前後の並びから金額を推測し、鉛筆で印をつけて先生に報告した。先生は「少額だから」と言ったが、本人は何度も見返した。表は先生の帳簿整理と税務書類の元になる。2日のうち入力は約1日、残り半日以上は確認と探し直し。一番つらいのは合わないときの探し直し。",
+      "Daniel の追加情報: 諦めた経費は今四半期で約5件、2〜3万円。気づいたのは税理士に送る直前で、カメラロールを10分探して諦めた。税理士から Slack で催促が2回あり、消費税の確認が遅れた。Notion の列は日付・金額・支払先・クライアント名・カテゴリ・PDFリンク。税理士が見るのは日付・金額・支払先・カテゴリで、PDFを開くかは不明。クライアント名は請求書への載せ替え用に自分で使っている。",
+      "共通の本質: 2人とも、領収書の「情報」を表にそろえて、後工程の人(先生・税理士)に確実に渡すことが仕事。手間の大半は入力ではなく、「見つける・読めない・合わない」の確認作業。確認できない金額が出たときの扱いが決まっていない。",
+      "計画フェーズの合意: 精度より「誤確定させない」が最優先。外部OCR APIへの画像送信は確認が取れるまで禁止で、まずローカルOCRを試す。T1はT1a（保存）とT1b（アダプタ）に分け、T3は鈴木さんの案（OS標準カメラ、一覧に追加するだけ、要確認は色＋文言＋アイコン）で進める。未決事項は、本物のサンプル領収書を山田さんと Daniel さんから集めることと、ブラウザ側の縮小が感熱紙の字を潰さないかの確認。",
+      "iteration 1 のレビュー結果: T4・T2 はユーザーに出せる。T6 は API とロジックは確認済みだが、実機（カメラ、見た目）は未確認。T5 は差し替え口と規則までで、OCR の試行と実測は持ち越し。T3 は閉じた。CSV の画像列は相対パスで、Excel から写真を開けない（必要かどうかをユーザーに聞く）。tesseract はテスト用マシンにだけ入れてよい。",
+      "iteration 1 の受け入れは2人とも REJECT だった。理由は共通で、読み取りがない、実機で未確認、起動が重い、の3点。方向（誤確定させない、合計は確定ではないと出す）は2人とも評価した。2人とも Excel から写真を開かない（CSV の画像列はフル URL にしない）。山田さんは先月、5,000円の写真を紙から探すのに15分かかった。字の大きさ（13pxは小さい）と、先生が印刷して綴じる表を求めている。Daniel さんは、領収書の半分以上がメールと PDF で、クライアント列とショートカットもほしい（いずれも後回し）。次の判定条件は、Daniel さんが「カフェのレシートの金額・日付が要確認なしでどれだけ通るか」、山田さんが「自分のスマホで迷わず3枚撮って直せるか、薄い感熱紙が読めるか」。",
+      "iteration 2 の計画: 着手は T7→T5→T8→T9、削るなら T9 から。T5 の一覧に、カフェの金額・日付が「通った／誤読／要確認」のどれかを出す。T7 の QRコードと3行の手順を鈴木さんに回せるか、tesseract で1枚読むのにかかる秒数を、エンジニア2人に聞いている。",
+      "iteration 2 の計画で決めたこと。T5 に「誤読0件（母数つき）」と「1枚あたりの秒数の実測値」を足した。読み取りはキューで1件ずつ処理し、queued と queue_position を持たせる。手で直した欄は上書きしない。T7 は田中さん（サーバー、tesseract、写真を外に出さないこと）と鈴木さん（T10: QR、/start、3行の手順）で分担する。テストは端末同士がつながる Wi-Fi かテザリングで行う。T8 の印刷プレビューはテスト機で PDF に保存する。着手は田中さんが T7→T5、鈴木さんが T10→T8→T9。削るなら T9 から。",
+      "iteration 2 のレビュー結果。T8・T9・T10 はユーザーに出せる。当日に確かめることは、QR の実機確認、「5,000円」から写真が出るまでの人の秒数、紙の「要確認」が先生に伝わるか（山田さんに聞く）の3つ。T5・T7 はテスト機一式としては出せるが、本物の写真での誤読の件数・秒数と、機種名つきの実機確認が残っていて doing のまま。写真はその日のうちに、記録表⑦を書いてから消す。合成画像で、珈琲館が「珈下館」と誤読されたが要確認になり、確定扱いの行には入らなかった。",
+      "iteration 2 の受け入れも2人とも REJECT。セットアップの重さ、字の大きさ、⚠ の出し方、印刷、写真の検索は評価された。REJECT の中心は「自分のスマホと本物のレシートで試していない」こと。山田さんの accept 条件は、自分のスマホでカメラが開く、薄いレシートで誤った金額が確定にならない、「5,000円は何？」から1分以内、紙の合計の横に金額空欄の枚数を出す、の4つ。山田さんの紙への指摘は、合計にタクシー代が入っていないと先生が気づけない、要確認の項目名がない、「その他」が確定に見える、の3つ（T11）。Daniel さんの accept 条件は、Android でカメラが開く、カフェ2〜3枚で誤読0件のまま金額・日付の大半が通る（秒数も出す）。サブスクのメールのスクショが読めるかも見たい。カテゴリがほぼ全部要確認なのは不満で、T12（支払先の語から候補を出す）で対応する。メール・PDF とクライアント列は、受け入れが通ったら次の候補の1番目。",
+      "iteration 2 の wrapup。done になったのは T2・T4・T6・T8・T9・T10・T11・T12。T3 は T6 に置き換えて閉じた。T1・T5・T7 は受け入れテスト当日まで残す（本物の写真での誤読の件数と秒数、機種名つきの実機確認）。人間に決めてもらうことは、日時・場所、テスト機と Wi-Fi、2人のレシートの用意（その日のうちに消すと伝える）、Daniel さんの「大半」の基準、受け入れ後の次の候補（メール・PDF とクライアント列が1番目）。当日見ることは、編集画面のカテゴリが要確認の行でも「その他」と出る点（紙は「未分類」）。"
+    ],
+    "user-yamada": [
+      "山田さんの実情: 先月の経費精算は約2日（入力が約1日、確認・探し直しが半日以上）。読めないレシートは先月5〜6枚、推測で金額を入れ、鉛筆印をつけて先生に報告した。表は先生がお客様の帳簿整理に使い、印刷して綴じて保管している。最大の不安は、間違えて先生に迷惑をかけること。",
+      "受け入れテスト1回目は reject。理由は、実機のカメラが未確認・手入力だけでExcelより楽にならない・印刷と字の大きさ。先生に写真を求められたのは先月で、紙の綴りから探すのに15分かかった。Excelからは写真を開かないので、アプリで日付・金額から探せるほうが良い。次回はコンビニ・タクシー・薄い感熱紙（2回）を撮る担当。",
+      "受け入れテスト2回目（資料だけで判断）も reject。良くなった点は、字の大きさ、印刷の紙、写真を探す機能、読めない金額を空欄にすること。accept の条件は、当日に次の3つができること。①自分のスマホでカメラが開く ②薄い感熱紙で、誤った金額が確定扱いにならない ③「5,000円は何？」から1分以内に写真が出る。紙の表には、金額が空欄の行が合計に入っていないことと、どの項目が要確認なのかを書いてほしい。分類が決まらないときの「その他」も、紙では決まった分類に見えるので気になる。"
+    ],
+    "user-garcia": [
+      "Daniel は直近の四半期の締めを 3 週間遅らせた。作業は 4 時間で、クライアント 6 社を並行している。諦めた経費は約 5 件で 2〜3 万円。Gmail 2 つ、Dropbox、Slack DM、カメラロール約 3000 枚に領収書が散在している。Notion の列は日付・金額・支払先・クライアント・カテゴリ・PDF リンクで、税理士は日付・金額・支払先・カテゴリを見ている。",
+      "iteration 1 の受け入れは reject にした。理由は、読み取りがなく全部手入力であること、PC でサーバーを起動するセットアップが重いこと、PDF やメールの領収書を入れられないこと。次の判断材料は、実際の OCR でカフェのレシートがどれだけ要確認なしで通るか。CSV の画像の列はフル URL でなくてよい（税理士には Notion のリンクか PDF を送っている）。クライアント列は必要。",
+      "iteration 2 の受け入れも reject にした。セットアップ（QR だけで始められる）と画面の分かりやすさは解決した。残る判断材料は3つ：本物のカフェのレシートの実測（金額・日付の通過／誤読／要確認の件数と1枚の秒数）、自分の Android Chrome でカメラが開くか、メール領収書のスクショが読めるか。カテゴリがほぼ全部「その他＋要確認」になる点は不満。カフェなら会議費くらいは出してほしい。メール・PDF の取り込みとクライアント列は、引き続き乗り換えの条件。"
+    ],
+    "eng-backend": [
+      "田中は、読み取り精度の数字を、サンプル実測前には出さない方針。要確認の規則（空欄、閾値未満、形式検証NG、カテゴリは自信がなければ「その他」＋要確認）はエンジンに依存しない。保存はJSONと画像ファイル、DBなし。CSVはUTF-8のBOM付き。未確認事項は、外部OCR APIの可否（画像の外部送信可否も含む）と、実サンプル5枚の有無。",
+      "T4・T2 は実装済みでテスト8件が通り、コミット済み。T5 は差し替え口と検証までで、ローカルOCRの試行と実測が未実施。サンプル5枚（本物）が届いていない。POST は multipart ではなく画像バイトそのものを受け取る。日付が空の行は月の表に入らず `undated_count` で数える。",
+      "9749a0e で、T6 の画面と実APIを同じオリジン（`node src/server.mjs` が `web/` を配信）で結合し、スモーク確認した。形式NGの reason は「不正な形式です」。`needs_review_count` は要確認がある領収書の枚数で、failed を含み reading は含まない。テストは15件通過。T5 は実サンプルと tesseract の許可待ち。",
+      "d9f3796 で `rowNeedsReview` を変えた。reading 以外は項目の `needs_review` だけで判定する。failed は status として残すが、4項目を直せば要確認から外れる。テストは20件通過。T5 は、実サンプルと tesseract の許可待ちが続いている。iteration 1 で持ち越すことを PM に提案済み。",
+      "api.test.mjs は、assert が落ちると `s.close()` まで進まず、`node --test` が止まる。確認するときは `--test-timeout=10000` を付ける。後で `t.after(() => s.close())` に直すと決めた（未着手）。",
+      "eac29d7 で、api.test.mjs のサーバーを `t.after` で閉じるように直した。assert が落ちても止まらないことを確認済み。9720842 で、README にサーバーの起動方法、アダプタの差し替え方（`reader(buffer,{id})` は `{date,amount,payee,category}` を返し、各項目は `{value,confidence,reason?}`）、T5 の現状を追記した。テストは20件通過。T5 は引き続き、実サンプルと tesseract の許可待ち。",
+      "iteration 1 終了時点の状態。テストは21件通過、作業ツリーはクリーン。`scripts/sample-report.mjs`（b4ca021）は、samples/ の画像をアダプタに通して一覧と要確認の件数を出す（％は出さない）。T5 は doing のまま iteration 2 へ持ち越す。ブロッカーは、実サンプル5枚と tesseract 導入の許可（PM の返事待ち）。",
+      "iteration 1 の最終ラウンドでも状態は変わっていない（21件通過、作業ツリーはクリーン、samples/ と tesseract はなし）。鈴木さんの「実機受け入れテストの写真を T5 サンプルに流用する」案に賛成した。条件として、写真は data/images/ と samples/ にだけ置いてコミットしない（.gitignore に追加）、5枚の割り振りは PM、tesseract の導入可否も PM が決める、と提案した。許可が出たら、縮小前と縮小後の両方で一覧を出す。",
+      "review（iteration 1）時点の状態。c7e4c46 で .gitignore に samples/ を追加した。テストは22件通過。実サーバーに疑似リーダーをつないだ E2E（scratchpad の e2e.mjs）で、T2・T4 の受け入れ条件を確認済み。既知の制限として、CSV の画像列は相対パスで Excel からは開けない（ユーザーテストで要否を聞くよう PM に依頼した）。鈴木さんの ?maxside（3a69b0a）はレビュー済みで問題なし。T5 は doing のまま。受け入れテストの前に、PM から2人へ「今は読み取りなし」と伝えてもらうよう依頼した。",
+      "iteration 2 の計画で田中が提案した内容です。\n- T7 の分担: QR と3行の手順は鈴木さんに回す。田中はサーバーの起動、tesseract の導入、写真を外に出さないことを担当する。起動時に LAN の URL を表示する。\n- T7 のリスク: Wi-Fi のクライアント分離があると URL を開けない。テストは、端末同士がつながる Wi-Fi かテザリングで行う。\n- 1枚あたりの秒数は、tesseract を導入した日に本物の写真で測ってから答える。読み取りは1件ずつのキューにする（10個同時に走らせない）。\n- T5: tesseract の CLI を child_process で呼ぶ（依存なし）。`READER=tesseract` で切り替え、tesseract がなければ nullReader に戻る。正解は `samples/answers.json`（コミットしない）に置き、金額と日付を「通過／誤読／要確認」の件数で出す。誤読が出たら閾値を上げる。受け入れ条件に「誤読0件」を入れるよう PM に提案した（返事待ち）。",
+      "425eb10 の状態。キューを入れた（queued→reading→done/failed、`queue_position` は前に何枚あるか、PATCH は queued/reading 中も可、直した欄は `edited:true` で読み取り結果に上書きされない、同じ id への書き込みはロックで順番に処理）。`GET /api/info` は `{urls, reader}`。起動時に LAN の URL を表示する。tesseract 5.3.4 と jpn をこのマシンに導入済み。`src/tesseract.mjs` は TSV の行ごとの最小 conf を使う。金額は合計系の行だけを見て、候補の食い違いや `.` を含む形は要確認にする。HEIC は failed。`sample-report` は answers.json と比べて通過／誤読／要確認と秒数を出す。テストは35件通過。合成画像は参考値で、実測には数えない。「¥1,500」→「\\1.500」→「500」の誤読経路は塞いでテストに入れた。カテゴリの確からしさ 0.85 は仮の値。web/ は鈴木さんが queued 表示（isPending, statusText）を作業中で、未コミット。T5・T7 は実写真と実機の確認待ちで doing。",
+      "06c0419 で、/start のルート（鈴木さんの1行）と、その API テストをコミットした。3b5c229 で、README のテスト機の起動を `READER=tesseract node src/server.mjs` に直した。テストは42件通過、作業ツリーはクリーン。T5・T7 は、受け入れテスト当日の作業（本物の写真での実測、機種名つきの実機確認）待ちで doing。当日は、写真を samples/ にコピーして answers.json を書き、sample-report でカフェの1行と秒数を出すと PM に提案した。",
+      "b058278 で、sample-report に `--init` を追加した。写真ごとに空欄の answers.json を作り、書いた正解は残す。OCR の値は入れない。未記入（null や空欄）の項目は数えない。それまでは未記入でも誤読に数えるおそれがあった。README に当日の4手順（cp data/images→samples、--init、正解を記入、report）を書いた。テストは49件通過、作業ツリーはクリーン。T9 は確認済みで、サーバー側の修正は不要。T5・T7 は当日の実測と実機確認待ちで doing。",
+      "01b0f8d で README の当日手順に⑤と⑥を足した。⑤ `git status --short --ignored data samples` で `!!` だけが出ることを確かめる。⑥ 一覧の出力を残して `rm -rf data samples` で消す。テストは49件通過、作業ツリーはクリーン。当日の分担は、田中がサーバー・samples・sample-report、鈴木さんが記録表、佐藤さんが「この5,000円は何？」の質問役（鈴木さんの案に賛成した）。写真を消すタイミングは PM の返事待ちで、田中の推奨はその日のうち。T5・T7 は doing のまま。",
+      "iteration 2 の最終ラウンドで、当日の手順①〜⑥を実サーバーと合成画像で通しで試し、README のとおりに動くことを確かめた。HEAD は 01b0f8d、テストは49件通過、作業ツリーはクリーン（data/ と samples/ も消してある）。注意点は、samples/ のファイル名が id になること。answers.json の kind は、写真を開き、記録表を見ながら書く。pkill -f にパターンを渡すと自分のシェルまで落ちる。サーバーを止めるときは pgrep で PID を調べて kill する。T5・T7 は当日の実測と、機種名つきの実機確認待ちで doing のまま。",
+      "review（iteration 2）で 012b238 を入れた。tesseract.mjs の reason を述語の形に直した（見つかりません／はっきり読めません／2つ以上の値に読めます／合計の行に見つかりません／決まりません）。これで「カテゴリがカテゴリが決まりません」が出なくなる。⚠ の文で項目名が二重にならないことを確かめるテストを足し、テストは50件通過。鈴木さんの T8・T9・T10 はレビュー済みで、指摘はない。T5・T7 は当日の実測と実機確認待ちで doing。サーバーは `node ... & SP=$!` で起動し、止めるときは `kill $SP` にする（pgrep -f は自分のシェルに当たる）。",
+      "wrapup（iteration 2）で c1459c8 を入れた（T12 done）。支払先の語 → カテゴリの候補で、対応は `src/category-words.json`。判定は reader.mjs の `normalize()` → `suggestCategory()`。支払先が要確認、語が当たらない、2つ以上当たる、のどれかなら「その他」＋要確認。未読み取り（nullReader）のときは reason を「未読み取り」のまま残す。tesseract.mjs の本文キーワードによるカテゴリ判定は削除した。sample-report に「カテゴリ：候補あり（要確認なし）○／要確認○」の行を追加。合成3枚では 2／1。テストは51件通過。支払先を PATCH してもカテゴリの候補は出し直さない（既知の制限）。T1・T5・T7 は受け入れテスト当日の実測と実機確認待ちで open。"
+    ],
+    "eng-frontend": [
+      "T3 の方針: 撮影は `input[capture=environment]`（OS 標準カメラ）。アップロード前に長辺約2000px へ縮小。要確認の項目は「色＋文言＋アイコン＋理由」で示す。API への依頼は、非同期登録（reading/done/failed）、項目ごとの {value, confidence, needs_review, reason}、全体の needs_review_count、edited フラグ。API が固まるまではモックで進める。",
+      "T6 は `workspace/trial-receipts/web/` にモックで実装済みで、実 API は未接続、ブラウザでの動作は未確認。API への確認事項は4点で、`needs_review_count` は枚数単位、PATCH は `{項目: 値}`、reason は述語の形、エラーは `{error}`。残りは、実 API への接続、実機確認、薄い感熱紙で縮小が問題ないかの確認、T2 の月別画面・CSV との連携。",
+      "T6 に月の表、合計と total_note、日付なしの件数の案内、CSV 保存ボタン（モックでは出さない）、失敗行の手入力（`fieldsFor`）、日付なしの行を先頭に並べる処理（`orderForScreen`）を追加した（21cfd35）。テストは19件通過。田中さんへの相談中の件: failed の行を全項目直しても failed のままで、要確認に数えられる。残りは、実機確認と、薄い感熱紙を縮小しても字が潰れないかの確認（サンプル待ち）。",
+      "失敗行の要確認は、田中さんが案(b)「項目の要確認で判定」で直した（d9f3796）。そのコミットに、私の app.js の修正も入っている。修正内容は、直した欄の⚠をその場で消す処理と、行からフォーカスが外れたら再描画する処理。テストは20件通過。残りは、実機確認と、感熱紙を縮小したときの字の確認（サンプル待ち）。",
+      "編集→テスト→コミットを1本で流したコマンドは、時間切れで止まり、コミットまで進まなかった。変更は d9f3796 に入っていて、テストは20件通過した。共有の workspace でテストを流すときは、`timeout 90` を付ける。コミットはテストと別に行う。",
+      "直し終えた失敗行の表示は c302319 で対応済み（失敗表示と色を消し、絞り込みからも外す）。テストは21件通過。T3 は T6 の重複なので、PM に閉じてもらうよう依頼した。iteration 2 では、実機確認と感熱紙の縮小確認を「山田さん・Daniel さんのスマホで10枚撮る受け入れテスト」にまとめて提案した。その写真を T5 のサンプルにも使う。",
+      "3a69b0a で `?maxside` を追加した（0 は縮小なし、500以上の整数でその値を上限にする、ほかの値は2000）。`maxSideFrom` は logic.js にある。テストは22件通過。受け入れテストでは、薄い感熱紙だけ既定と `?maxside=0` で2回撮り、縮小前後を T5 の一覧で比べる案を出した。写真は data/images/ にだけ置き、コミットしない（田中さん案に賛成）。",
+      "review（iteration 1）で、T6 の DEMO を実サーバーで取った。スクリプトは scratchpad/t6demo.mjs、テストは22件通過。田中さんの T2・T4 は指摘なし。CSV の画像列が相対パスで Excel から開けない件は、ユーザーテストで聞いてもらう。必要なら iteration 2 でフルURLを入れる。ブラウザと実機は引き続き未確認。",
+      "iteration 2 の計画で、T7 のうち QR（自前で `web/qr.js` を書き、依存は足さない）、`/start` 画面、3行の手順を引き受けた。田中さんには2点を依頼した。読み取りキューの `status:\"queued\"`＋`queue_position` と、edited の欄を OCR 結果で上書きしないこと。この環境には chromium・firefox・qrencode・tesseract がない。T8 の印刷プレビューは `@media print` で作り、テスト機で PDF 保存して DEMO に出す前提にした。着手順は T7b→T8→T9。",
+      "05a915c で T10・T8 を実装した。中身は、QR は `web/qr.js`、`/start` は start.html と start.js、`printSheet`、`statusText`、`countText(n, waiting)`、16px。テストは41件通過。ブラウザ確認は scratchpad/chr にある。@sparticuz/chromium と puppeteer-core を npm で入れたもので、playwright の CDN は 403 だった。demo.mjs で実サーバーをスマホ幅で操作し、out/ にスクショと印刷 PDF を出した。QR の検証には scratchpad/qrv（python venv、zxing-cpp）を使う。`/start` のルートの1行は、田中さんの未コミットの server.mjs にあり、コミットを依頼済み。次は T9（日付・金額で検索し、該当なしなら日付なしの行を案内する）。実機でのカメラと QR の確認は T7 で行う。",
+      "4952a66 で T9 を実装した。検索は全件が対象で、月と要確認の絞り込みは無視する。金額は完全一致、日付は年を省ける。見つからないときは日付のない行へ案内する。関数は `parseQuery`・`searchReceipts`・`searchText`・`renderSearch`。テストは48件通過。デモは scratchpad/chr/t9demo.mjs で、out/t9-*.png に出る。puppeteer で type=search の欄をトリプルクリックしても文字を選べなかったので、値は $eval で消す。これで iteration 2 の自分のタスク（T10・T8・T9）はすべて done。残りは受け入れテスト当日の実機確認（カメラ、QR）と、山田さんが写真を探すのにかかる秒数の計測。",
+      "fd51123 で、README に受け入れテスト当日の記録表を足した。項目は、機種、QR、カメラ、行が増えるか、1枚目までの秒数、T9 の秒数、maxside の差、迷った場所。当日の分担の案は、田中さんがサーバーと sample-report、鈴木が表の記入、佐藤さんが「この5,000円は何？」の質問役。テストは48件通過で、作業ツリーはクリーン。",
+      "01b0f8d でテストは49件すべて通過し、作業ツリーはクリーン。田中さんの README の⑥（data と samples を rm で消す）は、記録表の⑦（maxside の差）を書き終えてから行うよう依頼した。写真をその日のうちに消すことに賛成した。消すタイミングを決めるのは佐藤さん。",
+      "review（iteration 2）で、scratchpad/chr/rv2.mjs を使い、実際の tesseract と実サーバーを画面からつないで確かめた。田中さんの 012b238 は、⚠ の文で項目名が二重になるものが0件で、指摘なし。HEAD 012b238 でテストは50件通過、作業ツリーはクリーン、コードの変更なし。当日に聞くこと: 紙の要確認の列は項目名が出ない。金額が空欄の行は合計に入らないので、先生が注記の意味を読み取れるか（記録表の⑧）。",
+      "3369de0 で T11 を実装した。中身は `noAmountCount`・`noAmountText`、`PRINT_FLAG_LABELS`（カテゴリは「分類」と書く）、`UNCLASSIFIED`＝「未分類（要確認）」（紙と toCsv の両方）。CSV で reason が「未読み取り」のときは「はまだ読み取られていません」の文にした。テストは53件通過。デモは scratchpad/chr/t11demo.mjs で、既定のアダプタに PATCH をかけて状態を作り、out/t11-* に出力した。自分のタスクはすべて done（T3 は T6 と重複なので閉じてもらう）。残りは当日の記録表の記入。"
+    ]
+  },
+  "historyWindow": 40
+}

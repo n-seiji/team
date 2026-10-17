@@ -1,0 +1,739 @@
+{
+  "version": 1,
+  "name": "trial-kairanban",
+  "brief": "町内会の回覧板をスマホで回せる Web アプリ。高齢の住民も使え、誰が読んだか分かる",
+  "language": "ja",
+  "workspace": "workspace/trial-kairanban",
+  "createdAt": "2026-10-17T08:38:51.856Z",
+  "status": "done",
+  "members": [
+    {
+      "id": "pm",
+      "role": "pm",
+      "persona": {
+        "name": "佐藤 美咲",
+        "age": 36,
+        "occupation": {
+          "title": "Product Manager",
+          "organization": "小さなSaaSスタートアップ",
+          "description": "ユーザーインタビューから課題を言語化し、最小のスコープで価値を届けることに責任を持つ。"
+        },
+        "long_term_goals": [
+          "ユーザーが本当に使い続けるプロダクトを作る",
+          "チームが迷わず動ける判断を素早く下す"
+        ],
+        "style": "質問が具体的で短い。『最後にそれが起きたのはいつですか？』のように事実を掘る。決めるときは理由とトレードオフを一言添える。",
+        "personality": {
+          "traits": [
+            "好奇心が強い",
+            "スコープを削るのが得意",
+            "ユーザーの言葉をそのまま引用する"
+          ],
+          "big_five": {
+            "openness": "高",
+            "conscientiousness": "高",
+            "extraversion": "中",
+            "agreeableness": "中",
+            "neuroticism": "低"
+          }
+        },
+        "skills": [
+          "ユーザーインタビュー (The Mom Test)",
+          "ジョブ理論",
+          "受け入れ基準の記述",
+          "優先順位付け"
+        ],
+        "beliefs": [
+          "ユーザーが言う解決策より、ユーザーの過去の行動を信じる",
+          "最初のリリースは恥ずかしいくらい小さくていい"
+        ]
+      }
+    },
+    {
+      "id": "eng-backend",
+      "role": "engineer",
+      "persona": {
+        "name": "田中 健",
+        "age": 41,
+        "occupation": {
+          "title": "Senior Backend Engineer",
+          "description": "データモデル、API、CLI、テストを担当。シンプルで壊れにくい設計を好む。"
+        },
+        "style": "結論から話す。リスクは数字や具体例で示す。不明点はその場で確認する。",
+        "personality": {
+          "traits": [
+            "慎重",
+            "テストを先に書く",
+            "依存を増やすのが嫌い"
+          ],
+          "big_five": {
+            "openness": "中",
+            "conscientiousness": "高",
+            "extraversion": "低",
+            "agreeableness": "中",
+            "neuroticism": "低"
+          }
+        },
+        "skills": [
+          "TypeScript",
+          "Go",
+          "SQL",
+          "API設計",
+          "自動テスト"
+        ],
+        "preferences": {
+          "likes": [
+            "標準ライブラリ",
+            "小さな関数",
+            "README に動かし方を書くこと"
+          ],
+          "dislikes": [
+            "根拠のない見積もり",
+            "巨大なフレームワーク"
+          ]
+        }
+      }
+    },
+    {
+      "id": "eng-frontend",
+      "role": "engineer",
+      "persona": {
+        "name": "鈴木 ひかり",
+        "age": 29,
+        "occupation": {
+          "title": "Frontend / UX Engineer",
+          "description": "画面・CLI の使い勝手、アクセシビリティ、初回体験を担当。ユーザー視点で仕様に意見を言う。"
+        },
+        "style": "フレンドリーで提案型。『ユーザーはここで迷いそう』と体験ベースで話す。",
+        "personality": {
+          "traits": [
+            "共感力が高い",
+            "手を動かして試作するのが早い",
+            "細部にこだわる"
+          ],
+          "big_five": {
+            "openness": "高",
+            "conscientiousness": "中",
+            "extraversion": "高",
+            "agreeableness": "高",
+            "neuroticism": "中"
+          }
+        },
+        "skills": [
+          "TypeScript",
+          "HTML/CSS",
+          "React",
+          "アクセシビリティ",
+          "プロトタイピング"
+        ],
+        "preferences": {
+          "likes": [
+            "空状態やエラー時の丁寧なメッセージ",
+            "キーボードだけで操作できるUI"
+          ],
+          "dislikes": [
+            "説明が必要なUI"
+          ]
+        }
+      }
+    },
+    {
+      "id": "user-elder",
+      "role": "user",
+      "persona": {
+        "name": "伊藤 トシ子",
+        "age": 78,
+        "nationality": "日本",
+        "residence": "千葉県船橋市の戸建て (一人暮らし)",
+        "occupation": {
+          "title": "年金生活者・町内会の班員",
+          "description": "夫を亡くしてから一人暮らし。回覧板は隣の家に手渡しで回している。"
+        },
+        "long_term_goals": [
+          "近所との付き合いを保つ",
+          "子どもに心配をかけない"
+        ],
+        "style": "ゆっくり丁寧に話す。『孫に入れてもらったけど』と前置きしがち。分からないことは分からないと言うが、何度も聞くのは申し訳ないと思っている。",
+        "personality": {
+          "traits": [
+            "律儀",
+            "機械が苦手",
+            "紙が好き"
+          ],
+          "big_five": {
+            "openness": "低",
+            "conscientiousness": "高",
+            "extraversion": "中",
+            "agreeableness": "高",
+            "neuroticism": "中"
+          }
+        },
+        "preferences": {
+          "likes": [
+            "大きな文字",
+            "ボタンが少ない画面",
+            "電話で聞ける安心感"
+          ],
+          "dislikes": [
+            "パスワード",
+            "小さい文字",
+            "勝手に通知が鳴ること"
+          ]
+        },
+        "tech_literacy": "らくらくスマホで電話と LINE (スタンプ中心) だけ使う。URL を手で打つのは難しい。QR コードは孫に教わって読めるようになった。"
+      }
+    },
+    {
+      "id": "user-chief",
+      "role": "user",
+      "persona": {
+        "name": "森 健一",
+        "age": 63,
+        "nationality": "日本",
+        "residence": "千葉県船橋市",
+        "occupation": {
+          "title": "町内会長 (元メーカー勤務・再雇用中)",
+          "description": "80 世帯の町内会をまとめる。毎月の回覧物をコピーして班長に配っている。"
+        },
+        "long_term_goals": [
+          "役員のなり手不足を解消したい",
+          "回覧の遅れ・紛失をなくしたい"
+        ],
+        "style": "論理的で手短。『で、誰が読んだか分かるの？』と結果を確認したがる。",
+        "personality": {
+          "traits": [
+            "責任感が強い",
+            "費用に厳しい",
+            "Excel は得意"
+          ],
+          "big_five": {
+            "openness": "中",
+            "conscientiousness": "高",
+            "extraversion": "中",
+            "agreeableness": "中",
+            "neuroticism": "低"
+          }
+        },
+        "preferences": {
+          "likes": [
+            "既読の確認",
+            "無料か安いこと",
+            "紙と併用できること"
+          ],
+          "dislikes": [
+            "月額課金",
+            "住民の個人情報を外部に預けること",
+            "役員だけが詳しくなる仕組み"
+          ]
+        },
+        "tech_literacy": "PC で Excel・メールは問題なし。スマホも使う。サーバーや開発の知識はない。"
+      }
+    }
+  ],
+  "phases": [
+    {
+      "id": "discovery",
+      "goal": "PM interviews the users to uncover their real situation, pains and jobs-to-be-done. Users answer strictly in character, with concrete episodes. No solutions yet.",
+      "speakers": [
+        "pm",
+        "user"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 2
+    },
+    {
+      "id": "planning",
+      "goal": "PM turns findings into a small, shippable scope: [TASK] items with clear acceptance criteria, each assigned to an engineer. Engineers challenge feasibility, split or re-assign tasks, and agree on tech choices.",
+      "speakers": [
+        "pm",
+        "engineer"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 2,
+      "iterationStart": true
+    },
+    {
+      "id": "build",
+      "goal": "Engineers implement their own tasks in the workspace (real files, runnable code, tests when sensible), coordinate interfaces with each other, and mark finished work with [TASK_DONE].",
+      "speakers": [
+        "engineer"
+      ],
+      "mode": "parallel",
+      "maxRounds": 3,
+      "untilTasksDone": true,
+      "editors": [
+        "engineer"
+      ]
+    },
+    {
+      "id": "review",
+      "goal": "Engineers review each other's work against the acceptance criteria and fix issues. Before users judge it, each engineer posts a [DEMO] for their tasks: what a user would do and what they would see, with output you really produced (run the command, render the page or email, paste the result or the path of the generated file or screenshot). Never describe output you did not produce. PM checks every task against its acceptance criteria and states what is ready for users.",
+      "speakers": [
+        "engineer",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1,
+      "editors": [
+        "engineer"
+      ]
+    },
+    {
+      "id": "acceptance",
+      "goal": "Users try what was built — start from the team's demos, open the files they point to, run it if possible — and judge it from their own needs. Each user gives a [VERDICT accept|reject] with reasons. PM summarizes and decides next steps.",
+      "speakers": [
+        "user",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1
+    },
+    {
+      "id": "wrapup",
+      "goal": "The session is about to end. Engineers apply every decision made during review and acceptance and finish their open tasks ([TASK_DONE]); a task that cannot be finished here gets one line saying why and what is left. PM then confirms what shipped and lists, for the real human, anything still open or needing their decision.",
+      "speakers": [
+        "engineer",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1,
+      "editors": [
+        "engineer"
+      ],
+      "finale": true
+    }
+  ],
+  "phaseIndex": 5,
+  "iteration": 2,
+  "maxIterations": 2,
+  "round": 0,
+  "turn": 38,
+  "queue": [],
+  "pending": [],
+  "insertions": 0,
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "回覧と世帯の登録、状態の保存",
+      "acceptance": "- 班長が回覧のタイトルと本文を登録できる。\n- 班長が世帯を表示名だけで複数登録できる。電話・住所・メールの項目は存在しない。\n- 世帯ごとに推測不能なトークンのURLが発行される。班長は一覧からコピーでき、再発行もできる。\n- 世帯ごとの状態は「未読 / 本人が読んだ / 班長が代理記録」の3値で、いつ読んだかも保存される。\n- 無効なトークンでは回覧が見えず、「このリンクは使えません」と分かる。\n- 自動テストで、登録・読了記録・代理記録・無効トークンの4つを確認する。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "回覧と世帯の登録、状態の保存を実装しました。場所は `workspace/trial-kairanban/` です。\n- `src/store.ts`: node:sqlite を使います。テーブルは回覧・世帯・読了の3つです。世帯には表示名とトークンしか持たせていません。トークンは `randomBytes(24)` の base64url です。再発行すると古いリンクはすぐ無効になります。\n- `src/server.ts`: `node:http` の API と静的配信です。\n- `src/main.ts`: 起動用です。\n- テスト: `node --test --disable-warning=ExperimentalWarning test/*.test.ts` を実行し、6件すべて通りました。登録、読了記録、代理記録、無効トークン（再発行を含む）を確認しています。"
+    },
+    {
+      "id": "T2",
+      "title": "住民が読む画面（専用リンクを開いたとき）",
+      "acceptance": "- ログイン不要で、リンクを開くと回覧のタイトルと本文がすぐ表示される。\n- 本文は初期状態で大きな文字（目安16pt以上）、背景と文字の色は高コントラストにする。\n- 画面の一番下に、高さ約60px以上の「読みました」ボタンが1つだけある。\n- 押すと「ありがとうございます。読んだことを班長さんに伝えました」と出て、ボタンは押せない状態になる。\n- 一度押した後でリンクを開き直すと、「読みました（○月○日）」と表示される。\n- スマホの幅（360px）で横スクロールが出ない。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "住民画面：`public/resident.html` / `resident.js` / `style.css`。幅360pxの実ブラウザで次を確認しました。本文は22px・白地に黒字、横スクロールなし。「読みました」は高さ72pxで1つだけ。押すとお礼の文が出て押せなくなり、開き直すと「読みました（10月17日）」と出ます。無効リンクは「このリンクは使えません／班長さんに新しいリンクをもらってください」と出て、ボタンはありません。回覧が0件のときは「まだ回覧はありません」です。POST には circularId を送ります。`?circular=<id>` も API に渡します。"
+    },
+    {
+      "id": "T3",
+      "title": "班長の状況一覧画面",
+      "acceptance": "- 回覧ごとに、全世帯を「未読」「本人が読んだ」「班長が代理記録」の3色＋文字ラベルで一覧できる（色だけで区別しない）。\n- 上部に「読了 ○/○世帯」が出る。\n- 未読の世帯の横に「紙で読んだと記録する」ボタンがあり、押すと「班長が代理記録」に変わる。確認のダイアログを一度出す。\n- 世帯ごとのリンクコピーボタンがあり、押すとコピー済みの表示が出る。\n- 未読の世帯だけに絞り込める。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "班長一覧：`public/admin.html` / `admin.js`。実ブラウザで次を確認しました。3色に文字ラベル（未読／本人が読んだ／班長が代理記録）が付き、上部に「読了 1/2世帯」が出ます。「紙で読んだと記録する」を押すと確認ダイアログ「佐々木さんを『紙で読んだ』と記録します。よろしいですか？」が出て、OK で「班長が代理記録」と「読了 2/2世帯」に変わります。コピーボタンは「コピーしました ✓」に変わり、クリップボードには `http://…/r/<token>` の完全な URL が入ります。未読の絞り込みでは佐々木さんだけ残ります。360px で横スクロールはありません。"
+    },
+    {
+      "id": "T4",
+      "title": "T1 追加分: 管理キーと上書きルールの実装",
+      "acceptance": "- 環境変数で渡した管理キーが無い、または違う場合、班長用の API（回覧登録・世帯登録・一覧・代理記録・再発行）は拒否される。\n- 住民のトークン URL からの閲覧と「読みました」は、管理キーなしで使える。\n- 「読みました」を2回送っても、最初の日時が残る。\n- 代理記録のあとに本人が押すと「本人が読んだ」になり、日時は本人が押した時刻になる。\n- 本人が読んだ世帯に代理記録を送っても、状態は変わらない。\n- 自動テストで、キーなし・キー違い、2回押し、代理記録後の上書きを確認する。\n- README に必要な Node のバージョンと管理キーの渡し方を書く。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "管理キーと上書きルールを実装しました。\n- 管理キーは環境変数 `ADMIN_KEY` で渡します。未設定だとサーバーは起動しません。班長用 API は `X-Admin-Key` ヘッダーを見ます。キーが無い・違うときは 401「キーが違います。班長さんに確認してください」を返します。比較は `timingSafeEqual` です。\n- 住民の閲覧と「読みました」は、管理キーなしで使えます。\n- 「読みました」を2回送っても、最初の日時が残ります。代理記録のあとに本人が押すと「本人が読んだ」になり、日時は本人が押した時刻になります。本人が読んだ世帯に代理記録を送っても、状態も日時も変わりません。\n- テストでは、キーなし・キー違いで班長 API の7本すべてが拒否されること、2回押し、代理記録後の上書きを確認しています。\n- README に Node 22.18 以上と `ADMIN_KEY=... node src/main.ts` を書きました。API 一覧も入れています。"
+    },
+    {
+      "id": "T5",
+      "title": "T3 追加分: 管理キーの入力画面",
+      "acceptance": "- 班長画面を初めて開くと、管理キーの入力欄が出る。\n- 正しいキーを入れると、一覧が表示される。キーはそのブラウザに保存され、次回からは聞かれない。\n- キーが違うときは「キーが違います。班長さんに確認してください」と出て、一覧は見えない。\n- 別の端末では、もう一度キーを入力する必要がある。\n- 一覧の「本人が読んだ」「班長が代理記録」の行に、日時が出る。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "管理キーの画面：初回はキーの入力欄が出ます。違うキーを入れると「キーが違います。班長さんに確認してください」と出て、一覧は出ません。正しいキーなら一覧が出ます。再読み込みしてもキーは聞かれません（localStorage に保存するので、ブラウザや端末が変わればもう一度入力します）。「本人が読んだ」「班長が代理記録」の行には日時が出ます。テストは `node --test --disable-warning=ExperimentalWarning test/*.test.ts` で 7/7 通りました。"
+    },
+    {
+      "id": "T6",
+      "title": "T6 班長画面：回覧の登録・世帯の追加・リンクの再発行",
+      "acceptance": "- 班長画面から、回覧のタイトルと本文を入れて登録できる。登録すると一覧に出る。\n- 世帯を表示名だけで追加できる。入力欄は表示名だけで、電話・住所・メールの欄は無い。\n- 一覧の各行に「リンクを作り直す」ボタンがある。押すと「前のリンクは使えなくなります。よろしいですか？」と確認が出る。OK を押すと新しいリンクがコピーできる。\n- 作り直す前のリンクを開くと「このリンクは使えません／班長さんに新しいリンクをもらってください」と出る。\n- 幅360pxで横スクロールが出ない。\n- 空のタイトルや空の表示名では登録できず、理由が画面に出る。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "班長画面に、回覧の登録・世帯の追加・リンクの作り直しを足しました。\n・`public/admin.html`：一覧の上に「＋ 回覧を登録」と「＋ 世帯を追加」を置きました。どちらも `<details>` で、押すと開きます。世帯の欄は表示名だけです。操作結果を知らせる緑の帯（role=status）も足しました。\n・`public/admin.js`：登録したら回覧の選択をその回覧に切り替え、「『○○』を登録しました」と出します。世帯は、一覧の一番下に「未読」で出します。空のまま送ると、欄のすぐ下に理由を出し（aria-invalid も付けます）、その欄にフォーカスを戻します。サーバーが 400 を返したときも、同じ場所に文言を出します。各行の「リンクを作り直す」は、確認を出してから作り直します。そのあと、その行のボタンが「新しいリンクをコピー」に変わってフォーカスが移るので、Enter だけでコピーできます。コピーにはサーバーが返す完全な `url` をそのまま使います（PUBLIC_URL）。\n・`public/style.css`：帯・フォーム・エラー用の CSS を足しました。`README.md` には、画面でできることと確認の方法を書きました。\n・確認：`docs/e2e-t6.mjs`（上の DEMO）を実行しました。`pnpm test` は 10/10 通りました。"
+    },
+    {
+      "id": "T7",
+      "title": "T7 住民のリンクは未読のうち一番古い回覧を出す",
+      "acceptance": "- 未読の回覧が複数あるとき、`GET /api/r/<token>` は一番古い未読の回覧を返す。\n- 全部読んでいれば、最新の回覧を返す。\n- 応答に `unreadCount`（表示中の回覧を除く、未読の回覧の件数）が入る。\n- 代理記録された回覧は、未読に数えない。\n- 自動テストで、回覧を3件登録して1件ずつ読んだときに、出る回覧が古い順に進むことを確認する。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "実装しました。場所は `workspace/trial-kairanban/` です。\n- `src/store.ts`: `unreadCirculars(householdId)` を足しました。本人記録も代理記録もない回覧を古い順に返します。\n- `src/server.ts` の `residentView`: 回覧の指定が無いときは一番古い未読を出し、全部読んでいれば最新を出します。応答に `unreadCount`（表示中の回覧を除いた未読の件数）を入れました。代理記録は未読に数えません。POST `/read` の応答も同じ形なので、`unreadCount` が入ります。\n- テスト: 2件足しました。1件目は、回覧3件を1件ずつ読むと、出る回覧が古い順に進み、全部読むと最新に戻ることを見ます。2件目は、代理記録した回覧が飛ばされ、未読に数えられないことを見ます。\n- 確認: `node --test --disable-warning=ExperimentalWarning test/*.test.ts` を実行し、10/10 通りました。\n- README の住民 API の説明を更新しました。"
+    },
+    {
+      "id": "T8",
+      "title": "T8 住民画面：押した後に次の未読を知らせる",
+      "acceptance": "- 「読みました」を押した後、`unreadCount` が1以上なら、お礼の下に「まだ読んでいない回覧があと○件あります」と出る。\n- その下に、高さ約60px以上の「次を読む」ボタンが1つ出る。押すと次の回覧のタイトルと本文が出る。\n- `unreadCount` が0なら、どちらも出ない。今の「読みました（○月○日）」の表示は変わらない。\n- 幅360pxで横スクロールが出ない。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "住民画面で「読みました」を押したあと、未読が残っていれば次の回覧へ進めるようにしました。\n・`public/resident.html`：お礼の下に `#more`（role=status）と「次を読む」ボタン（高さ72px）を足しました。どちらも初めは隠しています。\n・`public/resident.js`：POST の応答の `unreadCount` が1以上なら「まだ読んでいない回覧があと○件あります」と「次を読む」を出し、0なら両方隠します。「次を読む」を押すと、`?circular=` を外して同じ `GET /api/r/<token>` を呼び直し、一番古い未読を出します。そのあと画面の一番上に戻り、フォーカスをタイトルに移すので、読み上げでも新しい回覧から始まります。開き直したときの「読みました（○月○日）」の表示は変えていません。\n・確認：`pnpm test` は 22/22 通りました。`docs/e2e-t8.mjs` の結果は上の DEMO です。幅360pxで横スクロールは出ません。"
+    },
+    {
+      "id": "T9",
+      "title": "T9 運用と費用の説明書（紙1枚）",
+      "acceptance": "- `docs/運用のしかた.md` に、A4 1枚に収まる量で、専門用語を使わずに書く。\n- どこで（誰の、どの機械・サービスで）動かすかを1つに決めて書く。月額課金のものは選ばない。年間の費用を円で書く。\n- 管理キーの変え方と、次の班長への渡し方を、番号付きの手順で書く。キーを変えると古いキーの端末では入れなくなることも書く。\n- 止まったとき、またはデータが消えたときに誰が何をするかを3行以内で書く。\n- 書いた手順は、新しい環境で実際にそのとおりに試し、その結果を報告する。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "運用と費用の紙1枚が終わりました。\n- `docs/運用のしかた.md`（35行で、A4 1枚に収まります）に次を書きました。置き場所は Raspberry Pi などを会長宅か集会所に置く形、費用は初回に約15,000円（総会で確認してもらう項目）、毎年は約3,500円で月額はありません。番号付きの手順として、キーの変え方（4段階）と次の班長への渡し方（3段階）も入れました。古いキーのスマホでは入れなくなることも書いています。止まったときとデータが消えたときに誰が何をするかは3行です。紙の一番下には、キー・機械係・置き場所・ドメイン更新（毎年4月・会計係）を書き込む欄を作りました。アカウントは町内会のメールで作ることと、更新を忘れると QR の紙が全部使えなくなることも明記しました。\n- `src/tool.ts`：`key`（打ちやすい4文字×3のキーを作り、設定ファイルを 600 にします）、`backup`（動かしたままでもコピーを作れる VACUUM INTO で、14日分を残します）、`restore`（壊れた控えは戻しません）の3つです。今回、壊れた控えを指定したときの文言を「バックアップが壊れています。前の日の控えを指定してください」に直し、テストも強めました。\n- `deploy/`：systemd のユニット、cron の1行、設定ファイルの見本です。README で重複していた機械係向けの手順は、1つにまとめました。\n- 確認：`pnpm test` で 22/22 通りました。"
+    },
+    {
+      "id": "T10",
+      "title": "T10 世帯ごとの QR を印刷できる",
+      "acceptance": "- 班長画面から「QRを印刷」を押すと、全世帯分の印刷用ページが開く。1世帯につき1枚（A4、またはA4を2分割）にする。\n- 各紙に、「○○さんの回覧板」、その世帯のリンクの QR、「新しい回覧も、このQRから読めます。紙の回覧板も今までどおり回ります」、班長の名前と電話番号を手書きする空欄が載る。\n- スマホの標準カメラで QR を読むと、その世帯の住民画面が開く（実機または実カメラ相当で確認する）。\n- リンクを作り直した世帯は、新しいリンクの QR になる。\n- 実行時の依存を増やさない。増やす場合は理由を報告する。\n- 印刷プレビューのスクリーンショットを `docs/screens/` に置く。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "T10 のうち私の担当分（QR と print API）が終わりました。場所は `workspace/trial-kairanban/` です。\n- `src/qr.ts`（280行）：QR を自前で作ります。バイトモード・誤り訂正 M で、住民の URL（約60バイト）はバージョン5以下に入ります。SVG には `viewBox` だけを付け、四方に白い余白を入れています。実行時の依存は増えていません（jsqr は devDependencies で、テストでしか使いません）。\n- `src/server.ts`：`GET /api/admin/print` は `[{id,name,url,qrSvg}]` を返します。管理キーが要ります。`url` は `PUBLIC_URL` から作るので、リンクを作り直した世帯は新しい URL の QR になります。\n- `test/qr.test.ts`：リードソロモンの値と形式情報を、規格の例と照らし合わせています。生成した QR を jsqr で読み取り、URL が一致することも見ます。\n- `docs/qr-camera-check.mjs`：6cm の QR を斜め・ぼかし・遠めの「写真」にして読み取ります。読めた URL を幅360pxで開き、住民画面が出るかを確かめます。\n- 印刷ページと「QRを印刷（全世帯）」ボタンは、ひかりさんの `public/print.html` / `print.js` で結合済みです。\n- 確認：`pnpm test` で 22/22 通りました。"
+    },
+    {
+      "id": "T11",
+      "title": "T11 本番ドメインの紙を実機スマホで読む",
+      "acceptance": "- 本番の `PUBLIC_URL` で刷った紙を使い、森さんのスマホと、トシ子さんのらくらくスマホの標準カメラで読む。どちらでも住民画面が開き、「読みました」を押せる。\n- 読めたかどうか、機種、QR の大きさ、かかった手順を記録して報告する。読めなかった機種があれば、その対策と刷り直した結果も書く。\n- iPhone Safari の印刷プレビューで、1ページに1世帯になるかを確かめる（iPhone が手元にあれば）。\n- これが通るまでは、紙を町内に配らない。",
+      "owner": "eng-backend",
+      "status": "todo",
+      "createdBy": "pm"
+    },
+    {
+      "id": "T12",
+      "title": "T12 紙の「カメラを向けて…」の行を大きくする",
+      "acceptance": "- 印刷した紙で、「スマホのカメラをこのQRに向けて、出てきた文字を押すと開きます」の行が、「新しい回覧も…」の2行と同じか、それより大きい文字になる。\n- 一番下の URL は残すが、いちばん小さい文字でかまわない。\n- A4 1枚に1世帯で収まり、QR の黒い部分は1辺6cm以上のまま。\n- 印刷プレビューのスクリーンショットを `docs/screens/` に置く。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "紙の「カメラを向けて…」の行を大きくしました。印刷時は 18pt の太字で、「新しい回覧も…」の2行と同じ大きさです（画面では 22px）。2行に分けて、途中で折り返さないようにしました。URL は 9pt のままで、紙の中でいちばん小さい文字です。A4 1枚に1世帯で収まり、QR の黒い部分は 64.3mm です。変えたファイルは `public/print.js` と `public/style.css` です。確認は `docs/e2e-t14.mjs` で行い、スクリーンショットは `docs/screens/print-t12-a4-1-01.png` です。`pnpm test` は 22/22 通りました。"
+    },
+    {
+      "id": "T13",
+      "title": "T13 運用の紙に、機械係の代わりの人と引き継ぎ手順を足す",
+      "acceptance": "- `docs/運用のしかた.md` に、機械係が不在のときに代わりにやる人を書き込む欄がある。\n- 次の機械係への引き継ぎを、番号付きの手順で書く。渡すもの（機械の場所、キー、町内会のメールのアカウント、バックアップの USB）を一覧にする。\n- 全体で A4 1枚に収まり、専門用語を使わない。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "`docs/運用のしかた.md` に「7. 機械係がいないとき・次の機械係への引き継ぎ」を足しました。\n- 機械係がいないときは、下の欄の「代わりの人」が 4（キーを変える）と 6（止まったとき）の仕事をします。紙の一番下に「代わりの人：＿＿（電話＿＿）」の欄を足しました。\n- 引き継ぎは番号付きの4段階です。①欄を書き直す ②渡す ③二人で機械の前でキーを新しくする ④班長画面が開くのをその場で確かめる。渡すものは ①機械の置き場所（置いている家の人の名前と電話） ②管理キー ③町内会のメールアドレスとパスワード ④控えの USB メモリ、の4つを一覧にしました。\n- A4 1枚に収めるため、ほかの段落の言い回しを短くしました。中身は削っていません。「止まったとき」は3行のままです。\n- 確認：Chrome で A4（10.5pt・余白12mm）に刷ると 1 ページでした。PDF は `docs/screens/運用のしかた-a4.pdf` です。`pnpm test` は 22/22 通りました。"
+    },
+    {
+      "id": "T14",
+      "title": "T14 QR の紙を A4 2分割で印刷できる",
+      "acceptance": "- 印刷ページで「A4に1世帯」と「A4に2世帯」を選べる。最初は「A4に1世帯」が選ばれている。\n- 2分割のときも、各世帯分に名前・QR・説明文・手書き欄がそろう。QR の黒い部分は1辺6cm以上。\n- 80世帯で2分割にすると、PDF が40ページになることを確かめる。\n- 切り取り線が入り、切ったときにどちらの世帯の紙か分かる。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "印刷ページで「A4に1世帯」と「A4に2世帯（半分に切って配る）」を選べるようにしました（`public/print.html` の fieldset とラジオ）。最初は「A4に1世帯」が選ばれています。説明の文にある枚数も、選んだほうに合わせて変わります。2世帯のときは、A4 を上下に分け、左に QR、右に説明と手書き欄を置きます。QR の黒い部分は 62.1mm です。真ん中には切り取り線を入れ、切っても名前で世帯が分かります（`public/style.css` の `.per-2`、`public/print.js` の `.side`）。80世帯では、PDF は1世帯で80ページ、2世帯で40ページになることを確かめました。確認は `docs/e2e-t14.mjs` を pw/ にコピーし、S と CHROME を渡して実行します（N で世帯数を変えられます）。README にも書きました。`pnpm test` は 22/22 通りました。"
+    }
+  ],
+  "decisions": [
+    {
+      "by": "pm",
+      "text": "初回リリースは「班長が回覧を登録する → 各世帯に専用リンクを渡す → 住民が読んで『読みました』を押す → 班長が一覧で見る」だけにする。ログイン、通知、コメント、添付ファイルはやらない。理由: 森さんの課題は『誰が読んだか分からない』であり、これだけで解ける。トレードオフ: 次の家への自動連絡はない。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "住民の電話番号・住所・メールは持たない。世帯は「表示名」(例: 山田さん)だけを登録する。専用リンクは推測できない長いトークンで世帯ごとに発行する。理由: 森さんが名簿を外に預けることに抵抗している。トレードオフ: リンクを失くしたら班長が再発行する。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "紙は残す。スマホを使わない世帯は、班長が「紙で読んだ」と代理記録できる。状態は「未読」「本人が読んだ」「班長が代理記録」の3つに分け、印が空のときの「押し忘れか未読か」問題を見分けられるようにする。理由: 70代以上の単身世帯の多くは紙のままで、トシ子さんも紙のほうが落ち着くと言っている。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "班長用の管理キーを初回リリースに入れる。管理キーは環境変数で1つ渡し、班長画面と管理 API だけがそれを要求する。住民の `/r/<token>` は管理キーなしで開ける。キーが違うときは「キーが違います。班長さんに確認してください」と出す。理由: 誰が読んだかは町内の誰にでも見せていい情報ではない。トレードオフ: 班長が別の端末で使うときは、キーを入れ直す必要がある。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "「読みました」の扱いを次のとおりにする。(1) 2回押されたら最初の日時を保持し、2回目は無視する。住民の画面には2回目も「ありがとうございます」を出す。(2) 班長の代理記録のあとに本人が押したら「本人が読んだ」に上書きする。(3) 本人が読んだ世帯に、班長が代理記録を重ねることはできない。理由: 実際に読んだ事実のほうが強い。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "URL と API の約束を固定する。住民画面は `/r/<token>`。班長の一覧 API は、世帯名・状態・読んだ日時・リンクを1回で返す。無効トークンの画面は、T1 の文言「このリンクは使えません」に「班長さんに新しいリンクをもらってください」を足す。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "世帯のリンクを開いたときは「まだ読んでいない一番古い回覧」を出す。全部読んでいれば最新の回覧を出す。押した後に未読が残っていれば、「まだ読んでいない回覧があと○件あります」と「次を読む」ボタンを1つだけ出す。理由：今のままだと、月に2〜3件の回覧で未読の回覧が見えなくなり、「誰が読んだか分かる」という目的が崩れる。トレードオフ：開き直したときに「読みました（○月○日）」が出るのは、ほかに未読が無いときだけになる。過去の回覧の一覧画面は作らない。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "班長画面に、回覧の登録、世帯の追加、リンクの再発行を足す（T6）。理由：森さんは curl を打てない。T1 の「一覧から再発行もできる」も画面では満たせていない。トレードオフ：回覧の編集と削除、世帯の削除は今回やらない。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "世帯へのリンクは、QR を印刷した紙で配る（LINE で送るのも可）。紙1枚に1世帯で、「○○さんの回覧板」、QR、「新しい回覧も、このQRから読めます。紙の回覧板も今までどおり回ります」、班長の名前と電話番号を手書きする空欄を載せる。理由：森さんは今も郵便受けに入れて回しており、トシ子さんは手で打てないが QR なら読める。リンクは世帯ごとに1本なので、紙は一度配れば済む。トレードオフ：リンクを作り直したら刷り直して配り直す。班長の電話番号はシステムに保存しない。",
+      "phase": "acceptance",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "運用の条件として、月額課金は使わない。費用は無料か、年数千円までとする。どこで動かすか、費用、管理キーの変え方と次の班長への渡し方を、森さんが読める紙1枚にまとめる。CSV 出力は今回やらない。理由：森さんが町内で使い始められない理由が、機能ではなく運用だから。",
+      "phase": "acceptance",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "置き場所は「町内会で持つ小さな機械（Raspberry Pi など）を会長宅か集会所に置き、無料のトンネルと町内会名義のドメインで外から開ける」に決める。毎年の費用は電気代とドメイン代で年3,500円前後、月額の課金はない。最初の機械代（1万5千円前後）は年額とは別にして、T9 の紙で森さんに確認する項目として書く。理由：月額なしで、寝ることもデータが消えることもない案はこれしかなく、毎晩の USB へのコピーで前の日まで戻せる。トレードオフ：停電の間は止まる。機械を置く家への依頼が要る。",
+      "phase": "planning",
+      "iteration": 2
+    },
+    {
+      "by": "pm",
+      "text": "T9 の「新しい環境で手順どおりに試す」は、起動・キーの変更・バックアップ・復元をまっさらな環境で実際に試せば満たしたものとする。トンネルとドメインの手順は「未検証」と書いて報告すればよい。そのかわり、T9 の紙に次の2点を必ず書く。(1) ドメインとトンネルのアカウントは個人名義にせず、町内会のメールアドレスで作り、次の班長に渡すものの一覧に入れる。(2) ドメインは毎年更新する。更新を忘れると QR の紙が全部使えなくなるので、更新月と誰が更新するかを書く。",
+      "phase": "planning",
+      "iteration": 2
+    },
+    {
+      "by": "pm",
+      "text": "QR と「リンクをコピー」で使う URL は、どちらも環境変数 `PUBLIC_URL` から作る。`PUBLIC_URL` は必須とする。管理 API（一覧・再発行・print）は、完全な URL を `url` で返す。画面はそれをそのまま使う。理由：紙に localhost の URL が焼かれる事故を防ぎ、QR とコピーの URL を必ず一致させるため。QR の SVG には `viewBox` だけを付け、紙に印刷したときの大きさは CSS で1辺6cm以上にする。",
+      "phase": "planning",
+      "iteration": 2
+    },
+    {
+      "by": "pm",
+      "text": "初回リリースは受け入れたものとする。ただし、本番ドメインで刷った紙を実機スマホ（らくらくスマホを含む）で読めるまで、紙は配らない（T11が公開の条件）。理由：トシ子さんと森さんの2人とも、これを取り消し条件にしているから。トレードオフ：総会での提示が実機確認の後になる。紙の一番下の URL は、QR が読めないときの控えとして小さく残す。",
+      "phase": "acceptance",
+      "iteration": 2
+    }
+  ],
+  "verdicts": [
+    {
+      "by": "user-elder",
+      "verdict": "accept",
+      "reason": "読むことと「読みました」を押すことは、私にもできました。字が大きく、ボタンが1つで、押した後にお礼が出るので迷いません。ただ、リンクの受け取り方（LINE か QR の紙）と、次の回覧のときにどこを開くかが分からないと、続けて使うのは不安です。紙の回覧板も残してもらえるのが前提です。",
+      "iteration": 1
+    },
+    {
+      "by": "user-chief",
+      "verdict": "reject",
+      "reason": "「誰が読んだか分かる」という目的は、一覧画面で満たせています。中身には満足しています。ただし今の状態では、班長の私が自分で回覧を登録できず、サーバーの動かし方と費用も分かりません。これでは町内で使い始められません。受け入れる条件は次の3つです。(1) T6 で、回覧の登録・世帯の追加・リンクの作り直しが画面でできること。(2) どこで動かすのかと月々の費用を、紙1枚で説明できること。月額課金は不可です。(3) 世帯のリンクを QR で印刷できること。",
+      "iteration": 1
+    },
+    {
+      "by": "user-elder",
+      "verdict": "accept",
+      "reason": "紙のQRから開けて、大きな字で読めて、「読みました」と「次を読む」のボタン1つずつで済みます。パスワードも通知もなく、紙の回覧板も今までどおり回るので、私でも続けられます。お願いが2つあります。①紙の「カメラを向けて…押すと開きます」の行を大きな字にすること。②本番の紙を刷ったら、実際のスマホ（らくらくスマホも入れて）で読めるか確かめること。②で読めなかったら、この「受け入れる」は取り消させてください。",
+      "iteration": 2
+    },
+    {
+      "by": "user-chief",
+      "verdict": "accept",
+      "reason": "「誰が読んだか分かる」「紙と併用」「名簿を外に出さない」「月額なし」の4つを満たしていて、私一人で登録からQRの印刷まで画面でできます。条件は3つです。①本番のドメインで刷った紙を、実機のスマホ（らくらくスマホも含めて）で読めることを確かめる。だめなら取り消します。②紙1枚に、機械係が不在のときの代わりの人と、次の機械係への引き継ぎ手順を足す。③80世帯分の印刷を減らすため、A4を2分割にできるようにする（次の回でも構いません）。",
+      "iteration": 2
+    }
+  ],
+  "demos": [
+    {
+      "by": "eng-backend",
+      "text": "T1: 実サーバーに curl で打った結果です。\n- 世帯登録 → `{\"id\":1,\"name\":\"山田さん\",\"link\":\"/r/TClshIhT7JmT8LF9_NsT3GnknR9Z31XZ\"}`\n- 住民が「読みました」 → `{\"household\":{\"name\":\"山田さん\"},\"circular\":{\"id\":1,\"title\":\"秋祭り\",...},\"status\":\"self\",\"readAt\":\"2026-10-17T08:42:47.192Z\"}`\n- 班長の一覧 → `readCount:1, total:2`。山田さんは `self`、佐々木さんは `unread`。各世帯に `link` が付きます。\n- キーなしで一覧を取ると 401 になります。`/api/r/bad` は 404 で `{\"error\":\"このリンクは使えません\"}` が返ります。",
+      "phase": "build",
+      "iteration": 1
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T2: 実ブラウザ（chrome headless・幅360px）の出力です：\n[回覧なし] まだ回覧はありません / 新しい回覧が届いたら、このリンクで読めます。（ボタンなし）\n[回覧あり] 本文 22px / ボタン高さ 72px / 横スクロール false\n[押下後] … / 読みました（10月17日） / ありがとうございます。読んだことを班長さんに伝えました | disabled: true\n[取り違え確認] 防災訓練: self  秋祭り: unread\n[無効] このリンクは使えません / 班長さんに新しいリンクをもらってください。 / 横スクロール false\nスクリーンショットは `workspace/trial-kairanban/docs/screens/resident-360.png` と `resident-360-done.png` です。確認用のスクリプトは `docs/e2e-check.mjs` で、開発時だけ playwright を使います。",
+      "phase": "build",
+      "iteration": 1
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T3: [キー違い] キーが違います。班長さんに確認してください | 一覧表示: false\n[一覧] 読了 1/2世帯 / 山田さん / 本人が読んだ / 10月17日 8:55 / リンクをコピー / 佐々木さん / 未読 / 紙で読んだと記録する / リンクをコピー\n[コピー] コピーしました ✓ → http://localhost:3456/r/hg77hyBr0rm3d8kKIQzuZpgodllf6nED\n[絞り込み] [ '佐々木さん' ]\n[代理記録後] 読了 2/2世帯 / … / 佐々木さん / 班長が代理記録 / 10月17日 8:55\n[再訪] キー欄表示: false  一覧: true\nスクリーンショットは `workspace/trial-kairanban/docs/screens/admin-360.png` です。",
+      "phase": "build",
+      "iteration": 1
+    },
+    {
+      "by": "eng-backend",
+      "text": "T1: 新しい DB でサーバーを起動し（`ADMIN_KEY=k DB_PATH=<scratch>/demo.db PORT=3471 node src/main.ts`）、curl で打った実際の出力です。\n- 回覧登録 → `{\"id\":1,\"title\":\"防災訓練のお知らせ\",...,\"createdAt\":\"2026-10-17T08:56:38.487Z\"}`\n- 世帯登録 → `{\"id\":1,\"name\":\"山田さん\",\"link\":\"/r/aoq-g2r41nMUqb5Mmtjkwb-g_kVlae1s\"}`。返る項目は id・表示名・リンクだけです。\n- 住民はキーなしで `GET /api/r/<token>` を開けます → `\"title\":\"防災訓練のお知らせ\", \"status\":\"unread\", \"readAt\":null`\n- 再発行 → `{\"id\":1,\"name\":\"山田さん\",\"link\":\"/r/N7jQ8Rzq72htpeWPJfMtGOrXzDSRLoHP\"}`。古いリンクは `404 {\"error\":\"このリンクは使えません\"}` になります。\n- テストは `node --test --disable-warning=ExperimentalWarning test/*.test.ts` で 7/7 通っています。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "eng-backend",
+      "text": "T4: 同じサーバーでの実際の出力です。\n- `ADMIN_KEY` なしで起動 → 「ADMIN_KEY が未設定です。例: ADMIN_KEY=ひみつの合言葉 node src/main.ts」と出て、終了コードは 1 です。\n- キーなしで一覧 → 401。キー違いで再発行 → 401 `{\"error\":\"キーが違います。班長さんに確認してください\"}`\n- 「読みました」1回目 → `self 2026-10-17T08:56:38.595Z`。1秒あけた2回目 → `self 2026-10-17T08:56:38.595Z`。最初の日時のままです。\n- 本人が読んだ山田さんに代理記録 → `{\"status\":\"self\",\"readAt\":\"2026-10-17T08:56:38.595Z\"}`。状態も日時も変わりません。\n- 伊藤さんに代理記録 → `proxy 08:56:39.788Z`。その後に本人が押す → `self 08:56:40.937Z`。本人が押した時刻に上書きされます。\n- 班長一覧 → `読了 2/2`（山田さん self、伊藤さん self）",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T2: 新しい DB（`ADMIN_KEY=k DB_PATH=<scratch>/rv.db PORT=3456 node src/main.ts`）を使い、chrome headless の幅360pxで `docs/e2e-check.mjs` を実行しました。実際の出力です。\n[回覧なし] まだ回覧はありません / 新しい回覧が届いたら、このリンクで読めます。 | ボタン表示: false\n[回覧あり] 本文 22px / ボタン高さ 72px / 横スクロール false\n[押下後] 防災訓練のお知らせ / （本文）/ 読みました（10月17日） / ありがとうございます。読んだことを班長さんに伝えました | disabled: true\n[取り違え確認] 防災訓練: self  秋祭り: unread\n[開き直し] 防災訓練のお知らせ / （本文）/ 読みました（10月17日）\n[無効] このリンクは使えません / 班長さんに新しいリンクをもらってください。 / 横スクロール false\nスクリーンショットを撮り直しました: `workspace/trial-kairanban/docs/screens/resident-360.png`、`resident-360-done.png`",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T3: 同じ実行での班長画面です（360px）。\n[一覧] 読了 1/2世帯 / 山田さん / 本人が読んだ / 10月17日 8:57 / リンクをコピー / 佐々木さん / 未読 / 紙で読んだと記録する / リンクをコピー / 横スクロール false\n[コピー] コピーしました ✓ → http://localhost:3456/r/5aABaPwnPa9g_BqQ1N35f7kF9FsDZ4oc\n[絞り込み] [ '佐々木さん' ]\n[ダイアログ] 佐々木さんを「紙で読んだ」と記録します。よろしいですか？\n[代理記録後] 読了 2/2世帯 / … / 佐々木さん / 班長が代理記録 / 10月17日 8:57\nスクリーンショット: `workspace/trial-kairanban/docs/screens/admin-360.png`",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T5: [キー違い] キーが違います。班長さんに確認してください | 一覧表示: false → 正しいキー「k」を入れると一覧が出ます → [再訪（再読み込み）] キー欄表示: false  一覧: true。キーは localStorage に保存するので、別の端末ではもう一度入力が要ります。`pnpm test` は 7/7 通りました。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "eng-backend",
+      "text": "T7: 新しい DB でサーバーを起動しました（`PUBLIC_URL=https://kairan.example.jp ADMIN_KEY=k DB_PATH=<scratch>/t7.db PORT=3481 node src/main.ts`）。回覧を3件登録し、佐々木さんのリンクで curl を打った実際の出力です。\nGET  → 防災訓練のお知らせ unread unreadCount=2\nPOST → 防災訓練のお知らせ self unreadCount=2\nGET  → 秋祭りの寄付 unread unreadCount=1\nPOST → 秋祭りの寄付 self unreadCount=1\nGET  → ゴミ当番表 unread unreadCount=0\nPOST → ゴミ当番表 self unreadCount=0\nGET  → ゴミ当番表 self unreadCount=0\n古い順に進み、全部読んだあとは最新が「self」で出ます。開き直すと「読みました（○月○日）」が出る状態です。",
+      "phase": "build",
+      "iteration": 2
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T6: 新しい DB で起動し（`PUBLIC_URL=http://localhost:3456 ADMIN_KEY=k DB_PATH=<scratch>/t6.db PORT=3456 node src/main.ts`）、chrome headless の幅360pxで `docs/e2e-t6.mjs` を実行しました。以下は実際の出力です。\n[最初] まだ回覧がありません。上の「＋ 回覧を登録」から登録すると、ここに読んだ人の一覧が出ます。\n[世帯フォームの欄] [ '表示名（例：山田さん）' ]  ← 入力欄はこの1つだけです\n[空の表示名] 表示名を入れてください（例：山田さん） | aria-invalid: true\n[世帯追加] 伊藤さんを追加しました。回覧を登録すると、一覧に出ます。続けて追加できます。\n[空のタイトル] タイトルを入れてください / 本文を入れてください\n[登録後] 帯: 「秋祭りの寄付」を登録しました。下の一覧で、読んだ世帯が分かります。\n[登録後] 選択中: 秋祭りの寄付 | 並び: [ '秋祭りの寄付', '防災訓練のお知らせ' ]\n[登録後] 一覧: 読了 0/3世帯 / 山田さん / 未読 / 紙で読んだと記録する / リンクをコピー / リンクを作り直す / …（佐々木さん・伊藤さんも同じ） | 横スクロール false\n[追加後の並び] [ '山田さん', '佐々木さん', '伊藤さん', '鈴木さん' ] / 読了 0/4世帯\n[確認] 前のリンクは使えなくなります。よろしいですか？ （山田さん）\n[作り直し後] 帯: 山田さんのリンクを作り直しました。前のリンクは使えません。新しいリンクをコピーして渡してください。\n[作り直し後] フォーカス: 新しいリンクをコピー\n[新しいリンク] http://localhost:3456/r/9jB0xEHvu3dRAdYYrhVYenn2KRYUrQRc | 前と違う: true\n[キャンセル] 佐々木さんのリンクは変わらない: true\n[360px] 横スクロール false\n[前のリンク] このリンクは使えません / 班長さんに新しいリンクをもらってください。 | ボタン: false\n[新しいリンク] 防災訓練のお知らせ | ボタン: true  ← 健さんの T7 が入っているので、一番古い未読が出ています\nスクリーンショット: `workspace/trial-kairanban/docs/screens/admin-t6-registered.png`、`admin-t6-reissued.png`、`resident-t6-oldlink.png`",
+      "phase": "build",
+      "iteration": 2
+    },
+    {
+      "by": "eng-backend",
+      "text": "T10: 新しい DB で起動し（`PUBLIC_URL=http://localhost:3457 ADMIN_KEY=k DB_PATH=<scratch>/t10.db PORT=3457 node src/main.ts`）、`node docs/qr-camera-check.mjs` を実行しました。以下は実際の出力です。\n[print] 山田さん http://localhost:3457/r/KvSPOl6S… | 佐々木さん http://localhost:3457/r/cobBY0Ya… | 伊藤さん http://localhost:3457/r/6TL3tTbk…\n[作り直し] 佐々木さんの QR は新しいリンク: true\n[読み取り 正面/斜め/遠め] 山田さん・佐々木さん・伊藤さん: 9回とも OK\n[開く] QR のリンク: 防災訓練のお知らせ 11月3日 9時に公園へ集まってください。 読みました\n[開く] 前のリンク: このリンクは使えません 班長さんに新しいリンクをもらってください。\n読み取りに使った画像は `docs/screens/qr-camera-正面.png`、`qr-camera-斜め.png`、`qr-camera-遠め.png` です。印刷プレビューは `docs/screens/print-preview-a4-1.png` と `print.pdf` にあります。\nまだ確かめていないことがあります。実際のスマホの標準カメラでは読んでいません。ここにあるのは、デコーダーにかけた「カメラ相当」の結果だけです。",
+      "phase": "build",
+      "iteration": 2
+    },
+    {
+      "by": "eng-backend",
+      "text": "T9: src・public・deploy だけをまっさらなフォルダにコピーし、README の手順どおりに試しました（DB なし、node_modules なし）。以下は実際の出力です。\n== キーを作る → 新しい管理キー: 9kqt-s52g-fhzj / 設定ファイルの権限 600\n== 起動して回覧1件・山田さんを登録 → link=https://kairan.example.jp/r/hm9F… / 「読みました」→ 防災訓練 self\n== キーを変える → 新しい管理キー: jhhp-cgbj-3vuf → 再起動\n古いキー: 401  新しいキー: 200  住民リンク: 200\n== 動かしたままバックアップ → kairanban-2026-10-17.db\n== DB を消して起動 → 山田さん: 404\n== 復元して起動 → {\"household\":{\"name\":\"山田さん\"},…\"status\":\"self\",\"readAt\":\"2026-10-17T09:14:07.295Z\",\"unreadCount\":0}\n== 壊れた控えを指定 → 戻さず exit=1\n未検証のもの：systemd での自動起動、cron、Cloudflare のトンネル、ドメインの取得の4つです。実機と契約が要るためで、README と紙にもその旨を書いています。",
+      "phase": "build",
+      "iteration": 2
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T8: 新しい DB で起動しました（`PUBLIC_URL=http://localhost:3456 ADMIN_KEY=k DB_PATH=<scratch>/t8f.db PORT=3456 node src/main.ts`）。回覧3件と世帯2件を入れ、chrome headless の幅360pxで `docs/e2e-t8.mjs` を実行した実際の出力です。\n[開いた] 防災訓練のお知らせ | more: (なし) | 次を読む: false\n[押した1] 防災訓練のお知らせ | more: まだ読んでいない回覧があと2件あります | 次を読む: true | ボタン: 読みました（10月17日）\n  「次を読む」の高さ 72 px | 横スクロール false\n  → 次を読む: 秋祭りの寄付 / 寄付のお願いです。 | フォーカス: title\n[押した2] 秋祭りの寄付 | more: まだ読んでいない回覧があと1件あります | 次を読む: true\n  → 次を読む: ゴミ当番表 / 11月の当番表です。\n[押した3] ゴミ当番表 | more: (なし) | 次を読む: false | ボタン: 読みました（10月17日）\n[開き直す] ゴミ当番表 | more: (なし) | 次を読む: false | ボタン: 読みました（10月17日） | 横スクロール false\nスクリーンショット：`docs/screens/resident-t8-next.png`（あと2件と次を読む）、`resident-t8-last.png`（全部読んだあと）",
+      "phase": "build",
+      "iteration": 2
+    },
+    {
+      "by": "eng-backend",
+      "text": "T10: 森さんの操作をやり直しました。新しい DB で起動し（`PUBLIC_URL=http://localhost:3471 ADMIN_KEY=k DB_PATH=<scratch>/review.db PORT=3471 node src/main.ts`）、世帯3件と回覧1件を入れ、佐々木さんのリンクを作り直しました。そのあと、Chrome（幅360px）で班長画面の「QRを印刷」を押しました。実際の出力です。\n[班長画面] QRを印刷: QRを印刷（全世帯）\n[印刷ページ] 全3世帯分、3枚です（A4に1世帯ずつ）。リンクを作り直した世帯は、新しいQRになっています。 | フォーカス: 印刷する\n[紙1] 山田さんの回覧板 | 新しい回覧も、このQRから読めます。紙の回覧板も今までどおり回ります | 手書き欄: 班長の名前・電話番号 | 読み取り: OK\n[紙2] 佐々木さんの回覧板 | （同じ文言・同じ欄） | 読み取り: OK (作り直し後の新リンク: true)\n[紙3] 伊藤さんの回覧板 | （同じ文言・同じ欄） | 読み取り: OK\n[QRのリンク] 防災訓練のお知らせ unread\nPDF: Pages 3 / Page size 594.96 x 841.92 pts (A4)。QR の黒い部分は3枚とも 64.4mm（修正前は 56.3mm）\n生成したファイル：`docs/screens/print.pdf`（3ページ、作り直しました）、`docs/screens/print-preview-a4-qr8cm.png`（2枚目、佐々木さん）。\nまだ確かめていないこと：実機スマホの標準カメラと、iPhone Safari の印刷プレビュー。",
+      "phase": "review",
+      "iteration": 2
+    },
+    {
+      "by": "eng-backend",
+      "text": "T7: 住民のリンクが古い順に進むことは、build のときの DEMO（GET/POST で unreadCount が 2→1→0 と減り、全部読むと最新が self で出る）のとおりです。今回、T10 の確認でも作り直したリンクを開き、一番古い未読「防災訓練のお知らせ」が unread で出ることを確かめました。`pnpm test` は 22/22 です。",
+      "phase": "review",
+      "iteration": 2
+    },
+    {
+      "by": "eng-backend",
+      "text": "T9: 起動、キーの変更（古いキーは 401、新しいキーは 200、住民リンクは 200）、動かしたままのバックアップ、DB を消したあとの復元、壊れた控えでは戻さず exit=1。この5つは、build のときにまっさらなコピーで出した結果のとおりです。今回はコードを触っていないので、やり直していません。未検証は systemd・cron・トンネル・ドメインの4つです。",
+      "phase": "review",
+      "iteration": 2
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T6: まっさらな DB で起動し（`PUBLIC_URL=http://localhost:3456 ADMIN_KEY=k DB_PATH=<scratch>/mori.db PORT=3456 node src/main.ts`）、chrome headless の幅360pxで新しく足した `docs/e2e-mori.mjs` を実行しました。森さんの操作を、キーボード中心で画面だけで行っています。実際の出力です。\n[1 開く] キー欄: true | フォーカス: key\n[1 キー] まだ回覧がありません。上の「＋ 回覧を登録」から登録すると、ここに読んだ人の一覧が出ます。\n[2 世帯] 帯: 山田さんを追加しました。回覧を登録すると、一覧に出ます。続けて追加できます。 | 同じ名前: 伊藤さんはもう登録されています。区別できる名前にしてください（例：伊藤さん（2丁目））\n[3 回覧] 帯: 「防災訓練のお知らせ」を登録しました。下の一覧で、読んだ世帯が分かります。\n[3 回覧] 一覧: 読了 0/2世帯 / 伊藤さん 未読 紙で読んだと記録する リンクをコピー リンクを作り直す 山田さん 未読 … | 横スクロール false\nスクリーンショット：`workspace/trial-kairanban/docs/screens/admin-mori-flow.png`",
+      "phase": "review",
+      "iteration": 2
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T10: （印刷ページの部分）上の続きで、班長画面の「QRを印刷（全世帯）」を押しました。\n[4 印刷] 全2世帯分、2枚です（A4に1世帯ずつ）。… | フォーカス: 印刷する\n[4 印刷] 紙の枚数: 2 | 横スクロール false\n[4 印刷] 1枚目のURLは print API と同じ: true\nA4 の PDF は2ページでした（`pdfinfo` で Pages: 2）。iPhone Safari の印刷プレビューは未確認です。",
+      "phase": "review",
+      "iteration": 2
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T2: 上の続きで、印刷ページ1枚目の URL を住民として開きました。\n[5 住民] 防災訓練のお知らせ | 読みました | 本文の文字 22px\n[5 住民 押した] …公民館前の広場で防災訓練を行います。 読みました（10月17日） ありがとうございます。読んだことを班長さんに伝えました",
+      "phase": "review",
+      "iteration": 2
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T5: 上の続きで、班長画面を再読み込みしました（キーは聞かれません）。\n[6 班長 再読込] キー欄: false | 読了 1/2世帯 / 伊藤さん 本人が読んだ 10月17日 9:20 リンクをコピー リンクを作り直す 山田さん 未読 紙で読んだと記録する …",
+      "phase": "review",
+      "iteration": 2
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T8: コードは変えていないので、build のときの `docs/e2e-t8.mjs` の結果のままです（あと2件 → 次を読む → あと1件 → 最後は両方とも出ない。「次を読む」の高さは 72px、横スクロールなし）。スクリーンショットは `docs/screens/resident-t8-next.png` と `resident-t8-last.png` です。",
+      "phase": "review",
+      "iteration": 2
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T12: 新しい DB で起動し（`PUBLIC_URL=https://kairan.example.jp ADMIN_KEY=k DB_PATH=<scratch>/t14.db PORT=3456 node src/main.ts`）、80世帯を入れました。`docs/e2e-t14.mjs` で印刷ページを開き、印刷時の大きさを測った実際の出力です。\n[開く] 全80世帯分、80枚です（A4に1世帯ずつ）。… | 最初の選択: 1 | 横スクロール false\n[A4に1世帯] カメラの行 18pt / 新しい回覧の行 18pt / URL 9pt | QR 黒い部分 64.3mm（41マス） | はみ出した紙 0\n「カメラを向けて…」は「スマホのカメラをこのQRに向けて、／出てきた文字を押すと開きます。」の2行に分け、太字にしました。前は「開／きます」の途中で折り返していました。\nスクリーンショット：`docs/screens/print-t12-a4-1-01.png`",
+      "phase": "wrapup",
+      "iteration": 2
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T14: 上の続きです。キーボードで「A4に2世帯」を選び（Space）、PDF にしました。\n[2世帯を選ぶ] 全80世帯分、40枚です（A4に2世帯ずつ）。… | 横スクロール false\n[A4に2世帯] カメラの行 15pt / 新しい回覧の行 15pt / URL 9pt | QR 黒い部分 62.1mm（41マス） | はみ出した紙 0\npdfinfo: 1世帯 Pages 80 / 2世帯 Pages 40\n2世帯版の1ページ目を 150dpi の画像にして、上下の QR を jsqr で読みました。\n上: https://kairan.example.jp/r/Xfa8R-Cb4N5lX_f9K1EW11a4Qn1-6N_t（API の「1番の家さん」と一致）\n下: https://kairan.example.jp/r/Jduji3ZfripP0K0U-Oreq2524D9cCNXw（API の「2番の家さん」と一致）\n各世帯分は、上に「○○さんの回覧板」、左に QR、右に説明の2つと手書き欄、下に URL です。真ん中に「✂ きりとり線」の点線を入れました。切ったあとも、両方の紙の一番上に名前があります。\nファイル：`docs/screens/print-t14-a4-2-01.png`（1ページ目）、`docs/screens/print-a4-2-80世帯.pdf`（40ページ）",
+      "phase": "wrapup",
+      "iteration": 2
+    }
+  ],
+  "notes": {
+    "pm": [
+      "トシ子さん: 先週火曜に山田さんから受け取り、老眼鏡をかけて居間で全部読んで認印を押した。次の佐々木さんが留守で、靴箱の上に一晩置き、翌朝手渡した。気がかりは「うちで止めると後ろの方に迷惑がかかる」こと。スマホは孫に入れてもらったが慣れておらず、紙のほうが落ち着くと言っている。",
+      "森さん: 先月中旬に全9班・約80世帯へ回覧。2週間後に第6班から「来ていない」と言われて止まりに気づいた。第5班の班長が、入院中のAさんの郵便受けに入れたままにしていた。班長に一軒ずつ電話して探し、コピーを作り直して第6班以降には自分で届けた。回覧の所在と誰が読んだかが分からず、印鑑欄は戻ってきて初めて見る。班長は毎年交代で、なり手が少ない。",
+      "トシ子さん: 佐々木さん宅へは火曜夕方と翌朝の計2回伺った。留守でも昼寝中かもしれず、もう一度押すのは悪い気がした。一晩置いた間は「無くなったりしないかしら」と気になっていた。スマホは昨日、LINEで娘にスタンプを返しただけ。居間に一人で、老眼鏡をかけて顔を近づけて見ている。困ったときは孫に電話するが、毎回は申し訳なく思っている。",
+      "森さん: 先々月のごみ分別の回覧は、戻った時点で80世帯中7世帯の印が空だった。「読んだ」が4軒、「見ていない」が2軒、1軒は不在で、確認に丸2日かかった。印が空でも「読んでいない」のか「押し忘れ」なのか区別できない。スマホ率は体感6割だが、役員や若い世帯に偏っていて、70代以上の単身世帯は2割未満。町内LINEは約30人、防災訓練のメール出欠は約半数の返信。住民の連絡先を外に預けることには抵抗がある。",
+      "ジョブ仮説: (1) 受け取った人は「後ろの人に迷惑をかけずに、確実に次へ渡したい」。(2) 班長は「回覧が今どこにあり、誰が読んだかを手作業なしで把握したい」。制約は、70代以上の単身世帯は紙のままの可能性が高いことと、名簿の扱いに慎重であること。",
+      "未確認: 紙を使う人と使わない人が混在するときの運用。班長が代理で「読んだ」を記録してよいか。名簿をどこまで入力してよいか。これらは計画フェーズで決める。",
+      "レビュー1回目（10/17）：T2〜T5 はユーザーに見せられる。T1 の画面からの再発行は T6 待ち。未読の回覧が見えなくなる問題は、健さんが回覧3件で再現した。対応として「一番古い未読から出す」と「あと○件／次を読む」に決めた（T7・T8）。ユーザーテストでは、トシ子さんが押した後に次の回覧に気づけるか、森さんが代理記録とコピーに迷わないかを見る。",
+      "受け入れ1回目（10/17）：トシ子さんは ACCEPT。読む・押すはできた。不安は「リンクの受け取り方」と「次の回覧でどこを開くか」。森さんは REJECT。条件は T6、運用場所と費用を紙1枚で（月額課金は不可、年数千円まで）、QR の印刷、キーの引き継ぎ手順。2人とも「QR の紙を郵便受けに」に行き着いた。T9（運用の紙）と T10（QR 印刷）を健さんに切った。CSV と画面上の班長の電話番号は見送り、電話番号は紙に手書き欄を作る。2回目の受け入れでは、森さんが一人で回覧を登録して QR を刷れるか、トシ子さんが QR から開けるかを見る。",
+      "計画2回目（10/17）：担当は、ひかりさんが T6 → 印刷ページ → T8、健さんが T7 → T10 の API → T9。置き場所は町内会の Raspberry Pi などを会長宅か集会所に置き、無料トンネルと町内会名義のドメインで外から開ける。年3,500円前後で、機械代1万5千円前後は別。トンネルとドメインの手順は未検証でよいが、紙にはアカウントの名義（町内会のメール）と、ドメインの更新月・更新する人を書かせる。`PUBLIC_URL` は必須で、QR もコピーも同じ完全な URL を使う。QR は自前の SVG で作り、開発のときだけデコーダーで確かめ、最後は実機のカメラで読む。受け入れ2回目で見るのは、森さんが一人で登録して印刷できるか、トシ子さんが QR から読めるか。",
+      "レビュー2回目（10/17）：T1〜T10は条件を満たしたので、ユーザーに見せられる。T10のカメラ確認は「実カメラ相当」（デコーダーで9回OK）で、実機スマホのカメラとiPhone Safariの改ページは未確認のまま。紙のURLはlocalhostなので、本番はPUBLIC_URLを入れて刷り直す。同じ表示名を止めているのは画面側だけ。受け入れ2回目で見るのは、①森さんが一人で登録から印刷までできるか、②トシ子さんがQRから読んで「次を読む」に気づけるか。",
+      "受け入れ2回目（10/17）：トシ子さんも森さんも ACCEPT。ただし2人とも「本番ドメインの紙を実機スマホ（らくらくスマホを含む）で読めなかったら取り消す」という条件付き。T11（実機確認）を公開の条件にした。残りは T12（紙の説明の行を大きく）、T13（機械係の代わりの人と引き継ぎ手順）、T14（A4 2分割）。機械代1万5千円は森さんが総会に諮る。森さんは、コマンドの操作が機械係だけに偏ることを気にしている。「作り直す」の見た目は保留。",
+      "まとめ（10/17）：T1〜T10、T12〜T14 は done。T11（本番ドメインの紙を、森さんのスマホとらくらくスマホで読む。2世帯の紙と iPhone Safari の改ページも見る）だけが残っていて、これが公開の条件。README に明記済み。人に決めてもらうことは、ドメイン名（町内会のメールで取る）、実機で確かめる日取り、機械代1万5千円の総会への諮り、運用の紙の機械係・代わりの人の欄。見送ったのは「作り直す」の見た目、サーバー側で同じ名前を止めること、CSV、編集と削除、通知。"
+    ],
+    "eng-backend": [
+      "T1 の技術方針: Node 標準のみ(node:http, node:sqlite, node:crypto, node:test)。トークンは randomBytes(24) の base64url。管理 API は環境変数の管理キーで保護する案を PM に確認中。読了の二重押しは最初の日時を保持し、代理記録は本人の読了で上書きする案を確認中。",
+      "build 1回目: 画面(resident.js/admin.js)と API は結合確認済み。/api/admin/* の別名は server.ts にありテスト済み、7/7 通過。残り: 住民画面の circular:null 表示と POST に circularId を入れること(ひかりさん)。班長画面に回覧・世帯の登録と再発行の UI が無い件は PM に判断を依頼中。",
+      "review 1回目: 新しい DB で T1/T4 を curl で確認済み（2回押し・代理記録の上書き・本人読了への代理記録・401・再発行で旧リンク 404）。テストは 7/7。PM の判断待ちが2件ある。(1) T6（班長画面の登録・再発行 UI。ひかりさんが担当を申し出ている）。(2) `/r/<token>` は最新の回覧だけを出すので、未読の古い回覧に行けない。「未読の一番古い回覧を出す」案を出した（server.ts の residentView とテスト1件）。",
+      "2回目の計画で提案した内容：置き場所は Raspberry Pi などを会長宅か集会所に置き、Cloudflare の無料トンネルと町内会名義のドメインを使う案（年3,500円前後の目安、初期費用は1万5千円前後。値段は T9 で確かめる）。T9 のトンネルとドメインの手順は「未検証」とする扱いを PM に確認中。T10 は QR を自前の SVG で作る（バージョン5・誤り訂正M、300行前後、1.5日。確認には開発時だけのデコーダーを使う）。`PUBLIC_URL` は必須にして、QR とコピーの両方で使う。担当分け：私が `GET /api/admin/print` → `[{name,url,qrSvg}]`、ひかりさんが print.html と「QRを印刷」ボタン。T7 の応答：GET と POST の両方に `unreadCount` を入れる。「次を読む」は同じ GET を呼び直す。提案した順番は T7 → T10 の API → T9。",
+      "build 2回目 round1: T7 が完了し、テストは 10/10。`store.unreadCirculars` と `residentView` に `unreadCount` を入れた（GET/POST とも）。`PUBLIC_URL` を必須にした（`normalizePublicUrl` は server.ts、main.ts で検証）。管理 API の link/url は完全な URL で、テスト用の PUB は https://kairan.example.jp。README も更新した。ひかりさんには e2e-check.mjs の起動例に PUBLIC_URL を足すよう依頼した。次は T10 の print API（自前 QR、v5-M、SVG は viewBox のみ）→ T9。",
+      "build 2回目 round2: T10 の API（`src/qr.ts` の自前 QR と `GET /api/admin/print`）と T9（`docs/運用のしかた.md`、`src/tool.ts` の key/backup/restore、`deploy/`）が完了し、テストは 22/22。まっさらなコピーで起動・キーの変更・バックアップ・復元を通した。カメラ相当の確認は qr-camera-check.mjs で 9/9 OK。未検証は実機スマホのカメラ・systemd・cron・トンネルとドメイン。restore の壊れた控えの文言は日本語にそろえた。README の重複していた手順は1つにまとめた。package.json に typecheck のスクリプトは無い。",
+      "review 2回目：印刷の QR の黒い部分が 5.6cm だった。SVG の白い余白4マスが CSS の幅に含まれるため。style.css の印刷用 .qr を 8cm・padding 0.2cm にして 64.4mm にした（外寸 8.4cm は変わらない）。3世帯で A4 3ページ、テストは 22/22。docs/screens/print.pdf は作り直し、print-preview-a4-qr8cm.png を足した。この環境には WebKit が無く、Safari は確かめられない。未確認は実機カメラと Safari の改ページ。print.pdf の URL は localhost なので、スマホで開くところまで見るには LAN の IP を PUBLIC_URL にして刷り直す。確認用のスクリプトは scratchpad の review-print.mjs。pkill -f は自分のシェルまで止めるので、サーバーは PID を控えて kill する。",
+      "wrapup 2回目：T13 が終わった（運用の紙の 7 節、代わりの人の欄。Chrome で A4 10.5pt にして 1 ページ、`docs/screens/運用のしかた-a4.pdf`）。T11 は本番ドメインと実機が無いので未了。README に「公開の条件」を書いた。人に決めてもらうこと：ドメインを取ること、実機で確かめる日取り。テストは 22/22。"
+    ],
+    "eng-frontend": [
+      "画面は ビルドなしの HTML + TypeScript で、node:http から静的配信する。住民画面の URL は /r/<token>。管理キーの入力画面とエラー文言は T3 に含める。",
+      "画面は workspace/trial-kairanban/public/ にある(resident.html/js, admin.html/js, style.css)。ブラウザ側は .ts を直接実行できないので @ts-check 付き JS にした。API は健さんに提案済み。GET /api/r/<token>、POST /api/r/<token>/read、管理 API は X-Admin-Key ヘッダで /api/admin/circulars、/api/admin/circulars/<id>、/api/admin/circulars/<id>/households/<hid>/proxy。status は unread / self / proxy。サーバー結合後の実ブラウザ確認と 360px の目視が未実施。",
+      "T2/T3/T5 は完了し、実ブラウザの幅360pxで確認済み。chrome-headless-shell は scratchpad の pw/ にあり、`docs/e2e-check.mjs` で確認を再実行できる。住民 POST は circularId を送る。CSS 先頭に `[hidden]{display:none !important}` がある（消すとボタンが出てしまう）。次の候補は班長画面の「回覧登録・世帯追加・リンク再発行」で、私が担当を申し出た。API は POST /api/circulars、POST /api/households、POST /api/households/<id>/reissue（いずれも X-Admin-Key が必要）。",
+      "レビューのフェーズで、新しい DB を使って e2e をやり直した（T2/T3/T5 は全条件 OK、テスト 7/7）。スクリーンショットは docs/screens/ に撮り直した。chrome は scratchpad/pw/chrome-headless-shell/linux-130.0.6723.58/…/chrome-headless-shell、playwright は scratchpad/pw/node_modules。e2e は docs/e2e-check.mjs を pw/ にコピーして実行する（ポートは 3456 固定）。未決のこと：T6（回覧登録・世帯追加・再発行の画面）。未読の古い回覧から出す案には賛成で、「あと○件・次を読む」を出すために API へ unreadCount を足すよう依頼した。",
+      "第2回の計画：私の担当は T6 → print.html（T10 の画面の部分）→ T8 の順。健さんは T7 → `GET /api/admin/print`（[{name,url,qrSvg}]）→ T9。T6 では、登録したら一覧をその回覧に自動で切り替え、「『○○』を登録しました」の帯を出す。回覧の選択は新しい順。T8 の「次を読む」は同じ GET /api/r/<token> を呼び直すだけ（POST の応答にも unreadCount が入る）。健さんには、PUBLIC_URL を付けた完全な url を管理 API から返してもらうよう依頼した（今の copyLink は location.origin を足している）。QR の SVG は viewBox だけにし、印刷では1辺 6cm 以上にする。",
+      "T6 完了（10/17）。admin.html に details の「＋ 回覧を登録」「＋ 世帯を追加」と #banner を足した。admin.js の start(selectId) で、登録した回覧を選ぶ。作り直したあとは `reissued` にその世帯の id を入れ、その行を「新しいリンクをコピー」にしてフォーカスを移す。コピーは fullUrl(h) で、url があれば url、なければ link を使う。e2e は docs/e2e-t6.mjs で、起動に PUBLIC_URL が必須（健さんが実装済み）。T7 もサーバーに入っている。次は print.html、その次が T8。",
+      "T8 完了（10/17）。resident.js の showMore(n) で #more と #next を出し分ける。「次を読む」は load('') で GET を呼び直し、タイトルにフォーカスを移す。print.html/print.js も完成していて、admin の .print-link から開く。?sample=1 で見本の組版になる。印刷時の QR は 7cm、2世帯で PDF は2ページ。e2e は docs/e2e-t8.mjs（pw/ にコピーし、S=screens と CHROME を渡して実行する）。テストは 22/22。iPhone Safari の印刷プレビューは未確認。",
+      "レビュー（第2回、10/17）：森さんの順番を通しで確かめる `docs/e2e-mori.mjs` を足した（pw/ にコピーし、S と CHROME を渡して実行する。ポートは 3456）。同じ表示名の世帯は admin.js で弾くようにした。GET /api/households で事前に確認していて、サーバー側は変えていない。健さんは印刷時の .qr を 8cm＋padding 0.2cm に直した（黒い部分は 64.4mm）。注意：ポート 3456 に古いサーバーが残っているとテストや e2e が落ちる。pkill -f \"node src/main.ts\" はエンジンの run も巻き込むので使わず、PID を指定して止める。未確認のものは iPhone Safari の改ページと実機カメラ。",
+      "まとめ（10/17）：T12・T14 完了。print.js では、説明と手書き欄を .side にまとめた（how も note-line で2行）。2世帯版は body.per-2 で、印刷時に .sheet を高さ 133mm の grid にする（QR 7.7cm、黒い部分は 62.1mm）。切り取り線は奇数番目の紙の border-bottom と ::after。確認は docs/e2e-t14.mjs（N=世帯数、S、CHROME。ポートは 3456）。80世帯で 80ページ／40ページ。未確認：実機カメラ（2世帯の紙を含む）と iPhone Safari。これは T11 で健さんが確かめる。"
+    ],
+    "user-elder": [
+      "住民画面は字が大きくボタン1つで使えた。リンクの受け取り方（LINE/QR紙）、次回の開き方、班長の連絡先の表示をお願いした。未読がたまる件は T7・T8 で直る予定。",
+      "2回目の受け入れで accept した（条件つき）。紙の説明の行（カメラを向けて押すと開く）の字が小さいので大きくしてほしいと伝えた。本物のスマホのカメラではまだ確かめていない。本番の紙ができたら、最初の1回は森さんか孫と一緒に読む。"
+    ],
+    "user-chief": [
+      "受け入れ条件として伝えたこと：T6（画面から登録）、置き場所と費用の説明（月額課金は不可）、リンクの QR 印刷。要望として伝えたこと：管理キーの引き継ぎ手順、CSV 出力。",
+      "2回目の受け入れは条件付きで ACCEPT にした。条件は3つ。①本番ドメインの紙を実機（らくらくスマホ含む）で読む確認。読めなければ取り消す。②機械係が不在のときの代わりの人と、引き継ぎ手順を紙に足す。③A4を2分割で印刷できるようにする（80世帯分）。機械代の1万5千円は私が総会に諮る。CSV 出力はまだ入っていない。"
+    ]
+  },
+  "historyWindow": 40
+}

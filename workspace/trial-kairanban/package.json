@@ -1,0 +1,15 @@
+{
+  "name": "trial-kairanban",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "start": "node src/main.ts",
+    "test": "node --test --disable-warning=ExperimentalWarning test/*.test.ts"
+  },
+  "devDependencies": {
+    "jsqr": "1.4.0"
+  }
+}

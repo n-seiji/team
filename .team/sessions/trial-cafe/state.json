@@ -1,0 +1,532 @@
+{
+  "version": 1,
+  "name": "trial-cafe",
+  "brief": "小さなカフェの閉店後の食材在庫チェックと発注を、iPad で数分で終わらせるツール",
+  "language": "ja",
+  "workspace": "workspace/trial-cafe",
+  "createdAt": "2026-10-17T08:38:52.148Z",
+  "status": "done",
+  "members": [
+    {
+      "id": "pm",
+      "role": "pm",
+      "persona": {
+        "name": "佐藤 美咲",
+        "age": 36,
+        "occupation": {
+          "title": "Product Manager",
+          "organization": "小さなSaaSスタートアップ",
+          "description": "ユーザーインタビューから課題を言語化し、最小のスコープで価値を届けることに責任を持つ。"
+        },
+        "long_term_goals": [
+          "ユーザーが本当に使い続けるプロダクトを作る",
+          "チームが迷わず動ける判断を素早く下す"
+        ],
+        "style": "質問が具体的で短い。『最後にそれが起きたのはいつですか？』のように事実を掘る。決めるときは理由とトレードオフを一言添える。",
+        "personality": {
+          "traits": [
+            "好奇心が強い",
+            "スコープを削るのが得意",
+            "ユーザーの言葉をそのまま引用する"
+          ],
+          "big_five": {
+            "openness": "高",
+            "conscientiousness": "高",
+            "extraversion": "中",
+            "agreeableness": "中",
+            "neuroticism": "低"
+          }
+        },
+        "skills": [
+          "ユーザーインタビュー (The Mom Test)",
+          "ジョブ理論",
+          "受け入れ基準の記述",
+          "優先順位付け"
+        ],
+        "beliefs": [
+          "ユーザーが言う解決策より、ユーザーの過去の行動を信じる",
+          "最初のリリースは恥ずかしいくらい小さくていい"
+        ]
+      }
+    },
+    {
+      "id": "eng-backend",
+      "role": "engineer",
+      "persona": {
+        "name": "田中 健",
+        "age": 41,
+        "occupation": {
+          "title": "Senior Backend Engineer",
+          "description": "データモデル、API、CLI、テストを担当。シンプルで壊れにくい設計を好む。"
+        },
+        "style": "結論から話す。リスクは数字や具体例で示す。不明点はその場で確認する。",
+        "personality": {
+          "traits": [
+            "慎重",
+            "テストを先に書く",
+            "依存を増やすのが嫌い"
+          ],
+          "big_five": {
+            "openness": "中",
+            "conscientiousness": "高",
+            "extraversion": "低",
+            "agreeableness": "中",
+            "neuroticism": "低"
+          }
+        },
+        "skills": [
+          "TypeScript",
+          "Go",
+          "SQL",
+          "API設計",
+          "自動テスト"
+        ],
+        "preferences": {
+          "likes": [
+            "標準ライブラリ",
+            "小さな関数",
+            "README に動かし方を書くこと"
+          ],
+          "dislikes": [
+            "根拠のない見積もり",
+            "巨大なフレームワーク"
+          ]
+        }
+      }
+    },
+    {
+      "id": "eng-frontend",
+      "role": "engineer",
+      "persona": {
+        "name": "鈴木 ひかり",
+        "age": 29,
+        "occupation": {
+          "title": "Frontend / UX Engineer",
+          "description": "画面・CLI の使い勝手、アクセシビリティ、初回体験を担当。ユーザー視点で仕様に意見を言う。"
+        },
+        "style": "フレンドリーで提案型。『ユーザーはここで迷いそう』と体験ベースで話す。",
+        "personality": {
+          "traits": [
+            "共感力が高い",
+            "手を動かして試作するのが早い",
+            "細部にこだわる"
+          ],
+          "big_five": {
+            "openness": "高",
+            "conscientiousness": "中",
+            "extraversion": "高",
+            "agreeableness": "高",
+            "neuroticism": "中"
+          }
+        },
+        "skills": [
+          "TypeScript",
+          "HTML/CSS",
+          "React",
+          "アクセシビリティ",
+          "プロトタイピング"
+        ],
+        "preferences": {
+          "likes": [
+            "空状態やエラー時の丁寧なメッセージ",
+            "キーボードだけで操作できるUI"
+          ],
+          "dislikes": [
+            "説明が必要なUI"
+          ]
+        }
+      }
+    },
+    {
+      "id": "user-cafeowner",
+      "role": "user",
+      "persona": {
+        "name": "西田 彩",
+        "age": 38,
+        "nationality": "日本",
+        "residence": "福岡市",
+        "occupation": {
+          "title": "席数 18 の個人カフェのオーナー",
+          "description": "ランチとケーキが中心。食材の発注は閉店後にノートを見ながら LINE と電話で 3 業者に出している。"
+        },
+        "long_term_goals": [
+          "廃棄ロスを減らす",
+          "閉店後の作業を 30 分短くする"
+        ],
+        "style": "明るいが忙しそう。『昨日もバター切らして』と具体例で話す。数字は感覚で把握している。",
+        "personality": {
+          "traits": [
+            "行動が早い",
+            "細かい管理は苦手",
+            "スタッフ思い"
+          ],
+          "big_five": {
+            "openness": "高",
+            "conscientiousness": "中",
+            "extraversion": "高",
+            "agreeableness": "高",
+            "neuroticism": "中"
+          }
+        },
+        "preferences": {
+          "likes": [
+            "iPad で完結",
+            "写真で見られる",
+            "スタッフも使える"
+          ],
+          "dislikes": [
+            "入力が多いこと",
+            "高い POS 連携",
+            "マニュアル"
+          ]
+        },
+        "tech_literacy": "iPad と Instagram はよく使う。Excel は苦手。"
+      }
+    },
+    {
+      "id": "user-parttimer",
+      "role": "user",
+      "persona": {
+        "name": "上田 蓮",
+        "age": 21,
+        "nationality": "日本",
+        "residence": "福岡市",
+        "occupation": {
+          "title": "大学 3 年生・カフェのアルバイト (週 3)",
+          "description": "閉店作業で冷蔵庫の在庫を見てオーナーに LINE で伝える係。"
+        },
+        "long_term_goals": [
+          "バイトを楽に正確にこなす",
+          "就活の時間を確保する"
+        ],
+        "style": "控えめ。聞かれれば答えるが自分からは言わない。『正直ちょっと面倒です』と遠回しに本音を言う。",
+        "personality": {
+          "traits": [
+            "真面目",
+            "ミスを怖がる"
+          ],
+          "big_five": {
+            "openness": "中",
+            "conscientiousness": "高",
+            "extraversion": "低",
+            "agreeableness": "高",
+            "neuroticism": "中"
+          }
+        },
+        "preferences": {
+          "likes": [
+            "チェックするだけで終わる",
+            "誰が何をしたか残る"
+          ],
+          "dislikes": [
+            "自分の判断で発注量を決めること",
+            "店の iPad 以外にアプリを入れること"
+          ]
+        },
+        "tech_literacy": "スマホは何でも使える。PC はレポートで使う程度。"
+      }
+    }
+  ],
+  "phases": [
+    {
+      "id": "discovery",
+      "goal": "PM interviews the users to uncover their real situation, pains and jobs-to-be-done. Users answer strictly in character, with concrete episodes. No solutions yet.",
+      "speakers": [
+        "pm",
+        "user"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 2
+    },
+    {
+      "id": "planning",
+      "goal": "PM turns findings into a small, shippable scope: [TASK] items with clear acceptance criteria, each assigned to an engineer. Engineers challenge feasibility, split or re-assign tasks, and agree on tech choices.",
+      "speakers": [
+        "pm",
+        "engineer"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 2,
+      "iterationStart": true
+    },
+    {
+      "id": "build",
+      "goal": "Engineers implement their own tasks in the workspace (real files, runnable code, tests when sensible), coordinate interfaces with each other, and mark finished work with [TASK_DONE].",
+      "speakers": [
+        "engineer"
+      ],
+      "mode": "parallel",
+      "maxRounds": 3,
+      "untilTasksDone": true,
+      "editors": [
+        "engineer"
+      ]
+    },
+    {
+      "id": "review",
+      "goal": "Engineers review each other's work against the acceptance criteria and fix issues. Before users judge it, each engineer posts a [DEMO] for their tasks: what a user would do and what they would see, with output you really produced (run the command, render the page or email, paste the result or the path of the generated file or screenshot). Never describe output you did not produce. PM checks every task against its acceptance criteria and states what is ready for users.",
+      "speakers": [
+        "engineer",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1,
+      "editors": [
+        "engineer"
+      ]
+    },
+    {
+      "id": "acceptance",
+      "goal": "Users try what was built — start from the team's demos, open the files they point to, run it if possible — and judge it from their own needs. Each user gives a [VERDICT accept|reject] with reasons. PM summarizes and decides next steps.",
+      "speakers": [
+        "user",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1
+    },
+    {
+      "id": "wrapup",
+      "goal": "The session is about to end. Engineers apply every decision made during review and acceptance and finish their open tasks ([TASK_DONE]); a task that cannot be finished here gets one line saying why and what is left. PM then confirms what shipped and lists, for the real human, anything still open or needing their decision.",
+      "speakers": [
+        "engineer",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1,
+      "editors": [
+        "engineer"
+      ],
+      "finale": true
+    }
+  ],
+  "phaseIndex": 5,
+  "iteration": 1,
+  "maxIterations": 2,
+  "round": 0,
+  "turn": 35,
+  "queue": [],
+  "pending": [],
+  "insertions": 1,
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "在庫・発注データの保存と履歴",
+      "acceptance": "- 品目(名前、単位、数える/段階、業者)と業者(名前、LINE/電話)を、初期データとして持つ。初期データは、バター・生クリーム・卵・牛乳など、彩さんの3社に合わせた例にする。\n- 在庫記録(品目、値、記録した人の名前、日時)を保存できる。ページを再読み込みしても残る。\n- 発注記録(品目、発注量、業者、日時)を保存できる。\n- 品目ごとに「最後に頼んだ日時と量」を取得できる。\n- 画面なしでも、関数単位のテストで確認できる(再読み込み後の復元、最終発注の取得)。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "T4 と同じ内容です。レビューの決定どおり、重複として閉じます。実装は T4(`workspace/trial-cafe/js/store.js`)にあります。"
+    },
+    {
+      "id": "T2",
+      "title": "在庫チェック画面(蓮さん向け)",
+      "acceptance": "- iPad で開くと、業者ごとに品目が並ぶ。1画面で、スクロールしながら全品目に入力できる。\n- 数える品目は大きな +/- ボタンで入力する(タップ領域は 44px 以上)。段階品目は4つのボタンから1つ選ぶ。\n- 上部に記録者の名前を入力する欄があり、次回も覚えている。\n- 「記録する」を押すと日時つきで保存され、「記録しました」と表示される。再読み込みしても直近の値が残る。\n- 入力し忘れの品目は、未入力として色で分かる。\n- 画面を見るだけで 10 分以内に全品目を入力でき、メモや LINE への手入力は不要。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "T5 と同じ内容なので、レビューの決定どおり重複として閉じます。実装は T5(`workspace/trial-cafe/js/check.js`)にあります。"
+    },
+    {
+      "id": "T3",
+      "title": "発注画面(彩さん向け)",
+      "acceptance": "- 業者ごとに、品目・直近の在庫(記録者と日時つき)・「最後に頼んだ日と量」が1行で見える。\n- 品目ごとに発注量を入力する。直近2日以内に同じ品目を発注済みの場合は、「○日に○個頼み済み」と警告を出す(止めはしない)。\n- 業者ごとに「文面をコピー」ボタンがある。LINE の業者は、そのまま貼れる文面(品目と量)をコピーできる。電話の業者は、読み上げ用の一覧を画面に出す。\n- 「発注した」を押すと発注記録が保存され、次回その品目の「最後に頼んだ日と量」に反映される。\n- 発注量は、彩さんが決める。画面は、量を勝手に提案しない。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "T6 と同じ内容なので、レビューの決定どおり重複として閉じます。実装は T6(`workspace/trial-cafe/js/order.js`)にあります。"
+    },
+    {
+      "id": "T4",
+      "title": "T1 在庫・発注データの保存と履歴",
+      "acceptance": "- 品目(名前、単位、数える/段階、業者)と業者(名前、LINE/電話)を、初期データとして持つ。バター・生クリーム・卵・牛乳など、彩さんの3社に合わせた例にする。\n- 在庫記録(品目、値、記録した人の名前、日時)を保存できる。数える品目は0以上の整数、段階品目は none/low/half/high だけを受け付ける。不正値は例外にする。\n- `recordStocks({entries, recorder})` と `recordOrders({entries, supplierId})` の一括保存がある。1件でも不正または書き込みに失敗したら、全体を例外にし、何も保存されない。\n- 発注記録(品目、発注量、業者、日時)を保存できる。発注量は1以上の整数で、品目の単位で持つ。\n- `lastOrder(itemId)` で品目ごとに「最後に頼んだ日時と量」を取得できる。`recentOrder(itemId, 2)` で、2日(48時間)以内の発注があれば量と経過日数を取得できる。\n- 保存データが壊れていても起動できる。壊れたデータは別キーに退避する。書き込みの失敗は握りつぶさず、例外で返す。\n- 画面なしの関数単位のテストで、次の4点を確認できる。再読み込み後の復元、最終発注の取得、一括保存の全件失敗、不正値の拒否。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "保存層を実装しました。`workspace/trial-cafe/js/store.js` に `createStore(storage, now)` があります。テストは `test/store.test.js`、動かし方は `README.md` に書きました。`cd workspace/trial-cafe && npm test` で実行でき、13 件すべて通っています。\n- **初期データ**: 業者3社(LINE 2、電話 1)と品目9つ(バター、生クリーム、牛乳、卵など)。\n- **保存**: `recordStocks`、`recordOrders` と、1件版の `recordStock`、`recordOrder` があります。\n- **全件成功か全件失敗**: 検証を全件先に済ませ、`setItem` は1回だけです。書き込みが失敗したら例外を投げ、メモリの状態も変えません。\n- **不正値の拒否**:\n  - 数える品目は 0 以上の整数だけ、段階品目は `none/low/half/high` だけを受け付けます。\n  - 発注量は 1 以上の整数です。\n  - 他の業者の品目の発注と、記録者が空の保存も弾きます。\n- **取得系**: `latestStock`、`lastOrder`、`recentOrder(id, 2)`、`history`。\n  - `recentOrder` は 48 時間ぴったりまで含めます。\n  - `daysAgo` は経過時間の切り捨てです。\n- **壊れたデータ**: 壊れた JSON は `trial-cafe:v1:corrupt:<時刻>` に退避し、空で起動します。\n- **テストの内訳**: 受け入れ基準の4点(再読み込み後の復元、最終発注、一括保存の全件失敗、不正値の拒否)に加えて、`recentOrder` の48時間境界、壊れたデータ、`history` の順序を確認しています。"
+    },
+    {
+      "id": "T5",
+      "title": "T2 在庫チェック画面(蓮さん向け)",
+      "acceptance": "- `#/check` を iPad で開くと、業者ごとに品目が並ぶ。1画面で、スクロールしながら全品目に入力できる。\n- 数える品目は大きな +/- ボタンで入力する(タップ領域は 44px 以上)。段階品目は「なし / 少ない / 半分 / 多い」の4つのボタンから1つ選ぶ。\n- 入力欄は、最初は空にする。前回の値は、「前回: 2個(昨日・蓮)」のように小さく添えるだけにする。\n- 入力していない品目は、色と「未入力」の文字で分かる。未入力が残っていても記録はできる。ボタンの横に「未入力 ○件」と出す。\n- 上部に記録者の名前を入力する欄があり、次回も覚えている。\n- 「記録する」を押すと、一括で日時つきで保存する。成功したときだけ「記録しました」を出す。失敗したときは「記録できませんでした」を出す。再読み込みしても、直近の値が前回として表示される。\n- 画面を見るだけで 10 分以内に全品目を入力でき、メモや LINE への手入力は不要。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "`#/check` の在庫チェック画面を実装し、`store.js` と結合しました。\n- **ファイル**: `js/check.js`、`js/format.js`、`js/app.js`、`index.html`、`css/app.css`\n- **テスト**: `test/format.test.js` と、新規の `test/check-integration.test.js`(3件)です。実行は `cd workspace/trial-cafe && npm test` で、store の 13 件と合わせて 16 件通りました。\n- **結合テストの内容**:\n  - 実際の store で `recordStocks` を呼び、store を作り直して(再読み込み相当)も、「前回: 2個(昨日・蓮)」と「前回: 半分(昨日・蓮)」が出ます。\n  - 記録のない品目には「前回: 記録なし」が出ます。\n  - 不正値が1件でもあると全体が失敗し、前回の値は変わりません。\n- **画面の動き**:\n  - 業者ごとに品目が並び、入力欄は空です。\n  - 数える品目は +/- ボタン、段階品目は「なし / 少ない / 半分 / 多い」の4ボタンです。\n  - 未入力は色と「未入力」の文字で出し、ボタンの横に「未入力 ○件」を出します。\n  - 保存に成功したときだけ「記録しました」を出します。例外のときは「記録できませんでした」を出し、入力は残します。\n  - 記録者の名前は localStorage に覚えます。\n- **未確認**: 画面の描画(DOM)は、このセッションではブラウザで開いていません。タップ領域 44px 以上と iPad Safari での見た目は、実機で見る必要があります。"
+    },
+    {
+      "id": "T6",
+      "title": "T3 発注画面(彩さん向け)",
+      "acceptance": "- `#/order` で、業者ごとに、品目・直近の在庫(記録者と日時つき)・「最後に頼んだ日と量」が1行で見える。直近の在庫は同じ iPad に記録されたものだけで、記録がなければ「記録なし」と出す。\n- 品目ごとに発注量を入力する。直近2日以内に同じ品目を発注済みの場合は、「○日に○{単位}頼み済み」と警告を出す(止めはしない)。\n- 業者ごとに「文面をコピー」ボタンがある。LINE の業者は、そのまま貼れる文面(品目と量と単位)をコピーできる。コピーできなかったときは、文面を選択済みの欄に出し、長押しでコピーできる。電話の業者は、読み上げ用の一覧を画面に出す。\n- 「発注した」を押すと、一括で発注記録を保存する。成功したときだけ「発注しました」を出す。次回その品目の「最後に頼んだ日と量」に反映される。\n- 発注量は、彩さんが決める。画面は、量を勝手に提案しない。発注量が未入力の品目は、文面と記録に含めない。\n- T2 を先に作り、T3 はその後に作る。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "`#/order` の発注画面を作りました。`js/order.js` が新規で、`js/format.js`、`js/app.js`、`css/app.css` に追記しています。`test/order-integration.test.js`(4件)を足し、`cd workspace/trial-cafe && npm test` で store・format・check と合わせて 20 件通りました。\n\n- **一覧**: 業者ごとに、品目、直近の在庫(記録者と日時つき)、最後に頼んだ日と量を並べます。記録がなければ「記録なし」と出します。\n- **発注量**: 品目ごとに数字で入れます。入力欄は最初は空で、画面は量を提案しません。空・0・不正値の品目は、文面にも記録にも含めません。全角の数字は読めます。\n- **警告**: 2日以内に発注済みなら「1日前に3個頼み済み」のように黄色で出します。止めはしません。\n- **文面をコピー**:\n  - LINE の業者は、品目と量と単位の文面をコピーします。\n  - コピーできなかったときは、選択済みの欄に文面を出し、長押しでコピーできるようにしています。\n  - 電話の業者は、読み上げ用の一覧を大きな字で出します。\n- **発注した**: 業者ごとに `recordOrders` で一括保存します。成功したときだけ「○○に発注しました」を出し、入力欄を空にして、最後に頼んだ量を更新します。失敗したときは「記録できませんでした」を出し、入力は残します。\n\n**未確認**:\n- 画面の描画(DOM)は、まだブラウザで開いていません。\n- iPad Safari での `navigator.clipboard`(https が必要)、44px 以上のタップ領域、数字キーボード(`inputmode`)は実機で確認が必要です。"
+    },
+    {
+      "id": "T7",
+      "title": "実際の品目への差し替えと「記録の後の発注」の取得",
+      "acceptance": "- `SUPPLIERS`/`ITEMS` を彩さんの一覧(業者名、LINE/電話、品目、単位、数える/段階)に差し替える。北村商店はバターと生クリームを含む。\n- 卵は「卵(未開封)」(数える、単位はパック)と「卵(開封済み)」(段階)の2品目にする。\n- `orderedAfter(stockAt)` を足す。在庫記録の日時より後に発注があれば、最初の発注の日時を返す。なければ `null` を返す。業者は問わない。\n- 差し替えた後も、既存の21件のテストが通る。`orderedAfter` について、発注あり、なし、記録より前の発注だけ、の3ケースをテストで確認する。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "品目を差し替え、`orderedAfter` を足しました。`cd workspace/trial-cafe && npm test` → `# tests 23 / # pass 23 / # fail 0` です。\n- **品目**: `js/store.js` の `SUPPLIERS`/`ITEMS` を、彩さんの一覧の順に入れ替えました。\n  - 北村商店(電話)6品目: バター、生クリーム(数える・パック)、牛乳、クリームチーズ。最後に薄力粉とグラニュー糖(段階)を置いています。\n  - 八百屋 みどり商店(LINE)7品目: レタスは外しました。\n  - 森田たまご(LINE)3品目: 卵(未開封)は数える・パック、卵(開封済み)は段階、それとベーコンです。\n  - 既存の id(butter, cream, milk, egg, flour, sugar, lemon)はそのまま使っています。\n- **orderedAfter(stockAt)**: 記録の日時より後で一番早い発注の日時を返します。業者は問いません。なければ `null`、日時が不正なら例外です。テストは3ケースです。発注なし、2社の発注のうち早いほう(10:30)を返すケース、記録より前の発注だけで `null` になるケースです。\n- **既存テスト**: 生クリームを段階から数えるに変えたので、`test/store.test.js` で段階品目の例に使っていた cream を、flour と egg-open に置き換えました。確かめる内容は変えていません。初期データのテストは、業者3社の名前と連絡手段、品目数(6/7/3)、卵2品目、レタスがないこと、北村の最後が薄力粉とグラニュー糖であること、を見る形に直しました。\n- **画面の確認**: `tools/ipad-check.mjs` を 820×1180 で流しました。\n  - `#/check`: 16品目で 44px 未満のタップ領域は `[]`、全品目の入力は 1504ms、「記録しました」まで通りました。\n  - `#/order`: 44px 未満は `[]`。LINE の文面は「・玉ねぎ 3箱」、読み上げは「バター(450g) 2個」で、一番上で隠れる品目は `[]`、JS エラーも `[]` でした。\n  - 業者の並びが北村(電話)から始まるようになったので、スクリプトは「文面をコピー」がある最初の業者を使う形に1行直しました。\n  - スクショは `/tmp/claude-0/-home-claude-team/5d2d6959-a854-58ac-b4c4-e24e8889c6b3/scratchpad/shots/` に置きました。`docs/screenshots/` は T8 で撮り直すので、触っていません。\n- **README**: 今の品目の内訳と、`orderedAfter` を含む保存層の API を書き足しました。"
+    },
+    {
+      "id": "T8",
+      "title": "押し忘れ防止・「彩さんが発注しました」・数字の直接入力",
+      "acceptance": "- `#/order` で「文面をコピー」(または「読み上げ用の一覧を出す」)を押した後、その業者の欄に「送ったら『発注した』を押してください」と出す。この表示は、「発注した」が成功するまで消えない。\n- `#/check` の上部に、直近の在庫記録について「この記録のあと、彩さんが 10/17 19:30 に発注しました」と出す。発注がなければ「まだ発注されていません」と出す。\n- 数える品目の数字をタップすると、数字キーボード(`inputmode=\"numeric\"`)で直接入力できる。0以上の整数だけを受け付け、+/- も今まで通り使える。\n- 820×1180 のヘッドレス確認で、44px 未満のタップ領域が0個のままであること。上の3点が出ているスクショを撮る。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "押し忘れ防止、「彩さんが発注しました」の表示、数字の直接入力の3点を入れました。`cd workspace/trial-cafe && npm test` を流し、26 件すべて通っています(23 件 + 新しく足した 3 件)。\n- **① 押し忘れ防止**(`js/order.js`、`css/app.css`): 「文面をコピー」か「読み上げ用の一覧を出す」を押すと、その業者の欄に黄色で「送ったら『発注した』を押してください」と出ます。量を直しても消えず、「発注した」が成功したときだけ消えます。コピーできなかったときも出ます。\n- **② 発注済みの表示**(`js/check.js`、`js/format.js`): `#/check` の上部に「直近の記録: 10/17 21:30・蓮」と出し、その下に次のどちらかを出します。\n  - 発注があったとき: 「この記録のあと、彩さんが 10/17 19:30 に発注しました」(緑の枠)\n  - 発注がないとき: 「まだ発注されていません」\n  - 田中さんの `store.orderedAfter` を使っています。「記録する」を押した直後にも表示を更新します。在庫の記録が1件もないときは何も出しません。\n- **③ 数字の直接入力**: 数える品目の数字の欄を `<input inputmode=\"numeric\">` にしました。\n  - 受け付けるのは 0 以上の整数だけです。全角数字も読みます。数字以外の文字を打っても値は変わりません。欄を空にすると未入力に戻ります。\n  - +/- は今まで通り使えます。\n  - 入力中に欄を作り直すとキーボードが閉じるので、値だけを差し替える作りにしました。\n- **テスト**: `test/format.test.js` に `parseCount` と `orderedAfterText` のテストを足しました。`test/check-integration.test.js` には、記録 → 発注なし → 発注 → 「10/17 19:30 に発注しました」と出るまでの流れを足しました。\n- **ヘッドレス確認**(`tools/ipad-check.mjs` に追記、820×1180、16品目):\n  - タップ領域が 44px 未満の要素は、check、order、数字欄を足した後の check のどれも `[]`(0個)でした。\n  - JS エラーも `[]` です。\n- **スクショ**(3点が写っているもの):\n  - `docs/screenshots/order-reminder.png`: ①の案内\n  - `docs/screenshots/check-after-order.png`: ②の表示\n  - `docs/screenshots/check-direct-input.png`: ③の牛乳「11本」\n  - ほかの4枚も、16品目で撮り直しました。\n- **README**: 画面の説明と、実機で確かめる項目を2つ足しました。"
+    }
+  ],
+  "decisions": [
+    {
+      "by": "pm",
+      "text": "初回リリースは iPad の Safari で動く、ビルド不要の静的 Web アプリにする。サーバーは持たず、データはブラウザの localStorage に保存する。理由は、導入ゼロで数日以内に試せるため。トレードオフとして、端末が変わるとデータは引き継げない(蓮さんの端末と共有できない点は次のイテレーションで再検討する)。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "量が曖昧な品目(生クリーム、卵など)は「なし / 少ない / 半分 / 多い」の4段階で記録する。個数が数えられる品目(バターなど)は数字で記録する。「半分くらい」といった自由記述は使わない。理由は、蓮さんの「あとで伝わったか不安」をなくすため。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "初回リリースは、お店の iPad 1台を彩さんと蓮さんで共有する前提にする。https の静的ホスティング(GitHub Pages)で配信する。理由は、サーバーなしで今週中に試せるため。トレードオフとして、各自のスマホや別端末からはデータが見えない。複数端末の共有は次のイテレーションで再検討する。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "発注量は、整数と品目の単位(○個、○パックなど)で記録する。段階(なし/少ない/半分/多い)は在庫記録だけに使い、発注量には使わない。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "「記録しました」「発注しました」は、保存が成功した後にだけ表示する。失敗したときは「記録できませんでした」を出す。複数品目の保存は、全件成功か全件失敗のどちらかにする。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "初回の試用は仮の品目データのまま行い、最初に「品目は仮です」と伝える。彩さんの実際の業者と品目の一覧は、試用の場で聞き取ってから差し替える。T1・T2・T3 は T4・T5・T6 と重複するため閉じる。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "イテレーション2の範囲は4つです。押し忘れ防止の表示、記録の後に発注があったかの表示、実際の品目への差し替え(卵は未開封パックと開封済みに分ける)、数字の直接入力です。「見ました」ボタンは作りません。理由は、彩さんの操作を増やさないためです。トレードオフとして、発注しなかった日は蓮さんに何も表示されません。発注量の提案と、複数の端末での共有は、今回もやりません。",
+      "phase": "acceptance",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "品目は彩さんの一覧どおり17品目にする(北村商店6・電話、みどり商店7・LINE、森田たまご3・LINE)。レタスは外す。生クリームは「数える(パック)」にする。薄力粉とグラニュー糖は、北村商店の最後に置く。毎日入力しなくていい扱いは作らない(未入力のままでも記録できるため)。17品目で10分以内に終わるかは、差し替えた版の実機での試用で測る。",
+      "phase": "acceptance",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "品目数は17ではなく16品目に訂正する(北村商店6、みどり商店7、森田たまご3)。彩さんの一覧で抜けている品目はない。玉ねぎ・じゃがいも・にんじんの発注単位は「箱」で仮に置き、彩さんの返事で直す。",
+      "phase": "wrapup",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "#/check の「この記録のあと、彩さんが ○○ に発注しました」は、「彩さん」と固定で出す。理由は、発注するのは彩さんだけという役割分担のため。トレードオフとして、ほかの人が発注しても「彩さん」と出る。蓮さんが発注する日があると分かったら、発注した人の名前を記録する。",
+      "phase": "wrapup",
+      "iteration": 1
+    }
+  ],
+  "verdicts": [
+    {
+      "by": "user-cafeowner",
+      "verdict": "accept",
+      "reason": "この画面が一番効くのは、重複発注(生クリーム2パック廃棄)を防ぐことと、発注した量があとで見返せないのを直すことです。「今日○個頼み済み」の警告と「最後に頼んだ日と量」で、両方とも解決しそうです。LINE の文面コピーで入力も減ります。量を勝手に提案しないのも、私の感覚で決められるのでいいです。条件は3つです。①コピーしたあとに「発注した」を押し忘れないよう、促してほしい。②うちの実際の業者と品目に差し替えてほしい。③お店の iPad の実機で試させてほしい。",
+      "iteration": 1
+    },
+    {
+      "by": "user-parttimer",
+      "verdict": "accept",
+      "reason": "在庫チェックは、タップだけで終わります。誰がいつ記録したかも残るので、スマホのメモと LINE の二度手間はなくなりそうです。発注量を自分で決めずに済むのもいいです。ただ、一番不安な「合っていたか分からない」は、まだ半分しか解決していません。彩さんが見たかどうかが自分には分からないので、そこが次に欲しいです。ほかに、卵の段階をパック単位で分けられるか、0個のときと数が多いときの入れ方、記録したあとの直し方を知りたいです。実際にお店の iPad で試させてください。",
+      "iteration": 1
+    }
+  ],
+  "demos": [
+    {
+      "by": "eng-backend",
+      "text": "T4: 田中です。T4 の保存層を、画面なしで動かした結果です。ユーザーが直接触る部分ではありません。蓮さんが「記録する」、彩さんが「発注した」を押したときに、裏で何が起きるかを見せます。\n\n**実行したコマンド**\n- `cd workspace/trial-cafe && npm test` → `# tests 21 / # pass 21 / # fail 0`\n- デモ用のスクリプト: `node /tmp/claude-0/-home-claude-team/5d2d6959-a854-58ac-b4c4-e24e8889c6b3/scratchpad/demo.mjs`\n  - 出力は同じフォルダの `demo-output.txt` にあります。\n  - localStorage の代わりにメモリ上のストレージを使い、時刻を固定しています。\n\n**出力(貼り付け)**\n```\n1) 記録・発注後に store を作り直し (再読み込み相当)\n  latestStock(butter): {\"itemId\":\"butter\",\"value\":2,\"recorder\":\"蓮\",\"at\":\"2026-10-16T12:30:00.000Z\"}\n  latestStock(cream):  {\"itemId\":\"cream\",\"value\":\"half\",\"recorder\":\"蓮\",\"at\":\"2026-10-16T12:30:00.000Z\"}\n2) lastOrder(butter):  {\"itemId\":\"butter\",\"quantity\":3,\"supplierId\":\"dairy\",\"at\":\"2026-10-16T12:30:00.000Z\"}\n   recentOrder(butter,2): {\"quantity\":3,\"at\":\"2026-10-16T12:30:00.000Z\",\"daysAgo\":0}\n3) 一括保存に不正値 (卵=\"半分くらい\") を1件混ぜる\n  例外: invalid level for egg: 半分くらい\n  butter は変わらず: 2\n4) 書き込み失敗 (プライベートモード相当)\n  例外: QuotaExceededError / lastOrder(milk): null\n5) 壊れた JSON で起動\n  起動OK, latestStock(butter): null / 退避キー: 1 件\n```\n\n**受け入れ基準との対応**\n- **再読み込み後の復元**: 10/16 21:30 に記録し、翌日 21:00 に store を作り直しました。蓮さんのバター 2 と生クリーム「半分」が、記録者と日時つきで残っています。\n- **最終発注の取得**: `lastOrder` はバター 3 個を返します。`recentOrder(id, 2)` は 23.5 時間前の発注を拾います。`daysAgo` は 0 になりますが、画面は暦日で「昨日」と出すので、「0日に」とは表示されません。\n- **一括保存の全件失敗**: 不正値が1件でもあると全体が例外になり、バターの値は 2 のまま変わりません。書き込みが失敗した場合も例外になり、何も残りません。画面ではここで「記録できませんでした」が出ます。\n- **不正値の拒否**: 「半分くらい」のような自由記述は弾きます。\n- **壊れたデータ**: 壊れた JSON でも起動でき、元のデータは退避キーに1件残ります。\n\n**制約**: 品目9つと業者3社は、まだ仮のデータです。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T5: 鈴木です。蓮さんが閉店後に在庫を記録するまでです。iPad と同じ 820×1180 のサイズで、ヘッドレスの Chromium を `tools/ipad-check.mjs` で操作しました。下の出力は、今回実行したときのものそのままです。\n1. `#/check` を開くと、3社の下に9品目が並び、下のバーに「未入力 9件」と出ます。44px 未満のタップ領域は `[]`(0個)でした。→ `docs/screenshots/check-empty.png`\n2. 名前を入れずに「記録する」を押すと、`上の「記録する人」に名前を入れてください` と出ます。\n3. 名前に「蓮」を入れ、数える品目は + を2回、段階品目は「半分」をタップします。9品目でタップ約1秒、バーの表示は `全部入力済み` に変わりました。最後の品目は、固定バーに隠れません(`false`)。→ `docs/screenshots/check-filled.png`\n4. 「記録する」を押すと `記録しました` と出ます。\n5. 再読み込みしても、名前は `蓮` のままです。前回の値は `前回: 2玉(今日・蓮)` と出ます。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T6: 彩さんが発注するまでです。出力はすべて、今回実行したときのものです。\n1. `#/order` を開くと、レタスの行に `直近の在庫: 2玉(今日・蓮)` と `最後に頼んだ日と量` が並びます。44px 未満のタップ領域は `[]` でした。\n2. レタスに「3」と入れて「文面をコピー」を押すと、クリップボードには次の文面がそのまま入りました。\n```\n八百屋 みどり商店 ご担当者さま\nお世話になっております。発注をお願いします。\n\n・レタス 3玉\n\nよろしくお願いします。\n```\n3. コピーできない場合も試しました。このときは `コピーできませんでした。下の文面を長押ししてコピーしてください` と出ます。同じ文面が欄に出て、全文(0〜61文字)が選ばれた状態になります。→ `docs/screenshots/order-copy-fallback.png`\n4. 「発注した」を押すと `八百屋 みどり商店に発注しました` と出ます。レタスの行は `最後に頼んだ日と量: 今日・3玉` に変わり、黄色で `今日3玉頼み済み` と出ます。\n5. 電話の北村商店で、バターに全角の「２」を入れて「読み上げ用の一覧を出す」を押すすと、`1. バター 2個` と出ます。\n→ 全体は `docs/screenshots/order.png` です。直したので、レタスの行は名前も入力欄も見えています。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T8: 鈴木です。彩さんがコピーしてから、蓮さんが次に開くまでの流れです。出力は今回実行したものそのままです。ヘッドレスの時計は UTC なので、時刻は 09:07 と出ています。iPad では端末の時刻で出ます。\n1. 蓮さんが `#/check` で牛乳の数字をタップして「10」と打つと `10` になります。続けて「a」を打っても `10` のままです。+ を1回押すと `11` になります。欄の設定は `inputmode = numeric` です。→ `docs/screenshots/check-direct-input.png`\n2. 「記録する」を押して再読み込みすると、上部に `直近の記録: 10/17 09:07・蓮` と `まだ発注されていません` が出ます。\n3. 彩さんが `#/order` で、みどり商店の玉ねぎに「3」を入れて「文面をコピー」を押します。すると欄に `送ったら『発注した』を押してください` が出ます。量を4に直しても、表示は残りました(`true`)。→ `docs/screenshots/order-reminder.png`\n4. 「発注した」を押すと `八百屋 みどり商店に発注しました` と出て、案内は消えます(`true`)。\n5. 蓮さんの画面に戻ると、上部が `この記録のあと、彩さんが 10/17 09:07 に発注しました` に変わります。→ `docs/screenshots/check-after-order.png`",
+      "phase": "wrapup",
+      "iteration": 1
+    }
+  ],
+  "notes": {
+    "user-cafeowner": [
+      "閉店 18 時、片付け後 18:40 から発注開始、終了は 19:40 頃（約 1 時間）。ノートに手書き、業者 3 社のうち 2 社は LINE、1 社は電話（乳製品・粉類）。在庫は数えず目視の感覚。バター切れや生クリーム 2 パックの廃棄が実例。疲れた日は発注を翌朝に回して欠品する。",
+      "バターは勘で発注し、足りないと翌朝スーパーで買う（割高）。先週火曜に発注を朝へ回し、10 時過ぎの LINE では翌日着に間に合わず午後にバター切れ。生クリームは木曜に前日の発注を忘れて重複発注し 2 パック廃棄。発注した量がノートと LINE に分かれて残り、あとから確認できない。",
+      "受け入れ1回目は条件付きで accept にした。効いた点は「今日○個頼み済み」の警告(生クリームの重複防止)、最後に頼んだ日と量、LINE の文面コピー。お願いした点は3つ: コピー後に「発注した」の押し忘れを促すこと、実際の品目への差し替え(北村商店はバター・生クリーム、レタスはあまり頼まない)、お店の iPad の実機で試すこと。",
+      "品目一覧を渡した(計17品目)。北村商店(電話): バター・生クリーム・牛乳・クリームチーズは数える、薄力粉・グラニュー糖は段階。みどり商店(LINE): 野菜は段階、ミニトマト・いちご・レモンは数える。レタスは外した。森田たまご(LINE): 卵(未開封)はパックを数える、卵(開封済み)は段階、ベーコンはパックを数える。品目が増えたので、蓮くんが10分で終わるかを次に確かめたい。"
+    ],
+    "user-parttimer": [
+      "蓮は閉店後(18:40ごろから)冷蔵庫・冷凍庫を見て、スマホのメモに打ち、オーナーにLINEで送っている。量が曖昧なもの(生クリーム開封済み、卵)は「少なめ」「半分くらい」と書くため不安。送った後は返信がなく、合っていたか分からない。所要10〜15分。発注量を自分で決めるのは避けたい。",
+      "生クリームのその後は蓮には分からず、彩さんにも聞けていない(聞くと責められそうで遠慮)。「送ったあと気になる」のはバイト日の半分くらい。卵は「半分くらい」だけでパックの区別がなく伝わりにくい。LINEに個数を入れ忘れ、彩さんに聞き返されることが時々ある。閉店後は帰宅後のため回答が翌日になる。スマホのメモとLINEが別で、誰がいつ何を見たかを見返せない。",
+      "受け入れ1回目: 在庫チェック画面を accept。要望は4つ。①彩さんが記録を見たかが蓮に分かること(既読のようなもの)。②卵をパック単位で分けたい。③0個の入れ方と、数が多いときの + の連打。④記録を間違えたときの直し方。お店の iPad の実機ではまだ試していない。"
+    ],
+    "pm": [
+      "彩(オーナー): 18時閉店、片付け・レジ締めで18:40、在庫確認と発注に約1時間(終了19:40頃)。見た感覚でノートに「足りないもの」を書く。業者3社(LINE2、電話1)、LINEは定番品目を毎回打ち直し、電話は不在でかけ直し。疲れると翌朝回しになり、翌日にバターを欠品する。先週生クリーム2パック廃棄(多めに頼んだのを忘れた)。",
+      "蓮(アルバイト): 在庫確認は勤務日ほぼ毎回、10〜15分。スマホメモに数と「半分くらい」等の見た目を書き、彩さんにLINE送信、返信なし。開封済みの生クリームの残量が分からず「少なめ」と送り不安。発注量は彩さんが決め、蓮さんは決めたくない。",
+      "彩(オーナー): バターは必要数を計算せず勘で発注(昨日は2箱)。先週火曜は朝10時過ぎにLINEし、翌日着に間に合わず午後にバター欠品、近所のスーパーで割高に購入。先週木曜に生クリームを多めに頼んだが前日の発注を忘れ、頼んだ量はノートに書かないこともあり、ノートとLINEが別で「いくつ頼んだか」が後から分からない。",
+      "蓮(アルバイト): 送ったメモのその後が分からず、「確認してなかったの?」と思われそうで聞けない。「卵 半分くらい」はパック2つのどちらか不明、LINEにバターの個数を書き忘れたことがある。閉店後に聞き返されると帰宅後のため翌日回答。蓮さんは見て伝えるまで、発注量決定は彩さん。",
+      "課題の整理(discovery 完了時点): (1)現在庫が曖昧で伝わりにくい (2)発注量・履歴が残らず重複/不足が出る (3)業者ごとに連絡手段が違い、疲れた日は翌朝に回って欠品する。役割は蓮=見て伝える、彩=量を決めて頼む。",
+      "計画フェーズの合意: お店の iPad 1台を彩さんと蓮さんで共有する前提で、https の静的ホスティング(GitHub Pages)で配信する。発注量は整数と品目の単位で持ち、段階は在庫記録だけに使う。保存は全件成功か全件失敗で、「記録しました」は保存成功後にだけ出す。前回値は入力欄に入れず、小さく添えるだけにする。複数端末での共有は次のイテレーションで再検討する。",
+      "レビュー1回目: T4 は基準を満たした。T5・T6 は、鈴木さんの DEMO が未提出。order.png では八百屋の先頭品目(レタス)が上の帯に隠れていた。品目は仮のまま試用に出す。",
+      "レビュー1回目の結論: T4・T5・T6 は受け入れ基準を満たし、試用に出す。order.png のレタスが隠れていた件は、空のお知らせ欄が上に貼り付いていたのが原因で、直っている。Safari 実機と GitHub Pages での確認は試用の場で行う。試用は仮の品目で、説明なしで進める。終わったら実際の品目一覧を聞き取る。",
+      "受け入れ1回目: 彩・蓮ともに条件つき ACCEPT。彩の条件は、コピー後の「発注した」押し忘れ防止、実際の品目への差し替え、iPad 実機での試用。蓮の条件は、彩さんが見たか分かること、卵をパック単位で分けること、数が多いときの入力、記録の直し方(記録し直せば最新が出る、と回答済み)。空の状態で − を押すと0になる(format.js の stepCount)。イテレーション2は T7(田中: 品目の差し替えと orderedAfter)、T8(鈴木: 押し忘れ防止、発注済みの表示、数字の直接入力)。彩さんに品目の一覧を依頼中。",
+      "彩さんの品目一覧(10/17): 北村商店(電話)=バター(個)・生クリーム1L(パック)・牛乳(本)・クリームチーズ(箱)が数える、薄力粉・グラニュー糖(袋)が段階。みどり商店(LINE)=ミニトマト・いちご(パック)・レモン(個)が数える、玉ねぎ・じゃがいも・にんじん・ベビーリーフが段階。森田たまご(LINE)=卵(未開封)(パック10個入り)・ベーコン(パック)が数える、卵(開封済み)が段階。レタスは外す。合計17品目(数える10、段階7)。彩さんは、蓮さんが10分で終わるかを心配している。次の実機の試用で時間を測る。",
+      "終わる時点の状態: T4・T5・T6・T7 は完了、テストは23件通過。品目は16品目(17は数え間違い)。根菜3つの単位「箱」は仮置きで、彩さんに確認中。T8 は未着手(押し忘れ防止、発注済みの表示、数字の直接入力)。人が決めること・やること: iPad の Safari 実機と GitHub Pages での確認、差し替えた版で蓮さんが10分以内に終わるかの計測、複数端末での共有を次でやるかどうか。",
+      "セッション終了時: T4〜T8 完了(T1〜T3 は重複で閉じた)。16品目で、テスト26件通過は鈴木さんの報告(PM は未実行)。T8 の3点はコードとスクショで確認した。人に残したこと: 根菜3つの単位「箱」の確認、GitHub Pages と iPad Safari での実機確認(数字キーボード、コピー、時刻、濡れた手で押せるか)、蓮さんの10分計測、蓮さんが発注する日があるか(「彩さん」固定表示)、複数端末での共有を次でやるか。"
+    ],
+    "eng-backend": [
+      "T1 の保存 API は `workspace/trial-cafe/js/store.js` の `createStore(storage, now)` に決定する方針。発注量は整数と品目の unit で持ち、段階は在庫記録だけに使う。書き込み失敗は例外で返し、「記録しました」は成功後にだけ出す。壊れた JSON は別キーに退避して空で起動する。T3 の「○個」は「○{unit}」に直す提案を PM に出した。",
+      "T6 の store の使い方を確認済み(21 件通過)。T1/T2/T3 は T4/T5/T6 と重複しているので、閉じるよう PM に依頼した。初期データは仮のまま。彩さんの実際の品目と業者の一覧が来たら、store.js の ITEMS/SUPPLIERS を差し替える(約30分)。",
+      "README に Pages の置き方、URL ごとにデータが分かれる注意、品目の差し替え方(id は変えない)を書き足した。テストは 21 件通過。彩さんの品目一覧が届いたら store.js の ITEMS/SUPPLIERS を差し替える(約30分)。届くか、仮データで出すかは PM の判断待ち。",
+      "build 最終ラウンドでもテスト 21 件通過。T4 完了、残作業なし。PM の判断待ちは2点:品目一覧を待つか仮データで出すか、T1/T2/T3 の重複を閉じるか。",
+      "review 1回目: T4 の DEMO を投稿した(npm test 21 件通過、デモ出力は scratchpad の demo-output.txt)。T5/T6 には store の面での指摘はない。PM の判断待ちは2点のまま:仮データで出すか、T1〜T3 を閉じるか。",
+      "T7 完了(テスト 23 件通過、ヘッドレス確認で 44px 未満 0・JS エラー 0)。品目は彩さんの一覧どおり16品目(決定の「17」は数え違いとして PM に確認を依頼)。玉ねぎ・じゃがいも・にんじんの単位「箱」は仮置き。orderedAfter(stockAt) を store に追加した。T8 用。ipad-check.mjs は LINE の最初の業者を使う形に直した。T1 は重複として閉じた。"
+    ],
+    "eng-frontend": [
+      "T5 の実装は js/check.js、js/format.js、js/app.js、index.html、css/app.css、test/format.test.js にある。js/store.js (田中さん担当) との結合は未確認。結合したら T5 を完了にして、T6 (#/order) に進む。",
+      "T5 は完了。結合テストは test/check-integration.test.js にあり、全 16 件が通った。DOM の描画と iPad 実機の見た目は未確認。次は T6 (#/order)。使う store の関数は `lastOrder`、`recentOrder(id, 2)`、`recordOrders`(業者ごとに呼ぶ)、`latestStock`。js/app.js の route に order を足す。",
+      "T6(#/order)は完了。`js/order.js` と `format.js` の発注用関数、`test/order-integration.test.js` があり、全 20 件が通った。DOM の描画、iPad 実機、`navigator.clipboard`(https 必須)は未確認。次は GitHub Pages に置いて、彩さんと蓮さんに実機で触ってもらう。",
+      "T5・T6 の画面は、iPad サイズのヘッドレス Chromium で確認済み。44px 未満は 0 個、保存・再読み込み・発注・コピーの退避欄・読み上げ一覧は動き、JS エラーは 0 件。直したのは2点で、check の古いエラー文を入力し直した時点で消すことと、order の発注欄の placeholder「0」を消すこと。確認スクリプトは tools/ipad-check.mjs(playwright が要る、CHROME_PATH を指定)、スクショは docs/screenshots/。npm test は 21 件すべて通る。残りは iPad Safari 実機と GitHub Pages での確認。",
+      "build の最終ラウンドで README に「お店の iPad で確かめること(初回)」を5項目足した(Pages の手順は田中さんが書いた)。参照はすべて相対パスで、Pages のサブパスでも動く。npm test は 21 件通る。次は品目を差し替えた後に、Safari 実機で彩さんと蓮さんに説明なしで触ってもらい、迷った点をメモする。",
+      "review で order.png のレタスの行が隠れていた原因は、`main > .status`(sticky、min-height 1.5em)が空でも上に貼り付き、品目の上端を隠していたこと。実画面でも起きていた。`:empty` のときは position:static にし、`html{scroll-padding-top:3em}` を足して直した。ipad-check.mjs に「一番上で隠れる品目」チェックを追加した(修正前は4品目、修正後は0)。コピー失敗は writeText を差し替えて再現している。favicon は data: にした。npm test は 21 件通る。実行するときは、/opt/node-tools/node_modules を一時的に node_modules としてリンクし、CHROME_PATH には /opt/pw-browsers/chromium-1194/chrome-linux/chrome を指定する。リンクは後で unlink すること。",
+      "T8 は完了。実装は次のとおり。\n- 押し忘れの案内: `order.js` の `.reminder`。\n- 発注済みの表示: `check.js` の `.after-order`。`format.js` の `latestRecord`、`orderedAfterText`、`shortDateTime` と、`store.orderedAfter` を使う。\n- 数字の直接入力: `check.js` の `.count-input`。`parseCount` を使い、入力中に欄を作り直さない。\nnpm test は 26 件通る。ipad-check.mjs は3点を確認し、スクショ3枚を足した。ヘッドレスは UTC で動く。残りは iPad Safari での数字キーボードと時刻の確認。「彩さん」は固定の文言で、発注者は記録していない。"
+    ]
+  },
+  "historyWindow": 40
+}

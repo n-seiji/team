@@ -1,0 +1,9 @@
+{
+  "name": "trial-tango",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "dist": "node scripts/dist.mjs"
+  }
+}

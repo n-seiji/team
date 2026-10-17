@@ -1,0 +1,33 @@
+*{box-sizing:border-box}
+/* display を指定した要素でも hidden 属性で必ず消す */
+[hidden]{display:none!important}
+body{margin:0;font:16px/1.5 system-ui,sans-serif;background:#f6f7fb;color:#1c2333}
+#app{max-width:480px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;padding:12px 16px}
+header{display:flex;justify-content:space-between;color:#4a5570}
+.count{font-weight:700;margin:0}.pos{margin:0}
+.card{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;border-radius:16px;margin:8px 0;padding:16px;text-align:center;box-shadow:0 1px 4px #0002;overflow-wrap:anywhere}
+.card .en{font-size:2rem;font-weight:700}.card .ja{font-size:1.5rem;margin-top:12px;color:#1d5fd1}
+.actions{display:flex;flex-direction:column;gap:8px;padding:8px 0}
+.row{display:flex;gap:8px}.row .btn{flex:1}
+.btn{min-height:56px;min-width:44px;font-size:1.1rem;border:2px solid #1d5fd1;background:#fff;color:#1d5fd1;border-radius:12px;padding:0 16px}
+.btn.primary{background:#1d5fd1;color:#fff}.btn.good{background:#1f8a4c;border-color:#1f8a4c;color:#fff}
+.btn:focus-visible,.card:focus-visible{outline:3px solid #f5a623;outline-offset:2px}
+.empty{flex:1}.empty textarea,.backup textarea{width:100%;font:inherit;margin:8px 0}
+.msg{min-height:1.5em;color:#4a5570}
+.backup{font-size:.9rem;padding-bottom:8px}.backup summary{min-height:44px;display:flex;align-items:center}
+.backup .btn{min-height:44px;margin-right:8px}
+#app h1{font-size:1.4rem}#app input{width:100%;min-height:48px;font:inherit;padding:0 12px;margin:8px 0;border:2px solid #9aa5bd;border-radius:12px}
+#start .btn,#result .btn{width:100%;margin-top:8px}#choices .btn{text-align:left}#wrong{padding-left:1.2em}
+#quiz{flex:1;display:flex;flex-direction:column}#quiz .card{flex:1}
+.empty .btn{width:100%;margin-top:8px}.note{font-size:.9rem;color:#4a5570}
+.link{min-height:44px;background:none;border:0;color:#1d5fd1;text-decoration:underline;font:inherit;font-size:.9rem;text-align:left;padding:0}
+.link:focus-visible{outline:3px solid #f5a623;outline-offset:2px}
+.paste-box summary,.backup summary{min-height:44px;display:flex;align-items:center;cursor:pointer;color:#1d5fd1}
+/* T8: 「本名はいりません」と組の例を2行で並べ、欄と「はじめる」の位置を前と同じにする */
+#start .note{margin-bottom:0}#start #kumi-hint{margin:0 0 14px}
+.seat{display:flex;gap:8px}.seat .field{flex:1;min-width:0}
+.err{margin:0 0 8px;color:#4a5570;font-weight:700;font-size:.9rem}
+#seat>label{display:block;margin-top:8px}.err:empty{display:none}
+#app input[aria-invalid="true"]{border-color:#1d5fd1;border-width:3px}
+a.btn{display:flex;align-items:center;justify-content:center;text-decoration:none;width:100%;margin-top:8px}
+a.btn:focus-visible{outline:3px solid #f5a623;outline-offset:2px}

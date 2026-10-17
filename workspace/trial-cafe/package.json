@@ -1,0 +1,8 @@
+{
+  "name": "trial-cafe",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  }
+}
