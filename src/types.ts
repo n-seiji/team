@@ -36,6 +36,11 @@ export interface PhaseDef {
   editors?: Role[];
   /** Where the next iteration restarts when users reject the result (default: first phase). */
   iterationStart?: boolean;
+  /**
+   * Wrap-up phase: skipped in the normal order and entered only once, when the session is about to finish
+   * with unfinished tasks or with decisions made after the build (review / acceptance).
+   */
+  finale?: boolean;
 }
 
 export type TaskStatus = "todo" | "doing" | "done";
@@ -54,6 +59,13 @@ export interface Verdict {
   by: string;
   verdict: "accept" | "reject";
   reason: string;
+  iteration: number;
+}
+
+export interface Demo {
+  by: string;
+  text: string;
+  phase: string;
   iteration: number;
 }
 
@@ -81,6 +93,13 @@ export interface SessionState {
   tasks: Task[];
   decisions: { by: string; text: string; phase: string; iteration: number }[];
   verdicts: Verdict[];
+  /** What engineers actually showed users ([DEMO]): steps and real output. Absent in older sessions. */
+  demos?: Demo[];
+  /**
+   * The workspace is an existing codebase (e.g. a git worktree given with `init --workspace`), not a folder
+   * the team created. Engineers then follow its own rules, and claude-cli turns run inside it.
+   */
+  externalWorkspace?: boolean;
   /** Semantic memory: durable notes each agent chose to keep. */
   notes: Record<string, string[]>;
   historyWindow: number;
@@ -94,6 +113,7 @@ export type EntryKind =
   | "task_update"
   | "decision"
   | "verdict"
+  | "demo"
   | "advance"
   | "system";
 

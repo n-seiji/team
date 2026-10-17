@@ -12,6 +12,7 @@ interface NewSessionOptions {
   phases: PhaseDef[];
   language?: string;
   workspace?: string;
+  externalWorkspace?: boolean;
   maxIterations?: number;
   historyWindow?: number;
   now?: () => string;
@@ -43,11 +44,12 @@ export class World {
       brief: o.brief,
       language: o.language ?? "ja",
       workspace: o.workspace ?? "workspace",
+      ...(o.externalWorkspace ? { externalWorkspace: true } : {}),
       createdAt: now(),
       status: "running",
       members: o.members,
       phases: o.phases,
-      phaseIndex: 0,
+      phaseIndex: Math.max(0, o.phases.findIndex((p) => !p.finale)),
       iteration: 1,
       maxIterations: o.maxIterations ?? 2,
       round: 0,
@@ -58,6 +60,7 @@ export class World {
       tasks: [],
       decisions: [],
       verdicts: [],
+      demos: [],
       notes: {},
       historyWindow: o.historyWindow ?? 40,
     };
@@ -157,6 +160,12 @@ export class World {
         this.log(m.id, "task_update", `${t.id} → ${t.status}${a.text ? ": " + a.text : ""}`);
         break;
       }
+      case "DEMO": {
+        const tid = a.arg ?? /\bT\d+\b/.exec(a.text)?.[0];
+        (s.demos ??= []).push({ by: m.id, text: tid && a.arg ? `${tid}: ${a.text}` : a.text, phase: this.phase.id, iteration: s.iteration });
+        this.log(m.id, "demo", tid && a.arg ? `${tid}: ${a.text}` : a.text);
+        break;
+      }
       case "DECISION":
         s.decisions.push({ by: m.id, text: a.text, phase: this.phase.id, iteration: s.iteration });
         this.log(m.id, "decision", a.text);
@@ -235,32 +244,59 @@ export class World {
     }
   }
 
-  /** Next phase; after the last one, either loop (users rejected) or finish. */
+  /**
+   * Next phase; after the last one, either loop (users rejected) or finish. Before finishing, a `finale`
+   * phase (wrap-up) runs once if tasks are still open or decisions came after the last chance to build.
+   */
   private endPhase(): void {
     const s = this.state;
     s.round = 0;
     s.queue = [];
-    if (s.phaseIndex < s.phases.length - 1) {
-      s.phaseIndex++;
-      this.logPhaseStart();
-      return;
+    if (!this.phase.finale) {
+      const next = s.phases.findIndex((p, i) => i > s.phaseIndex && !p.finale);
+      if (next >= 0) {
+        s.phaseIndex = next;
+        this.logPhaseStart();
+        return;
+      }
+      const vs = s.verdicts.filter((v) => v.iteration === s.iteration);
+      const rejected = vs.filter((v) => v.verdict === "reject");
+      if (rejected.length > 0 && s.iteration < s.maxIterations) {
+        s.iteration++;
+        s.phaseIndex = Math.max(0, s.phases.findIndex((p) => p.iterationStart && !p.finale));
+        this.log(
+          "system",
+          "system",
+          `Iteration ${s.iteration} begins: ${rejected.length}/${vs.length} users rejected (${rejected.map((r) => r.by).join(", ")}).`,
+        );
+        this.logPhaseStart();
+        return;
+      }
+      const finale = s.phases.findIndex((p) => p.finale);
+      const left = wrapupItems(s);
+      if (finale >= 0 && (left.tasks.length || left.decisions.length)) {
+        s.phaseIndex = finale;
+        this.log(
+          "system",
+          "system",
+          `Wrap-up before finishing: ${left.tasks.length} open task(s), ${left.decisions.length} late decision(s) to apply.`,
+        );
+        this.logPhaseStart();
+        return;
+      }
     }
+    this.finish();
+  }
+
+  private finish(): void {
+    const s = this.state;
+    s.status = "done";
     const vs = s.verdicts.filter((v) => v.iteration === s.iteration);
-    const rejected = vs.filter((v) => v.verdict === "reject");
-    if (rejected.length === 0 || s.iteration >= s.maxIterations) {
-      s.status = "done";
-      const summary = vs.length ? `${vs.length - rejected.length}/${vs.length} users accepted.` : "No user verdicts were given.";
-      this.log("system", "system", `Session finished after iteration ${s.iteration}. ${summary}`);
-      return;
-    }
-    s.iteration++;
-    s.phaseIndex = Math.max(0, s.phases.findIndex((p) => p.iterationStart));
-    this.log(
-      "system",
-      "system",
-      `Iteration ${s.iteration} begins: ${rejected.length}/${vs.length} users rejected (${rejected.map((r) => r.by).join(", ")}).`,
-    );
-    this.logPhaseStart();
+    const accepted = vs.filter((v) => v.verdict === "accept").length;
+    const summary = vs.length ? `${accepted}/${vs.length} users accepted.` : "No user verdicts were given.";
+    const open = s.tasks.filter((t) => t.status !== "done");
+    const rest = open.length ? ` Still open: ${open.map((t) => `${t.id} (${t.title})`).join(", ")}.` : "";
+    this.log("system", "system", `Session finished after iteration ${s.iteration}. ${summary}${rest}`);
   }
 
   private logPhaseStart(): void {
@@ -283,6 +319,20 @@ export class World {
 }
 
 const systemNow = () => new Date().toISOString();
+
+/**
+ * What a wrap-up phase must take care of: tasks not done, and decisions of this iteration made in or after the
+ * last regular phase where anyone could edit the workspace (so nobody has applied them yet).
+ */
+export function wrapupItems(s: SessionState): { tasks: Task[]; decisions: SessionState["decisions"] } {
+  const regular = s.phases.map((p, i) => ({ p, i })).filter(({ p }) => !p.finale);
+  const lastEdit = Math.max(-1, ...regular.filter(({ p }) => p.editors?.length).map(({ i }) => i));
+  const late =
+    lastEdit < 0
+      ? []
+      : s.decisions.filter((d) => d.iteration === s.iteration && s.phases.findIndex((p) => p.id === d.phase) >= lastEdit);
+  return { tasks: s.tasks.filter((t) => t.status !== "done"), decisions: late };
+}
 
 export function currentPhase(s: SessionState): PhaseDef {
   return s.phases[s.phaseIndex];

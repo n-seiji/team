@@ -35,10 +35,11 @@ Key properties:
 | discovery | PM, users | The PM interviews users and digs into concrete episodes. No solutions yet |
 | planning | PM, engineers | The PM writes tasks with acceptance criteria and assigns owners; engineers debate feasibility, risks and tech choices |
 | build | engineers (**in parallel**) | Each engineer implements their tasks in `workspace/<session>/` and reports `[TASK_DONE]` |
-| review | engineers, PM | Cross-review and fixes; the PM checks the acceptance criteria |
-| acceptance | users, PM | Users read or run the result and give `[VERDICT accept/reject]`; the PM sums up |
+| review | engineers, PM | Cross-review and fixes; each engineer posts a `[DEMO]` with output they really produced; the PM checks the acceptance criteria |
+| acceptance | users, PM | Users start from the demos (kept in their prompt), read or run the result and give `[VERDICT accept/reject]`; the PM sums up |
+| wrapup | engineers, PM | Only when the session is about to finish with open tasks, or with decisions made in review / acceptance that nobody has applied yet. Engineers apply them; the PM lists what is left for the real human |
 
-If any user rejects and the iteration limit (`maxIterations`) has not been reached, the team goes back to planning. Each phase ends after its maximum number of rounds, or earlier when the PM sends `[ADVANCE]`.
+If any user rejects and the iteration limit (`maxIterations`) has not been reached, the team goes back to planning. Each phase ends after its maximum number of rounds, or earlier when the PM sends `[ADVANCE]`. When the session finishes, the last log line names any task that is still open.
 
 ### Conversation protocol
 
@@ -51,6 +52,7 @@ Agents reply with plain-text tags, an extension of TinyTroupe's THINK / TALK / D
 [TASK owner=eng-backend] title
 acceptance criteria (on the following lines)
 [TASK_DONE T1] what was implemented, in which files, and how it was verified
+[DEMO T1] what a user does and sees, with real output (pasted, or a generated file / screenshot path)
 [DECISION] a decision the team follows from now on
 [VERDICT accept] / [VERDICT reject] reasons
 [ADVANCE] end the current phase (PM only)
@@ -94,6 +96,18 @@ node src/main.ts log --tail 20 --no-thoughts                     # transcript
 node src/main.ts say "Let's focus on sole proprietors"           # speak to the team as the human
 ```
 
+#### Working on an existing repository
+
+To have the team work on another codebase (for example a GitHub issue), check it out as a git worktree and pass it as the workspace:
+
+```bash
+git -C ../app worktree add "$PWD/workspace/app-77" -b team/app-77   # one worktree per issue
+node src/main.ts init --name app-77 --workspace workspace/app-77 --brief-file brief-77.md --config configs/app.json
+node src/main.ts overlaps                                            # files / migration numbers other sessions also changed
+```
+
+With `--workspace` the folder is used in place (no `workspace/<session>/` is created). Prompts list only the files changed so far (git status and commits on top of the default branch), engineers are told to follow the codebase's own CLAUDE.md and rules, `claude-cli` turns run inside the workspace so its CLAUDE.md and hooks apply, and engineers see what other sessions on the same repository have changed. `team status` warns when two sessions touch the same file or create numbered files with the same number (such as `migrations/0021_*.sql`). Put personas that fit the product in a separate config (`--config`).
+
 `pnpm team <command>` works too, as does `team <command>` after `pnpm link --global`.
 
 To drive host mode yourself (for example from another agent framework):
@@ -120,6 +134,7 @@ Set the model with `backend.model` in `team.config.json`, `--model`, or the `TEA
   - `untilTasksDone`: end early once every task is done
   - `editors`: roles allowed to edit `workspace/` in this phase
   - `iterationStart`: where the next iteration restarts after a rejection
+  - `finale`: a wrap-up phase, skipped in the normal order and run once before finishing when work is left
 - **Language**: `language` (default `ja`) is the language the agents speak.
 - **Memory length**: `historyWindow` is the number of recent transcript entries included in each prompt.
 
@@ -144,6 +159,7 @@ src/
   protocol.ts   reply tag parser
   prompt.ts     per-turn prompt (persona, shared state, memory)
   store.ts      persistence under .team/
+  overlap.ts    clashes between sessions working on the same repository
   render.ts     log and transcript.md formatting
   backends/     anthropic / claude-cli / mock
 personas/       member definitions
@@ -153,5 +169,6 @@ personas/       member definitions
 ## Limitations
 
 - Simulated users do not replace real users. Use them to widen hypotheses and catch obvious problems, then confirm important decisions with real people.
+- Users judge only what the team shows them: the demos and the files they can open. They cannot use a browser or a phone, so anything not demonstrated stays unverified, and they are told to say so.
 - Engineers in the build phase edit the same `workspace/<session>/` in parallel. They are told to keep to their own files, and conflicts are expected to be fixed in review.
 - The `claude-cli` backend gives engineers Bash and edit tools in phases that allow editing. Run it in a trusted environment, such as a container or a cloud session.

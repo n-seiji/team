@@ -66,6 +66,7 @@ function parseAttrs(s: string): { attrs: Record<string, string>; arg?: string } 
 }
 
 export const PROTOCOL_HELP = `Reply ONLY with action tags. Each tag starts a line; its content runs until the next tag.
+Write every tag's content (including [THINK] and [NOTE]) in the session language.
   [THINK] private reasoning (only you remember it; keep it short)
   [SAY to=all] message to everyone        ([SAY to=<id>,<id>] to address specific members; they will reply next)
   [NOTE] a fact you want to remember for the rest of the project (long-term memory)
@@ -75,6 +76,8 @@ export const ACTION_HELP: Record<string, string> = {
   TASK: "[TASK owner=<engineer-id>] short title\n  acceptance criteria on the following lines (testable, user-visible)",
   TASK_START: "[TASK_START T1] you started working on task T1",
   TASK_DONE: "[TASK_DONE T1] what you implemented, which files, how to run/verify it",
+  DEMO:
+    "[DEMO T1] what a user does and what they see, with real output you produced (pasted, or the path of a generated file / screenshot)",
   DECISION: "[DECISION] a decision the team should follow from now on",
   ADVANCE: "[ADVANCE] end the current phase now because its goal is met (PM only)",
   VERDICT: "[VERDICT accept] or [VERDICT reject] followed by your honest reasons (acceptance phase)",

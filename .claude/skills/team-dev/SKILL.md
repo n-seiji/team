@@ -15,6 +15,11 @@ All commands run from the repository root. `team` below means `node src/main.ts`
 
 - **The user gave a product idea** → `team init "<their idea, in their words>" --name <short-kebab-name> --json`.
   Its output is the same as `team next --json`, so go straight to step 2.2 and launch the first subagent.
+- **Work on an existing repository / a GitHub issue** → check the repository out as a git worktree under `workspace/`
+  (one per issue, its own branch), write the issue (title, body, links) to a brief file, and run
+  `team init --name <short-name> --workspace workspace/<short-name> --brief-file <file> --json`. Use a config with
+  personas that fit that product (`--config`). After each session, run `team overlaps` and tell the user about any
+  file or migration-number clash with other sessions on the same repository.
 - **"Continue" / no idea** → `team next --json` resumes the current session (`team sessions` / `team use <name>`
   to switch). Only if there is no session, or it is `done`, ask for one sentence about the product and who it is for.
 

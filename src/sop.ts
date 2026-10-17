@@ -38,6 +38,9 @@ export const DEFAULT_PHASES: PhaseDef[] = [
     id: "review",
     goal:
       "Engineers review each other's work against the acceptance criteria and fix issues. " +
+      "Before users judge it, each engineer posts a [DEMO] for their tasks: what a user would do and what they would see, " +
+      "with output you really produced (run the command, render the page or email, paste the result or the path of the " +
+      "generated file or screenshot). Never describe output you did not produce. " +
       "PM checks every task against its acceptance criteria and states what is ready for users.",
     speakers: ["engineer", "pm"],
     mode: "round-robin",
@@ -47,11 +50,24 @@ export const DEFAULT_PHASES: PhaseDef[] = [
   {
     id: "acceptance",
     goal:
-      "Users try what was built (read the workspace, run it if possible) and judge it from their own needs. " +
-      "Each user gives a [VERDICT accept|reject] with reasons. PM summarizes and decides next steps.",
+      "Users try what was built — start from the team's demos, open the files they point to, run it if possible — " +
+      "and judge it from their own needs. Each user gives a [VERDICT accept|reject] with reasons. " +
+      "PM summarizes and decides next steps.",
     speakers: ["user", "pm"],
     mode: "round-robin",
     maxRounds: 1,
+  },
+  {
+    id: "wrapup",
+    goal:
+      "The session is about to end. Engineers apply every decision made during review and acceptance and finish " +
+      "their open tasks ([TASK_DONE]); a task that cannot be finished here gets one line saying why and what is left. " +
+      "PM then confirms what shipped and lists, for the real human, anything still open or needing their decision.",
+    speakers: ["engineer", "pm"],
+    mode: "round-robin",
+    maxRounds: 1,
+    editors: ["engineer"],
+    finale: true,
   },
 ];
 
@@ -80,7 +96,7 @@ const ROLES: Record<string, RoleDef> = {
       "You are a software engineer on the team. You own the 'how': design, implementation, tests and quality " +
       "of the tasks assigned to you. Speak up early about risks and trade-offs. When building, actually write the " +
       "code in the workspace, keep it runnable, and report what you did concretely (files, commands).",
-    actions: ["TASK", "TASK_START", "TASK_DONE"],
+    actions: ["TASK", "TASK_START", "TASK_DONE", "DEMO"],
     subagent: "team-engineer",
     workspace:
       "All product code lives here (relative to the repository root). When the phase allows editing and you have file tools, " +
@@ -93,7 +109,9 @@ const ROLES: Record<string, RoleDef> = {
       "and you judge the product honestly — politely, but you will not pretend to like something that does not help you.",
     actions: ["VERDICT"],
     subagent: "team-persona",
-    workspace: "This is what the team has built so far. If you can read files, look at README.md and try it as a user would.",
+    workspace:
+      "This is what the team has built so far. If you can read files, start with the demos above and the files they point to, " +
+      "then README.md, and try it as a user would.",
   },
 };
 
@@ -120,6 +138,12 @@ export function subagentFor(role: Role): string {
 export function workspaceGuide(role: Role): string {
   return roleDef(role)?.workspace ?? "This is what the team has built so far.";
 }
+
+/** Extra workspace guidance when the workspace is an existing codebase (`init --workspace`). */
+export const EXTERNAL_WORKSPACE_GUIDE =
+  "This is an existing codebase with its own conventions. Before changing it, read its CLAUDE.md / AGENTS.md / " +
+  "CONTRIBUTING.md and README, follow its rules (structure, naming, tests, quality gate, commit conventions), " +
+  "and keep the change limited to the brief.";
 
 /** Whether `role` may edit the workspace during `phase`. */
 export function canEdit(phase: PhaseDef, role: Role): boolean {

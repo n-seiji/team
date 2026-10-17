@@ -2,6 +2,7 @@
 // Uses whatever auth Claude Code already has, and lets engineers really edit
 // files in the workspace during build/review. Works on Linux, macOS and Windows.
 import { spawn } from "node:child_process";
+import * as path from "node:path";
 import type { BackendConfig } from "../types.ts";
 import type { TurnPrompt } from "../prompt.ts";
 import { promptAsText } from "../prompt.ts";
@@ -23,12 +24,17 @@ export class ClaudeCliBackend implements Backend {
     const args = ["-p", "--output-format", "text", "--allowedTools", (p.canEdit ? BUILDER : READ_ONLY).join(",")];
     if (p.canEdit) args.push("--permission-mode", "acceptEdits");
     if (this.model) args.push("--model", this.model);
+    // In an existing codebase, run inside it so its own CLAUDE.md, rules and hooks apply to the turn.
+    const cwd = ctx.state.externalWorkspace ? path.resolve(ctx.root, ctx.state.workspace) : ctx.root;
+    const where =
+      cwd === ctx.root ? "" : `\nYour current directory is the workspace itself (${cwd}); workspace paths above are relative to it.`;
     const input =
       promptAsText(p) +
+      where +
       "\nUse your tools if needed, then make your FINAL message consist only of the action tags described above.\n";
     return new Promise((resolve, reject) => {
       const child = spawn(this.bin, args, {
-        cwd: ctx.root,
+        cwd,
         shell: process.platform === "win32", // resolves claude.cmd on Windows
         stdio: ["pipe", "pipe", "pipe"],
       });

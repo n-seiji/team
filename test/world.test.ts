@@ -108,3 +108,67 @@ test("rejects duplicate member ids", () => {
     /duplicate/,
   );
 });
+
+test("a late decision sends the session through wrap-up before it finishes", () => {
+  const w = make(1);
+  toAcceptance(w);
+  w.record("u1", "[VERDICT accept] good");
+  w.record("u2", "[VERDICT accept] good");
+  w.record("pm", "[DECISION] edge days stay at 100%");
+  assert.equal(w.state.status, "running");
+  assert.equal(w.phase.id, "wrapup");
+  assert.deepEqual(w.next(), ["e1"]);
+  w.record("e1", "applied");
+  w.record("e2", "nothing for me");
+  w.record("pm", "shipped");
+  assert.equal(w.state.status, "done");
+  assert.equal(w.phase.id, "wrapup");
+});
+
+test("wrap-up is skipped when nothing is left, and runs for open tasks", () => {
+  const clean = make(1);
+  toAcceptance(clean);
+  clean.record("u1", "[VERDICT accept] ok");
+  clean.record("u2", "[VERDICT accept] ok");
+  clean.record("pm", "thanks");
+  assert.equal(clean.state.status, "done");
+  assert.equal(clean.phase.id, "acceptance");
+
+  const w = make(1);
+  toAcceptance(w);
+  w.record("pm", "[TASK owner=e1] follow-up\n- docs updated", { force: true });
+  w.record("u1", "[VERDICT accept] ok");
+  w.record("u2", "[VERDICT accept] ok");
+  w.record("pm", "thanks");
+  assert.equal(w.phase.id, "wrapup");
+  w.record("e1", "could not finish");
+  w.record("e2", "-");
+  w.record("pm", "left for the human");
+  assert.equal(w.state.status, "done");
+  assert.ok(w.emitted.some((e) => e.kind === "system" && /Still open: T3 \(follow-up\)/.test(e.text)));
+});
+
+test("a rejection with iterations left loops instead of wrapping up", () => {
+  const w = make(2);
+  toAcceptance(w);
+  w.record("pm", "[TASK owner=e1] extra", { force: true });
+  w.record("u1", "[VERDICT reject] no");
+  w.record("u2", "[VERDICT accept] ok");
+  w.record("pm", "[DECISION] retry");
+  assert.equal(w.phase.id, "planning");
+  assert.equal(w.state.iteration, 2);
+});
+
+test("demos are recorded for engineers only", () => {
+  const w = make();
+  toBuild(w);
+  w.record("e1", "[TASK_DONE T1] did A\n[DEMO T1] run `a` → prints OK");
+  w.record("e2", "[TASK_DONE T2] did B");
+  w.record("e1", "[SAY to=all] lgtm");
+  w.record("e2", "lgtm");
+  w.record("pm", "[DEMO] fake");
+  assert.deepEqual(
+    w.state.demos!.map((d) => [d.by, d.text]),
+    [["e1", "T1: run `a` → prints OK"]],
+  );
+});
