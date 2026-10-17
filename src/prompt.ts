@@ -87,6 +87,9 @@ export function buildPrompt(
           "## Wrap-up checklist (must be settled before the session ends)",
           ...wrap.tasks.map((t) => `- open task ${t.id} owner=${t.owner ?? "-"}: ${t.title}`),
           ...wrap.decisions.map((d) => `- decision to apply (${d.phase}): ${d.text}`),
+          ...wrap.followUps.map(
+            (t) => `- follow-up ${t.id} (added in ${t.phase}; users have not seen it): do NOT build it, hand it over: ${t.title}`,
+          ),
         ]
       : []),
     ...(showDemos ? ["", "## Demos shown by the team (this iteration)", ...demos.map((d) => `- ${displayDemo(s, d)}`)] : []),

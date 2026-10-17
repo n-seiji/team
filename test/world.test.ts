@@ -145,7 +145,7 @@ test("wrap-up is skipped when nothing is left, and runs for open tasks", () => {
   w.record("e2", "-");
   w.record("pm", "left for the human");
   assert.equal(w.state.status, "done");
-  assert.ok(w.emitted.some((e) => e.kind === "system" && /Still open: T3 \(follow-up\)/.test(e.text)));
+  assert.ok(w.emitted.some((e) => e.kind === "system" && /Still open \(for the human\): T3 \(follow-up\)/.test(e.text)));
 });
 
 test("a rejection with iterations left loops instead of wrapping up", () => {
@@ -171,4 +171,29 @@ test("demos are recorded for engineers only", () => {
     w.state.demos!.map((d) => [d.by, d.text]),
     [["e1", "T1: run `a` → prints OK"]],
   );
+});
+
+test("follow-up tasks from acceptance start another iteration while iterations remain", () => {
+  const w = make(2);
+  toAcceptance(w);
+  w.record("u1", "[VERDICT accept] ok if the wording changes");
+  w.record("u2", "[VERDICT accept] ok");
+  w.record("pm", "[TASK owner=e1] change the wording\n- says 記録なし");
+  assert.equal(w.state.status, "running");
+  assert.equal(w.state.iteration, 2);
+  assert.equal(w.phase.id, "planning");
+  assert.ok(w.emitted.some((e) => /follow-up tasks were added after the build \(T3\)/.test(e.text)));
+});
+
+test("in the last iteration, follow-ups are handed over in wrap-up, not built", async () => {
+  const { wrapupItems } = await import("../src/world.ts");
+  const w = make(1);
+  toAcceptance(w);
+  w.record("u1", "[VERDICT accept] ok");
+  w.record("u2", "[VERDICT accept] ok");
+  w.record("pm", "[TASK owner=e1] later\n- x");
+  assert.equal(w.phase.id, "wrapup");
+  const items = wrapupItems(w.state);
+  assert.deepEqual(items.followUps.map((t) => t.id), ["T3"]);
+  assert.deepEqual(items.tasks, []);
 });

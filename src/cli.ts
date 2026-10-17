@@ -262,7 +262,7 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
         const ctx = { state: w.state, root };
         // Members scheduled in the same step act in parallel (like TinyWorld steps).
         const replies = await Promise.all(
-          ids.map((id) => backend.respond(buildPrompt(w.state, id, view, files, { others }), ctx)),
+          ids.map((id) => respondWithRetry(() => backend.respond(buildPrompt(w.state, id, view, files, { others }), ctx), id, out)),
         );
         ids.forEach((id, i) => {
           const before = w.emitted.length;
@@ -280,6 +280,22 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
 
     default:
       throw new Error(`unknown command: ${cmd}\n\n${HELP}`);
+  }
+}
+
+/** One retry per turn; if that also fails, the member skips the turn so a single bad call does not stop the run. */
+async function respondWithRetry(call: () => Promise<string>, id: string, out: (s: string) => void): Promise<string> {
+  try {
+    return await call();
+  } catch (first) {
+    out(`warning: ${id}'s turn failed, retrying once: ${(first as Error).message.split("\n")[0]}`);
+    try {
+      return await call();
+    } catch (e) {
+      const reason = (e as Error).message.split("\n")[0].slice(0, 200);
+      out(`warning: ${id} skips this turn: ${reason}`);
+      return "[SAY to=all] (could not attend this turn)";
+    }
   }
 }
 

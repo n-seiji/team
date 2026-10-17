@@ -15,11 +15,14 @@ export function formatEntry(s: SessionState, e: Entry): string {
     case "system":
       return `— ${e.text}`;
     case "think":
-      return `${who} [thinks]: ${e.text}`;
+      return `${who} [memo]: ${e.text}`;
     case "note":
       return `${who} [notes]: ${e.text}`;
     case "say":
       return `${who}${to}: ${e.text}`;
+    case "task_update":
+      // Not "[TASK_UPDATE]": agents copy what they see, and that is not an action tag.
+      return `${who} (task update) ${e.text}`;
     default:
       return `${who} [${e.kind.toUpperCase()}]: ${e.text}`;
   }

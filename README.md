@@ -37,16 +37,16 @@ Key properties:
 | build | engineers (**in parallel**) | Each engineer implements their tasks in `workspace/<session>/` and reports `[TASK_DONE]` |
 | review | engineers, PM | Cross-review and fixes; each engineer posts a `[DEMO]` with output they really produced; the PM checks the acceptance criteria |
 | acceptance | users, PM | Users start from the demos (kept in their prompt), read or run the result and give `[VERDICT accept/reject]`; the PM sums up |
-| wrapup | engineers, PM | Only when the session is about to finish with open tasks, or with decisions made in review / acceptance that nobody has applied yet. Engineers apply them; the PM lists what is left for the real human |
+| wrapup | engineers, PM | Only when the session is about to finish with open tasks, or with decisions made in review / acceptance that nobody has applied yet. Engineers apply them; tasks added in acceptance are handed over, not built, and the PM lists what is left for the real human |
 
-If any user rejects and the iteration limit (`maxIterations`) has not been reached, the team goes back to planning. Each phase ends after its maximum number of rounds, or earlier when the PM sends `[ADVANCE]`. When the session finishes, the last log line names any task that is still open.
+If any user rejects, or the PM turns users' conditions into new tasks in acceptance, and the iteration limit (`maxIterations`) has not been reached, the team goes back to planning so users see the result. Each phase ends after its maximum number of rounds, or earlier when the PM sends `[ADVANCE]`. When the session finishes, the last log line names any task that is still open.
 
 ### Conversation protocol
 
 Agents reply with plain-text tags, an extension of TinyTroupe's THINK / TALK / DONE actions (`src/protocol.ts`):
 
 ```
-[THINK] private reasoning, visible only to its author
+[THINK] a short private memo, visible only to its author
 [SAY to=user-yamada] the addressed member speaks next (to=all addresses everyone)
 [NOTE] long-term memory, shown to its author on every later turn
 [TASK owner=eng-backend] title
@@ -171,4 +171,5 @@ personas/       member definitions
 - Simulated users do not replace real users. Use them to widen hypotheses and catch obvious problems, then confirm important decisions with real people.
 - Users judge only what the team shows them: the demos and the files they can open. They cannot use a browser or a phone, so anything not demonstrated stays unverified, and they are told to say so.
 - Engineers in the build phase edit the same `workspace/<session>/` in parallel. They are told to keep to their own files, and conflicts are expected to be fixed in review.
+- In auto mode a turn that fails (for example an API error) is retried once; if it fails again the member skips that turn and the run goes on.
 - The `claude-cli` backend gives engineers Bash and edit tools in phases that allow editing. Run it in a trusted environment, such as a container or a cloud session.

@@ -17,7 +17,9 @@ export const DEFAULT_PHASES: PhaseDef[] = [
     id: "planning",
     goal:
       "PM turns findings into a small, shippable scope: [TASK] items with clear acceptance criteria, " +
-      "each assigned to an engineer. Engineers challenge feasibility, split or re-assign tasks, and agree on tech choices.",
+      "each assigned to an engineer. Engineers challenge feasibility, split or re-assign tasks, and agree on tech choices. " +
+      "Decide early how each user will actually get to and start the product with their own device and skills " +
+      "(e.g. a URL on their phone vs. a terminal command) and make that part of the acceptance criteria.",
     speakers: ["pm", "engineer"],
     mode: "round-robin",
     maxRounds: 2,
@@ -52,7 +54,8 @@ export const DEFAULT_PHASES: PhaseDef[] = [
     goal:
       "Users try what was built — start from the team's demos, open the files they point to, run it if possible — " +
       "and judge it from their own needs. Each user gives a [VERDICT accept|reject] with reasons. " +
-      "PM summarizes and decides next steps.",
+      "PM summarizes and decides next steps: every condition a user attached to their verdict becomes a [TASK] or gets a " +
+      "one-line reason why not (follow-up tasks start another iteration while iterations remain).",
     speakers: ["user", "pm"],
     mode: "round-robin",
     maxRounds: 1,
@@ -62,6 +65,7 @@ export const DEFAULT_PHASES: PhaseDef[] = [
     goal:
       "The session is about to end. Engineers apply every decision made during review and acceptance and finish " +
       "their open tasks ([TASK_DONE]); a task that cannot be finished here gets one line saying why and what is left. " +
+      "Follow-ups added after the build are not built here: users have not seen them, so they are handed over. " +
       "PM then confirms what shipped and lists, for the real human, anything still open or needing their decision.",
     speakers: ["engineer", "pm"],
     mode: "round-robin",
@@ -95,7 +99,9 @@ const ROLES: Record<string, RoleDef> = {
     guide:
       "You are a software engineer on the team. You own the 'how': design, implementation, tests and quality " +
       "of the tasks assigned to you. Speak up early about risks and trade-offs. When building, actually write the " +
-      "code in the workspace, keep it runnable, and report what you did concretely (files, commands).",
+      "code in the workspace, keep it runnable, and report what you did concretely (files, commands). " +
+      "Other programs (including this team's own runtime) share the machine: when you start a server or any background " +
+      "process, stop it by its PID (`kill $PID`); never use pkill, killall or kill by name or pattern.",
     actions: ["TASK", "TASK_START", "TASK_DONE", "DEMO"],
     subagent: "team-engineer",
     workspace:

@@ -140,6 +140,8 @@ export class World {
           owner,
           status: "todo",
           createdBy: m.id,
+          phase: this.phase.id,
+          iteration: s.iteration,
         };
         s.tasks.push(t);
         this.log(m.id, "task", `${t.id} owner=${owner ?? "-"}: ${t.title}${t.acceptance ? "\n" + t.acceptance : ""}`);
@@ -261,25 +263,28 @@ export class World {
       }
       const vs = s.verdicts.filter((v) => v.iteration === s.iteration);
       const rejected = vs.filter((v) => v.verdict === "reject");
-      if (rejected.length > 0 && s.iteration < s.maxIterations) {
+      // Tasks added after the last chance to build (e.g. users' conditions in acceptance) are new scope:
+      // build them in another iteration so users see them, never silently in wrap-up.
+      const followUps = wrapupItems(s).followUps;
+      if ((rejected.length > 0 || followUps.length > 0) && s.iteration < s.maxIterations) {
         s.iteration++;
         s.phaseIndex = Math.max(0, s.phases.findIndex((p) => p.iterationStart && !p.finale));
-        this.log(
-          "system",
-          "system",
-          `Iteration ${s.iteration} begins: ${rejected.length}/${vs.length} users rejected (${rejected.map((r) => r.by).join(", ")}).`,
-        );
+        const why = rejected.length
+          ? `${rejected.length}/${vs.length} users rejected (${rejected.map((r) => r.by).join(", ")})`
+          : `follow-up tasks were added after the build (${followUps.map((t) => t.id).join(", ")})`;
+        this.log("system", "system", `Iteration ${s.iteration} begins: ${why}.`);
         this.logPhaseStart();
         return;
       }
       const finale = s.phases.findIndex((p) => p.finale);
       const left = wrapupItems(s);
-      if (finale >= 0 && (left.tasks.length || left.decisions.length)) {
+      if (finale >= 0 && (left.tasks.length || left.decisions.length || left.followUps.length)) {
         s.phaseIndex = finale;
         this.log(
           "system",
           "system",
-          `Wrap-up before finishing: ${left.tasks.length} open task(s), ${left.decisions.length} late decision(s) to apply.`,
+          `Wrap-up before finishing: ${left.tasks.length} open task(s), ${left.decisions.length} late decision(s) to apply, ` +
+            `${left.followUps.length} follow-up(s) to hand over.`,
         );
         this.logPhaseStart();
         return;
@@ -295,7 +300,7 @@ export class World {
     const accepted = vs.filter((v) => v.verdict === "accept").length;
     const summary = vs.length ? `${accepted}/${vs.length} users accepted.` : "No user verdicts were given.";
     const open = s.tasks.filter((t) => t.status !== "done");
-    const rest = open.length ? ` Still open: ${open.map((t) => `${t.id} (${t.title})`).join(", ")}.` : "";
+    const rest = open.length ? ` Still open (for the human): ${open.map((t) => `${t.id} (${t.title})`).join(", ")}.` : "";
     this.log("system", "system", `Session finished after iteration ${s.iteration}. ${summary}${rest}`);
   }
 
@@ -322,16 +327,25 @@ const systemNow = () => new Date().toISOString();
 
 /**
  * What a wrap-up phase must take care of: tasks not done, and decisions of this iteration made in or after the
- * last regular phase where anyone could edit the workspace (so nobody has applied them yet).
+ * last regular phase where anyone could edit the workspace (so nobody has applied them yet). Open tasks created
+ * after that phase are follow-ups: new scope that users have not seen, handed over instead of built.
  */
-export function wrapupItems(s: SessionState): { tasks: Task[]; decisions: SessionState["decisions"] } {
+export function wrapupItems(s: SessionState): {
+  tasks: Task[];
+  decisions: SessionState["decisions"];
+  followUps: Task[];
+} {
   const regular = s.phases.map((p, i) => ({ p, i })).filter(({ p }) => !p.finale);
   const lastEdit = Math.max(-1, ...regular.filter(({ p }) => p.editors?.length).map(({ i }) => i));
-  const late =
+  const late = (phase: string | undefined, iteration: number | undefined) =>
+    lastEdit >= 0 && iteration === s.iteration && s.phases.findIndex((p) => p.id === phase) > lastEdit;
+  const open = s.tasks.filter((t) => t.status !== "done");
+  const followUps = open.filter((t) => late(t.phase, t.iteration) && !s.phases.find((p) => p.id === t.phase)?.finale);
+  const decisions =
     lastEdit < 0
       ? []
       : s.decisions.filter((d) => d.iteration === s.iteration && s.phases.findIndex((p) => p.id === d.phase) >= lastEdit);
-  return { tasks: s.tasks.filter((t) => t.status !== "done"), decisions: late };
+  return { tasks: open.filter((t) => !followUps.includes(t)), decisions, followUps };
 }
 
 export function currentPhase(s: SessionState): PhaseDef {

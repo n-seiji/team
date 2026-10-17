@@ -52,6 +52,9 @@ export interface Task {
   owner?: string;
   status: TaskStatus;
   createdBy: string;
+  /** Where the task was created (absent in older sessions). */
+  phase?: string;
+  iteration?: number;
   summary?: string;
 }
 

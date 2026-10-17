@@ -159,6 +159,15 @@ test("users see this iteration's demos in acceptance; status --json names the ph
   assert.equal(JSON.parse(await run(dir, "status", "--json")).phase, "acceptance");
 });
 
+test("transcript shows task updates without an action-like tag", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "r1", "--brief", "表示");
+  await run(dir, "run", "--backend", "mock");
+  const log = await run(dir, "log");
+  assert.match(log, /\(task update\) T1 → done/);
+  assert.doesNotMatch(log, /\[TASK_UPDATE\]/);
+});
+
 test("a mock run goes through wrap-up after the PM's acceptance decision", async () => {
   const dir = sandbox();
   await run(dir, "init", "--name", "w1", "--brief", "まとめ");
@@ -173,3 +182,23 @@ function writeReply(dir: string, text: string): string {
   fs.writeFileSync(f, text);
   return f;
 }
+
+test("run keeps going when a member's turn fails twice", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "f1", "--brief", "失敗");
+  const { MockBackend } = await import("../src/backends/mock.ts");
+  const orig = MockBackend.prototype.respond;
+  let calls = 0;
+  MockBackend.prototype.respond = function (p, ctx) {
+    if (p.member === "user-yamada" && calls++ < 2) return Promise.reject(new Error("API Error: flagged"));
+    return orig.call(this, p, ctx);
+  };
+  try {
+    const out = await run(dir, "run", "--backend", "mock");
+    assert.match(out, /user-yamada skips this turn: API Error: flagged/);
+    assert.match(out, /could not attend this turn/);
+    assert.match(out, /session is done/);
+  } finally {
+    MockBackend.prototype.respond = orig;
+  }
+});
