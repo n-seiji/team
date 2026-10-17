@@ -34,6 +34,16 @@ node --test test/*.test.mjs  # ロジックのテスト
 - `reason` は述語の形（「薄くて読めません」「不正な形式です」）。「未読み取り」だけは画面側で文にする。
 - エラーは `{error: "理由"}` を日本語で。
 
+## サーバーと読み取りアダプタ（T4・T5）
+```
+node src/server.mjs          # API と web/ を http://<IP>:3000/ で配る。データは data/ に保存
+```
+- 保存: 画像は `data/images/<id>.<ext>`、記録は `data/records/<id>.json`。DB なし。
+- 読み取りエンジンは `createApp({ reader })` で差し替える。`reader(buffer, {id})` は `{date, amount, payee, category}` を返し、各項目は `{value, confidence, reason?}`。
+- 要確認の規則は `src/reader.mjs` の `normalize()` にあり、エンジンに依存しない。空欄、確からしさ 0.8 未満、日付・金額の形式 NG、カテゴリが5候補外（→「その他」）は要確認。推測で埋めない。
+- 今のエンジンは `nullReader`（全項目を空欄＋要確認「未読み取り」）。ローカル OCR の試行と実測はまだしていない（本物のサンプル5枚と tesseract の導入許可待ち）。精度の数字は測るまで書かない。
+- 外部 API には画像を送らない。
+
 ## 未確認・既知の制限
 - 実ブラウザ（iOS Safari / Android Chrome）での動作はまだ確認していない。ここで確認できたのはロジックのテストのみ。
 - 実 API には `node src/server.mjs` → `http://<IP>:3000/` で同じオリジンからつながる（スモーク確認済み）。
