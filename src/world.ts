@@ -1,7 +1,7 @@
 // The "world" (TinyWorld analogue): roster, shared transcript, phase/turn
 // scheduling and the effects of each action. Pure state transitions live here;
 // persistence is in store.ts so this module is easy to test.
-import type { Entry, EntryKind, PersonaSpec, PhaseDef, SessionState, Task, TaskStatus } from "./types.ts";
+import type { Entry, EntryKind, PersonaSpec, PhaseDef, SessionState, Task, TaskStatus, Trial } from "./types.ts";
 import { parseReply, type Action } from "./protocol.ts";
 import { allowedActions } from "./sop.ts";
 
@@ -78,6 +78,22 @@ export class World {
 
   member(id: string): PersonaSpec | undefined {
     return findMember(this.state, id);
+  }
+
+  /** Whether the runtime still has to run the verification command before this phase's first turn. */
+  get trialDue(): boolean {
+    return this.state.status === "running" && !!this.phase.trial && !this.state.trials?.some((t) => t.iteration === this.state.iteration);
+  }
+
+  /** Record the runtime's run of the verification command (see trialDue). */
+  addTrial(t: Omit<Trial, "iteration" | "at">): void {
+    const trial: Trial = { ...t, iteration: this.state.iteration, at: this.now() };
+    (this.state.trials ??= []).push(trial);
+    const result = !t.command
+      ? "No verification command was declared ([VERIFY]); users judge from the demos only."
+      : `Trial run of \`${t.command}\`: ${t.timedOut ? "timed out" : `exit ${t.exitCode}`}` +
+        (t.artifacts.length ? `, ${t.artifacts.length} file(s) saved` : "") + ".";
+    this.log("system", "system", result);
   }
 
   /** Members who should act now. Empty when the session is done. */
@@ -170,6 +186,16 @@ export class World {
         }
         t.owner ??= m.id;
         this.updateTask(m.id, t, TASK_STATUS[a.type], a.type === "TASK_START" ? undefined : a.text);
+        break;
+      }
+      case "VERIFY": {
+        const command = a.text.replace(/^`+|`+$/g, "").trim();
+        if (!command || command.includes("\n")) {
+          this.log("system", "system", `Ignored [VERIFY] from ${m.id}: give one command on one line.`);
+          break;
+        }
+        s.verify = { command, by: m.id };
+        this.log(m.id, "verify", command);
         break;
       }
       case "ASK_HUMAN":

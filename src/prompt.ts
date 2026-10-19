@@ -3,7 +3,7 @@
 import * as fs from "node:fs";
 import { execFileSync } from "node:child_process";
 import * as path from "node:path";
-import type { Entry, SessionState } from "./types.ts";
+import type { Entry, SessionState, Trial } from "./types.ts";
 import { ACTION_HELP, PROTOCOL_HELP } from "./protocol.ts";
 import { EXTERNAL_WORKSPACE_GUIDE, allowedActions, canEdit, roleGuide, workspaceGuide } from "./sop.ts";
 import { formatBacklog, formatEntry, formatQuestions } from "./render.ts";
@@ -66,6 +66,7 @@ export function buildPrompt(
   const wrap = phase.finale ? wrapupItems(s) : undefined;
   const others = m.role === "engineer" ? (extra.others ?? []) : [];
   const questions = m.role !== "user" && s.questions?.length ? formatQuestions(s) : "";
+  const trial = s.trials?.find((t) => t.iteration === s.iteration);
   const rejections = m.role === "pm" && phase.iterationStart ? rejectionsToAddress(s) : [];
 
   const user = [
@@ -107,11 +108,13 @@ export function buildPrompt(
             "patching around it. A user who rejected for the same reason again means the last fixes rested on a wrong premise.",
         ]
       : []),
+    ...(trial ? ["", ...formatTrial(trial)] : []),
     ...(showDemos ? ["", "## Demos shown by the team (this iteration)", ...demos.map((d) => `- ${displayDemo(s, d)}`)] : []),
     ...(notes.length ? ["", "## Your long-term notes", ...notes.map((n) => `- ${n}`)] : []),
     "",
     `## Workspace (${s.workspace}/)`,
     workspaceGuide(m.role),
+    ...(m.role === "engineer" ? [`Artifacts folder for evidence (relative to the repository root): ${artifactsDir(s.name)}/`] : []),
     ...(s.externalWorkspace && m.role === "engineer" ? [EXTERNAL_WORKSPACE_GUIDE] : []),
     edit ? "You may edit files in the workspace during this phase." : "Do not edit files during this phase.",
     ...(s.externalWorkspace ? ["Files changed so far (git status, relative to the workspace):"] : []),
@@ -135,6 +138,28 @@ export function buildPrompt(
   ].join("\n");
 
   return { member: m.id, role: m.role, canEdit: edit, system, user };
+}
+
+/** Where a session keeps evidence files: screenshots, generated files, trial runs. */
+export function artifactsDir(session: string): string {
+  return `.team/sessions/${session}/artifacts`;
+}
+
+function formatTrial(t: Trial): string[] {
+  if (!t.command)
+    return ["## Trial run", "The team declared no verification command, so nothing was run for users; judge from the demos only."];
+  const status = t.timedOut ? "timed out (stopped)" : t.exitCode === 0 ? "exit 0 (passed)" : `exit ${t.exitCode} (FAILED)`;
+  return [
+    `## Trial run (iteration ${t.iteration}): real output, produced by the team's runtime, not written by the team`,
+    `Command (run in the workspace): ${t.command}`,
+    `Result: ${status}`,
+    "```",
+    t.output.trim() || "(no output)",
+    "```",
+    ...(t.artifacts.length
+      ? ["Files it saved (open them; screenshots are images you can read):", ...t.artifacts.map((a) => `- ${a}`)]
+      : []),
+  ];
 }
 
 /** Last iteration's rejections, marking users who rejected in every iteration so far (the fixes did not land). */

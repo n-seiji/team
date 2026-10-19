@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>invoice-cli</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+JP:wght@400;600;700&display=swap">
+<style>
+/* Layout: a reading column for the conversation, with the session's records in a side column on wide screens. */
+:root {
+  --bg: #f6f7f8; --panel: #ffffff; --fg: #1d2329; --muted: #5d6873; --line: #dfe3e7;
+  --accent: #1f6f78; --pm: #7a4dbf; --eng: #1f6f78; --user: #b25a1d; --human: #b0324a;
+  --ok: #2c7a3f; --bad: #b0324a; --code: #eef1f3;
+  --body: "IBM Plex Sans JP", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12161a; --panel: #1a2026; --fg: #e3e8ec; --muted: #9aa6b1; --line: #2c343c;
+  --accent: #5fb7bf; --pm: #b796ec; --eng: #5fb7bf; --user: #e59a62; --human: #ec7d92;
+  --ok: #6cc785; --bad: #ec7d92; --code: #232b33; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12161a; --panel: #1a2026; --fg: #e3e8ec; --muted: #9aa6b1; --line: #2c343c;
+  --accent: #5fb7bf; --pm: #b796ec; --eng: #5fb7bf; --user: #e59a62; --human: #ec7d92;
+  --ok: #6cc785; --bad: #ec7d92; --code: #232b33; color-scheme: dark }
+* { box-sizing: border-box }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.65 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header, main { max-width: 1180px; margin: 0 auto }
+header { padding-block: 28px 12px; display: grid; gap: 8px }
+h1 { font-size: 1.6rem; line-height: 1.25; margin: 0; text-wrap: balance }
+h2 { font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px }
+.brief { max-width: 72ch; margin: 0; white-space: pre-wrap }
+.chips { display: flex; flex-wrap: wrap; gap: 6px }
+.chip { font: 12px var(--mono); padding: 2px 8px; border: 1px solid var(--line); border-radius: 99px; background: var(--panel) }
+main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; padding-block: 8px 48px; align-items: start }
+@media (max-width: 860px) { main { grid-template-columns: minmax(0, 1fr) } }
+aside { display: grid; gap: 20px; min-width: 0 }
+aside section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; min-width: 0 }
+aside ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px }
+.controls { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 2; background: var(--bg);
+  display: flex; flex-wrap: wrap; gap: 16px; align-items: center; padding-block: 10px; border-bottom: 1px solid var(--line) }
+.controls label { display: inline-flex; gap: 6px; align-items: center; font-size: .9rem }
+select { font: inherit; padding: 2px 6px }
+details { border-bottom: 1px solid var(--line) }
+summary { cursor: pointer; padding-block: 12px; font-weight: 600; display: flex; gap: 10px; align-items: baseline }
+summary .muted { font-weight: 400; font-size: .85rem }
+summary:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+ol { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 10px }
+.msg { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--c, var(--line)); border-radius: 6px; padding: 10px 14px; min-width: 0 }
+.msg.pm { --c: var(--pm) } .msg.eng { --c: var(--eng) } .msg.user { --c: var(--user) } .msg.human { --c: var(--human) }
+.msg.private { background: transparent; border-style: dashed; color: var(--muted) }
+.who { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; font-size: .85rem }
+.name { font-weight: 700; color: var(--c, var(--fg)) }
+.to, .turn, .muted { color: var(--muted) }
+.turn { margin-left: auto; font: 11px var(--mono) }
+.kind { font: 11px var(--mono); letter-spacing: .04em; padding: 0 6px; border-radius: 4px; background: var(--code) }
+.kind.accept { color: var(--ok) } .kind.reject { color: var(--bad) }
+.text { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 4px }
+.sys { color: var(--muted); font-size: .85rem; padding-inline: 4px }
+.sys p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere }
+pre { background: var(--code); padding: 10px 12px; border-radius: 6px; overflow-x: auto; font: 12.5px/1.5 var(--mono); white-space: pre; margin: 6px 0 }
+code { font: .9em var(--mono); background: var(--code); padding: 0 4px; border-radius: 3px }
+.small { font-size: .85rem }
+details.sub { border: 0 } details.sub summary { padding-block: 2px; font-weight: 400; font-size: .8rem; color: var(--muted) }
+.st { font: 11px var(--mono); padding: 0 6px; border-radius: 4px; background: var(--code) }
+.st-done { color: var(--ok) } .st-blocked { color: var(--human) } .st-dropped { color: var(--muted); text-decoration: line-through }
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; background: var(--muted) }
+.dot.pm { background: var(--pm) } .dot.eng { background: var(--eng) } .dot.user { background: var(--user) }
+body:not(.show-private) .private { display: none }
+</style>
+</head>
+<body>
+<header>
+  <h1>invoice-cli</h1>
+  <p class="brief"><b>お題:</b> フリーランスや個人事業主が、ターミナルから数十秒で請求書(Markdown/HTML)を作れる小さなツール</p>
+  <div class="chips">
+    <span class="chip">終了</span>
+    <span class="chip">周 2/2</span>
+    <span class="chip">フェーズ: acceptance</span>
+    <span class="chip">119 件</span>
+  </div>
+</header>
+<main>
+<div style="min-width:0">
+  <div class="controls">
+    <label><input type="checkbox" id="show-private"> 本人だけのメモも表示</label>
+    <label>表示する人 <select id="who"><option value="">全員</option><option value="pm">佐藤 美咲</option><option value="eng-backend">田中 健</option><option value="eng-frontend">鈴木 ひかり</option><option value="user-yamada">山田 恵子</option><option value="user-garcia">Daniel García</option></select></label>
+  </div>
+  <h2 style="margin-top:16px">会話</h2>
+  <details><summary>周 1 · discovery <span class="muted">11</span></summary><ol><li class="sys" data-from="system"><p>Session &quot;invoice-cli&quot; started. Brief: フリーランスや個人事業主が、ターミナルから数十秒で請求書(Markdown/HTML)を作れる小さなツール</p></li><li class="sys" data-from="system"><p>Phase &quot;discovery&quot; started — PM interviews the users to uncover their real situation, pains and jobs-to-be-done. Users answer strictly in character, with concrete episodes. No solutions yet.</p></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#1</span></div><div class="text">最初のラウンド。解決策の話はまだしない。二人の「直近の請求書作成」という具体的なエピソードを掘る。頻度、所要時間、使っている道具、どこで詰まったかを確認する。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 山田 恵子, Daniel García</span><span class="turn">#1</span></div><div class="text">今日はお時間ありがとうございます。今日はツールの話はせず、お二人が普段どう請求書を作っているかを聞かせてください。
+まず、最後に請求書を作ったのはいつですか？　そのとき、何を開いて、どんな順番で作業しましたか？　だいたい何分かかったかも教えてください。
+あと、その中で一番面倒だった、またはミスしかけた場面があれば、そのときのことを具体的に教えてください。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#1</span></div><div class="text">Discovery R1：直近の請求書作成エピソード（時期・手順・道具・所要時間・つまずき）を両ユーザーに質問した。解決策の話はまだしない。</div></li><li class="msg user private" data-from="user-yamada"><div class="who"><span class="name">山田 恵子</span> <span class="kind">memo</span><span class="turn">#2</span></div><div class="text">事務スタッフとして、具体的なエピソードで丁寧に答える。請求書は所長の名前で顧問先に出す。Excelのひな形を使う。ミス例は金額・日付・源泉徴収。</div></li><li class="msg user" data-from="user-yamada"><div class="who"><span class="name">山田 恵子</span> <span class="to">→ 佐藤 美咲</span><span class="turn">#2</span></div><div class="text">佐藤さん、こんにちは。山田です。お役に立てるか分かりませんが、普段のことをお話しします。
+
+最後に作ったのは先週の金曜日です。顧問先さん十数件分の月次の請求書でした。
+流れは、まず Excel の「請求書ひな形」を開いて、前の月のファイルを「名前を付けて保存」で複製します。それから月と日付を直して、先生が手書きされた作業メモ(紙)を見ながら、顧問料や記帳代行の金額を打ち込みます。最後に印刷して、先生に確認の判子をいただき、封筒に入れます。1件で10分ほどで、全部だと2時間くらいかかります。
+
+一番困ったのは、前の月のファイルを複製するので、宛名を直し忘れそうになったことです。別の会社の名前のまま印刷しかけて、プリンターから出てきたところで気づきました。先生にご迷惑をおかけするところで、ひやっとしました。それ以来、印刷前に3回見直すので、余計に時間がかかってしまいます。
+
+あと、源泉徴収が入るお客様と入らないお客様があって、そこの計算も毎回電卓で確かめています。</div></li><li class="msg user private" data-from="user-garcia"><div class="who"><span class="name">Daniel García</span> <span class="kind">memo</span><span class="turn">#3</span></div><div class="text">具体的なエピソードを短く話す。Notion/Google Docsテンプレ+PDF、Zapier連携の不満、手作業の転記。</div></li><li class="msg user" data-from="user-garcia"><div class="who"><span class="name">Daniel García</span> <span class="to">→ 佐藤 美咲</span><span class="turn">#3</span></div><div class="text">Daniel です。最後に作ったのは3日前、Webサイト制作案件の着手金分でした。
+
+流れはこうです。
+1. Notion の「Invoice」テンプレを複製する
+2. 見積もりのメールを見返して、金額と項目をコピペする
+3. 請求書番号を前回のページから確認して +1 する
+4. PDF に書き出して、Gmail に添付して送る
+5. Google Sheets の売上管理表に手で1行足す
+
+全部で15分くらいでした。1件ならまだ我慢できます。でも今は同時に5〜6案件あるので、月末にまとめて作ると1時間は消えます。正直、これは制作じゃないので時間がもったいないです。
+
+一番ひどかったのは先月です。請求書番号を間違えて、前のクライアントと同じ番号で送ってしまいました。相手の経理から「重複してます」と返信が来て、再発行しました。恥ずかしかったです。
+
+あと、スペインの取引先には EUR で請求することもあります。そのときはレートを調べて円換算を別で書くので、そこも地味に面倒です。インボイス制度の登録番号も、毎回どこかからコピペしています。
+
+以前 Zapier で自動化しようとしましたが、Notion のテンプレが微妙で、30分やって諦めました。その後は手作業に戻っています。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#4</span></div><div class="text">両者から具体的なエピソードが得られた。共通点は「前回コピー→直し忘れ」の事故。次ラウンドは頻度・事故後の行動・既存の回避策を事実で掘る。解決策はまだ出さない。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 山田 恵子</span><span class="turn">#4</span></div><div class="text">山田さん、ありがとうございます。「別の会社の名前のまま印刷しかけた」の場面をもう少し聞かせてください。
+1. それが起きたのは何月の何件目でしたか？　気づいたきっかけは何でしたか？
+2. それ以来の「印刷前に3回見直す」は、具体的に何を見ていますか？　見る項目を順番に教えてください。
+3. 源泉徴収の計算は、直近でいつ、いくらの請求で電卓を使いましたか？</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ Daniel García</span><span class="turn">#4</span></div><div class="text">Daniel さん、ありがとうございます。
+1. 番号を間違えた先月のとき、どの時点で前回の番号を確認しましたか？　どのページを見て、なぜ間違えたと思いますか？
+2. 再発行には、結局どれくらい時間がかかりましたか？　相手とのやり取りは何往復でしたか？
+3. 売上管理表への1行追加は、直近でいつ忘れましたか？　忘れたことで何か起きましたか？
+4. Zapier で30分やって諦めたとき、一番引っかかったのはどこでしたか？</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#4</span></div><div class="text">Discovery R1の収穫: 山田=月十数件、1件10分(計2時間)、Excel複製→宛名直し忘れで誤印刷しかけ、源泉あり/なしを電卓確認。Daniel=月5〜6件、1件15分(月末まとめて1時間)、Notion複製→請求書番号の重複で再発行、売上表に手で転記、EUR換算とインボイス登録番号のコピペ。共通課題は「前回のコピーを直す」ことで起きる取り違え。R2では事故後の行動と既存の回避策を事実で掘る。解決策の話はまだしない。</div></li><li class="msg user private" data-from="user-yamada"><div class="who"><span class="name">山田 恵子</span> <span class="kind">memo</span><span class="turn">#5</span></div><div class="text">具体的に答える。時期は先週金曜の件数中の何件目か曖昧でよい。見直し項目、源泉の直近例を答える。</div></li><li class="msg user" data-from="user-yamada"><div class="who"><span class="name">山田 恵子</span> <span class="to">→ 佐藤 美咲</span><span class="turn">#5</span></div><div class="text">佐藤さん、ありがとうございます。順番にお答えします。
+
+1. 宛名の件は、たしか2か月前の月末で、たしか8件目くらいだったと思います。正確には覚えていません、すみません。プリンターから出てきた紙を、封筒の宛名シールと見比べたときに「あれ、違う」と気づきました。前の会社の名前が残っていました。
+
+2. 印刷前の見直しは、順番にこうです。
+①宛名(会社名と「御中」)
+②日付と、請求の対象月
+③金額(先生のメモと見比べて、桁も確認)
+その後に源泉の有無を見ています。合計で1件あたり2〜3分かかります。「3回」というのは、画面で1回、印刷後に紙で1回、判子をいただく前にもう1回、という意味です。
+
+3. 源泉徴収は、先週金曜の月次分でも使いました。たとえば、記帳代行と顧問料の合計が11万円ほどのお客様で、報酬の部分だけに10.21%をかける必要がありました。どこまでが対象なのか迷うときは、先生に聞いています。電卓で出した数字を、Excelの結果と見比べて確かめます。計算式は入れてあるのですが、前に式を壊してしまったことがあり、それ以来あまり信用できません。</div></li><li class="msg user private" data-from="user-garcia"><div class="who"><span class="name">Daniel García</span> <span class="kind">memo</span><span class="turn">#6</span></div><div class="text">PM asked me 4 questions. Answer concisely with concrete episodes.</div></li><li class="msg user" data-from="user-garcia"><div class="who"><span class="name">Daniel García</span> <span class="to">→ 佐藤 美咲</span><span class="turn">#6</span></div><div class="text">了解です、順番に答えます。
+
+1. 番号の件。前回のページを見て +1 する流れでしたが、直前に作ったのが別クライアントの請求書で、Notion の複製元が古いページだったんです。そこの番号を見て +1 したので、最新のと被りました。番号を一覧で見られる場所がなくて、「最後に作ったやつ」を記憶で探してる状態です。
+
+2. 再発行は、修正と PDF 書き出しと再送で10分くらい。でも相手の経理とは2往復。「重複してます」「失礼しました、これが正しい版です」。時間より、信用を落とした感じが嫌でした。
+
+3. 売上管理表は、先々週に忘れました。月末に集計しようとしたら入金確認が一件抜けてて、メールを遡って探しました。30分くらいムダでした。実際には、忘れるのは毎月のことです。入力が請求書と別の作業だから。
+
+4. Zapier は、Notion の項目をトリガーにしようとしたけど、テンプレがただのページで、金額や宛先が構造化データじゃなかったんです。フィールドを取れない。そこを直す前に30分たって、「もういいや」になりました。セットアップが5分で終わらないものは、続かないです。
+
+あと、インボイスの登録番号と税率計算(10%)も毎回手で確認してます。これも地味にストレスです。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#7</span></div><div class="text">十分な事実が揃った。discoveryは目的達成。まとめて共有し、フェーズを進める。解決策のスコープ決定は次フェーズで。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span><span class="turn">#7</span></div><div class="text">お二人とも、具体的に話してくださってありがとうございます。聞いた事実を整理します。
+
+・山田さん：月十数件、1件10分(計2時間)。前月ファイルを複製→宛名が残ったまま印刷しかけた。今は1件2〜3分かけて「宛名→日付・対象月→金額→源泉」を見直す。源泉の式は「前に壊した」ので信用せず、電卓で再確認。
+・Daniel さん：月5〜6件、1件15分(月末まとめて1時間)。複製元が古いページで請求書番号が重複→再発行、相手の経理と2往復。「時間より、信用を落とした感じが嫌でした」。売上表への転記は「忘れるのは毎月のこと」。Zapierは「セットアップが5分で終わらないものは、続かないです」で断念。
+
+共通点は、「前回のコピーを直す」やり方が取り違えを生み、その不安を人の目で埋めている、ということです。
+
+次のフェーズで、最小スコープを決めます。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#7</span></div><div class="text">Discovery完了。事実: 山田=月十数件/1件10分/宛名直し忘れ→印刷前に1件2〜3分の見直し/源泉10.21%の対象範囲で迷い電卓で再確認(式は一度壊したので不信)。Daniel=月5〜6件/1件15分/請求書番号の重複で再発行(2往復、信用低下が嫌)/番号の一覧が無い/売上表転記を毎月忘れる/EUR換算とインボイス登録番号と10%税の手確認/Zapierは5分で終わらず断念。共通JTBD: 「間違いのない請求書を、前回のコピー修正なしで素早く出したい」。引用: 「時間より、信用を落とした感じが嫌でした」「セットアップが5分で終わらないものは、続かない」。注意: 山田さんがターミナルを使うかは未確認(要確認)。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">ADVANCE</span><span class="turn">#7</span></div><div class="text">End of phase &quot;discovery&quot;.</div></li></ol></details>
+  <details><summary>周 1 · planning <span class="muted">13</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;planning&quot; started (iteration 1) — PM turns findings into a small, shippable scope: [TASK] items with clear acceptance criteria, each assigned to an engineer. Engineers challenge feasibility, split or re-assign tasks, and agree on tech choices.</p></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#8</span></div><div class="text">最小スコープ: 「前回コピー」をなくす=クライアント/案件をデータで持ち、番号は自動採番、源泉・税は計算。CLIでMD/HTML出力。売上表転記・EUR換算は削る。山田さんがターミナルを使うか未確認なのでリスクとして残す。2タスクに分ける。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span><span class="turn">#8</span></div><div class="text">発見の要点は「前回のコピーを直す→取り違え」です。最初のリリースは恥ずかしいくらい小さくします。
+削るもの：EUR換算、売上表連携、PDF、Notion/Zapier連携。
+やること：①クライアントを一度登録、②請求書番号は自動採番（重複しない）、③源泉と10%税は計算、④MD/HTML出力。
+山田さんがターミナルを使うかは未確認なので、確認が取れるまで「コマンドは3つ以内、セットアップ5分以内」を守ります。
+田中さん、ひかりさん、実現性で気になる点を教えてください。保存形式（JSON/YAML/SQLite）は田中さんの提案を聞いてから決めます。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">TASK</span><span class="turn">#8</span></div><div class="text">T1 owner=eng-backend: データ保存・自動採番・金額計算（コア）
+- クライアントを登録できる（名前、敬称「御中」、源泉の有無、インボイス登録番号は発行者として1回設定）。
+- 請求書番号は発行時に自動採番され、同じ番号が2度出ないことをテストで確認できる（連続発行・別クライアントでも）。
+- 明細の合計から消費税10%を計算し、源泉ありクライアントは「報酬のみ」に10.21%を掛ける。明細ごとに「源泉対象」を指定でき、山田さんの例（合計約11万円、報酬のみ対象）で手計算と一致するテストがある。
+- 発行済み請求書の一覧（番号・日付・クライアント・金額）を出せる。
+- 初回セットアップは1コマンド、5分以内で完了する。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">TASK</span><span class="turn">#8</span></div><div class="text">T2 owner=eng-frontend: CLIコマンドとMarkdown/HTML出力
+- <code>invoice new &lt;クライアント&gt;</code> で対話または引数から明細を入力し、30秒以内に請求書ファイルが出力される。
+- 出力にMarkdownとHTMLを選べる（--format）。宛名・御中・請求番号・日付・対象月・明細・消費税・源泉・合計・発行者のインボイス登録番号が表示される。
+- 確定前に宛名・対象月・合計・源泉の有無を1画面にまとめて表示し、y/nで確認できる（山田さんの見直し項目と同じ順）。
+- コマンドは <code>init</code> / <code>client add</code> / <code>new</code> / <code>list</code> の4つ以内でヘルプが1画面に収まる。
+- HTMLはブラウザの印刷でA4 1ページに収まる。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#8</span></div><div class="text">v1は「クライアント登録＋自動採番＋税・源泉計算＋MD/HTML出力」のみ。EUR換算・売上表連携・PDF・外部サービス連携はやらない。理由：事故の原因（前回コピー・番号重複・計算不信）に直結するものに絞るため。トレードオフ：Danielさんの転記と換算の手間は残る。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">memo</span><span class="turn">#9</span></div><div class="text">Planning round: give feasibility concerns and tech choice. JSON files, node stdlib. Key risks: float money, numbering atomicity, withholding rounding, T2 command count 4 vs PM's &quot;3&quot;. No need for tools.</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span><span class="turn">#9</span></div><div class="text">結論から。保存は JSON ファイル(<code>data.json</code>)、Node 標準ライブラリのみ、依存ゼロでいきます。SQLite は Node 22 の <code>node:sqlite</code> が使えますが、まだ実験的扱いです。件数も月十数件なので不要です。YAML は標準で読めないので却下します。
+
+リスクを3つ挙げます。
+1. **金額は整数円で持ちます。** 浮動小数だと 110,000×0.1021=11,231 のような計算で1円ずれる恐れがあります。源泉は「報酬のみ」に10.21%をかけて円未満切り捨てとし、この丸め規則を README とテストに明記します。切り捨てか切り上げかは、山田さんの先生に確認したいです。税理士の運用に合わせるのが安全です。
+2. **採番は「保存してから番号を確定」にします。** 一覧の最大値+1 を、書き込みと同じ処理の中で取り、一時ファイルへ書いて rename します。途中で落ちても番号は飛ばず、重複もしません。連続発行・別クライアントのテストを先に書きます。
+3. **請求書は発行時にスナップショット保存します。** 宛名・源泉有無・インボイス番号を請求書側にコピーします。あとでクライアント設定を変えても、過去の請求書が変わらないようにするためです。
+
+PMさんへ: コマンド数は T2 の受け入れ条件が4つ(<code>init</code> / <code>client add</code> / <code>new</code> / <code>list</code>)で、PMさんの発言は3つ以内です。食い違っているので確認させてください。<code>init</code> を <code>client add</code> の初回に吸収すれば3つにできますが、「初回1コマンド」の条件とは両立しません。私は4つのままでいいと思います。
+
+ひかりさんへ: T1 のコア関数を先に出します。<code>createInvoice(store, {clientId, month, items})</code> が請求書オブジェクトを返し、<code>listInvoices</code> もあります。CLI はこれを呼ぶだけの薄い層にしてください。HTML/MD の描画は T2 側で持ってもらいます。明細の入力形式(<code>--item &quot;名称:金額:源泉対象y/n&quot;</code>)は、ひかりさんの案を聞かせてください。
+
+見積もりは、コアとテストで半日です。根拠は、関数が5つ程度、テストが20本程度と見ているためです。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">memo</span><span class="turn">#10</span></div><div class="text">計画フェーズなので実装はせず、UX観点の懸念と入力形式の案を出す。コマンド数は4つで田中さんに賛成。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span><span class="turn">#10</span></div><div class="text">ひかりです。田中さんのコア先出し、助かります。CLI は薄い層で受けます。UX 面で気になる点と提案です。
+
+1. **コマンド数**: 私も4つ(<code>init</code> / <code>client add</code> / <code>new</code> / <code>list</code>)のままがいいです。<code>init</code> を消すと、初回に何をすればいいか迷います。ヘルプは1画面に収めて、先頭に「最初は <code>invoice init</code>」と書きます。山田さんがターミナルを使うか未確認なので、初回の迷いを減らすことを優先したいです。
+
+2. **明細の入力**: 田中さんの <code>--item &quot;名称:金額:源泉対象y/n&quot;</code> に近い形で行きます。ただ、名称に「:」が入ると壊れるので、区切りは <code>/</code> ではなく **最後の2要素だけ**を金額と源泉として読みます。例: <code>--item &quot;顧問料:50000&quot;</code>、<code>--item &quot;記帳代行:60000:源泉&quot;</code>。源泉の指定は y/n より <code>源泉</code> の一語のほうが、指定の有無が見て分かりやすいです。引数なしで <code>invoice new 〇〇</code> と打ったら、「明細 1 の名称は？」と聞く対話モードに入ります。
+
+3. **確認画面**: 宛名、対象月、合計、源泉の有無を、山田さんの見直しと同じ順で1画面に出します。<code>この内容で発行しますか？ [y/N]</code> とし、Enter だけなら発行しません。N は「やり直す」ではなく「何も保存しない」と明記します。番号の欠番が出るのを避けるためです。
+
+4. **エラー・空状態**: クライアント未登録で <code>new</code> した場合は、「〇〇さんはまだ登録されていません。<code>invoice client add 〇〇</code> で登録できます」と次の一手まで出します。<code>list</code> が0件のときも同様です。
+
+5. **HTML**: A4 1ページは <code>@page { size: A4 }</code> と印刷用 CSS で対応します。明細が多いときは1ページに収まらないので、v1 は明細15行程度を上限の目安にし、README に書きます。
+
+田中さんへ質問です。
+- <code>createInvoice</code> は「確認前のプレビュー(番号なし)」を返せますか？ 番号は確認後に確定させたいので、<code>previewInvoice</code> と <code>createInvoice</code> に分けてほしいです。
+- 源泉の丸めは、確認画面にも「源泉徴収税額 (円未満切り捨て)」と表示したいです。先生の確認が取れたら教えてください。
+
+T2 は私が持ちます。このままで引き受けます。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#11</span></div><div class="text">コマンド数は4つで確定する。田中さんの3リスクは妥当。丸めは未確認事項として残す。previewとcreateの分離はT1に入れる。T1・T2の受け入れ基準を更新し、planningを締める。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#11</span></div><div class="text">コマンドは <code>init</code> / <code>client add</code> / <code>new</code> / <code>list</code> の4つで確定。私の「3つ以内」は撤回する。理由：初回の迷いを減らすほうが、コマンド数を1つ減らすより効果が大きいため。トレードオフ：ヘルプに載る項目が1つ増える。ただしヘルプは1画面に収める。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#11</span></div><div class="text">金額は整数円で持つ。源泉は「報酬のみ」に10.21%を掛けて円未満切り捨てとし、丸め規則をREADMEとテストに明記する。請求書は発行時にスナップショット保存する（宛名・源泉有無・インボイス番号）。理由：計算不信と、過去の請求書が変わる事故を防ぐため。トレードオフ：切り捨てか切り上げかは山田さんの先生に確認が取れるまで暫定。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#11</span></div><div class="text">確認画面でNまたはEnterのみの場合は何も保存せず、番号も消費しない。理由：欠番を出さないため。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">TASK</span><span class="turn">#11</span></div><div class="text">T3 owner=eng-backend: T1b プレビューと確定の分離（採番は確認後）
+- <code>previewInvoice(store, {clientId, month, items})</code> は番号なしで、合計・消費税・源泉・請求額を返し、データを一切書き込まない。テストで、呼んでもdata.jsonが変わらないことを確認できる。
+- <code>createInvoice</code> は同じ入力で、プレビューと同じ金額に番号を付けて保存する。プレビューと確定で金額が食い違わないテストがある。
+- 確認画面でNを選んだ場合は番号が消費されないことを、テストで確認できる。
+- 源泉の丸め規則（円未満切り捨て）がテストとREADMEに明記されている。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 田中 健, 鈴木 ひかり</span><span class="turn">#11</span></div><div class="text">結論です。
+1. コマンドは4つで確定します。私の「3つ以内」は撤回します。ヘルプ先頭に「最初は <code>invoice init</code>」と書いてください。
+2. 田中さん：3つのリスクはすべて採用です。ひかりさんの依頼どおり、<code>previewInvoice</code>（番号なし・書き込みなし）と <code>createInvoice</code> に分けてください。T1b として追加しました。
+3. ひかりさん：入力形式は <code>--item &quot;顧問料:50000&quot;</code> / <code>--item &quot;記帳代行:60000:源泉&quot;</code> で進めてください。最後の2要素だけを金額と源泉として読む案でOKです。確認画面は「宛名→対象月→合計→源泉」の順で、「源泉徴収税額 (円未満切り捨て)」も表示してください。明細15行目安もREADMEに書いてください。
+4. 丸めの切り捨ては暫定です。山田さんの先生に確認が取れたら共有します。山田さんのターミナル利用は未確認のままなので、実装後の受け入れテストで、初回セットアップが5分以内かを見ます。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#11</span></div><div class="text">Planning R2: コマンドは4つ(init/client add/new/list)で確定。金額は整数円、源泉は円未満切り捨て（暫定・山田さんの先生に要確認）。発行時スナップショット保存。確認でN/Enterのみなら保存せず採番もしない。T1b(preview/create分離)を田中さんに追加。未確認: 山田さんのターミナル利用、初回セットアップ5分以内（受け入れ時に確認）。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">ADVANCE</span><span class="turn">#11</span></div><div class="text">End of phase &quot;planning&quot;: scope, tasks, and tech choices are agreed.</div></li></ol></details>
+  <details><summary>周 1 · build <span class="muted">18</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;build&quot; started (iteration 1) — Engineers implement their own tasks in the workspace (real files, runnable code, tests when sensible), coordinate interfaces with each other, and mark finished work with [TASK_DONE].</p></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span><span class="turn">#12</span></div><div class="text">T1 → doing</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span><span class="turn">#12</span></div><div class="text">T3 → doing</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span><span class="turn">#12</span></div><div class="text">T1 → done: コアを <code>workspace/src/core.js</code> に実装しました。依存ゼロで、保存は <code>data.json</code>、金額は整数円です。
+- 提供している関数は <code>initStore</code>(発行者とインボイス番号を1回設定)、<code>addClient</code>、<code>listClients</code>、<code>findClient</code>、<code>calcAmounts</code>、<code>listInvoices</code>、<code>getInvoice</code> です。
+- 採番は <code>data.json</code> の <code>lastSeq</code> を発行時だけ +1 します。形式は <code>INV-0001</code> です。保存は一時ファイルに書いてから rename します。
+- 請求書は発行時に宛名・敬称・源泉の有無・発行者名・インボイス番号をコピーして保存します。
+- 山田さんの例(報酬10万円が源泉対象、実費1万円)は、手計算どおり消費税11,000円・源泉10,210円・請求額110,790円になります。
+- 確認は <code>cd workspace &amp;&amp; npm test</code> で、12本が全部通ります。
+- 初回セットアップは <code>initStore</code> 1回で済みます。コマンド化は T2 側です。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span><span class="turn">#12</span></div><div class="text">T3 → done: <code>previewInvoice</code> を実装しました。番号なしで、書き込みはしません。<code>createInvoice</code> は同じ計算に番号を付けて保存します。
+- テストで確認していること:
+  - プレビュー前後で <code>data.json</code> が一致する。
+  - プレビューと確定で5項目の金額が一致する。
+  - N を選ぶ(= <code>createInvoice</code> を呼ばない)と、次の発行が <code>INV-0001</code> になる。
+  - 不正入力で失敗しても番号を消費しない。
+- 丸め規則(消費税も源泉も円未満切り捨て)は <code>workspace/README.md</code> とテスト(33333円 → 3,403円)に明記しました。切り捨てかどうかは暫定です。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 鈴木 ひかり</span><span class="turn">#12</span></div><div class="text">ひかりさん、コアを出しました。<code>workspace/src/core.js</code>、使い方は <code>workspace/README.md</code> にあります。
+- **CLI の呼び出し順**: 確認画面は <code>previewInvoice(store, {clientId, month, items})</code> を使います。y のときだけ <code>createInvoice(store, 同じ入力)</code> を呼んでください。
+- **返り値**: どちらも <code>client</code> / <code>issuer</code> / <code>month</code> / <code>items</code> / <code>subtotal</code> / <code>tax</code> / <code>withholdingBase</code> / <code>withholdingTax</code> / <code>total</code> を持ちます。<code>createInvoice</code> はそれに <code>number</code> と <code>date</code>(YYYY-MM-DD)が付きます。
+- **items の形**: <code>{name, amount(整数円), withholding(bool)}</code> です。<code>--item &quot;記帳代行:60000:源泉&quot;</code> の解釈は CLI 側で、この形に変換してください。
+- **エラー**: クライアント未登録、対象月が YYYY-MM でない、金額が整数円でない、未 <code>init</code> のときは、日本語メッセージの <code>Error</code> を投げます。次の一手の案内文は CLI 側で足してください。
+- **未実装**: <code>data.json</code> の置き場所は <code>openStore(dir)</code> に渡す値で決まります。<code>~/.invoice/</code> かカレントかは、そちらで決めてください。
+- **同時実行**: 同時に複数プロセスで発行することは想定していません。個人利用なので許容しています。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 佐藤 美咲</span><span class="turn">#12</span></div><div class="text">佐藤さん、T1 と T3 が完了です。テスト12本が通りました。丸めは消費税・源泉とも円未満切り捨てで、先生の確認待ちのままです。変更が必要になっても <code>calcAmounts</code> 1か所で済みます。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span><span class="turn">#13</span></div><div class="text">T2 → doing</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 田中 健, 佐藤 美咲</span><span class="turn">#13</span></div><div class="text">ひかりです。T2 の描画部分と明細入力のパースまでできました。CLI 本体は田中さんのコア待ちです。
+- 作ったもの: <code>workspace/src/items.ts</code>(<code>--item</code> のパース)、<code>workspace/src/render.ts</code>(確認画面・Markdown・HTML。純関数です)、<code>workspace/test/render.test.ts</code>(4本)。
+- 確認方法: <code>cd workspace &amp;&amp; node --test test/render.test.ts</code> で4本通っています。
+- 明細は「最後の2要素だけ」を金額と源泉として読みます。名称に「:」があっても壊れません。金額のカンマや「円」も許容します。
+- HTML は <code>@page{size:A4}</code> と印刷用 CSS を入れました。A4 1ページに収まるかは、CLI をつないでから実機で見ます。
+- 確認画面は「宛名→対象月→合計→源泉」の順で、「源泉徴収税額 (円未満切り捨て)」も出します。
+
+田中さんへお願いです。<code>workspace/src/render.ts</code> の <code>Invoice</code> 型に、返す形を合わせてください。違う点があれば教えてください。こちらで寄せます。
+- 項目: <code>number?, date?, month, clientName, honorific, withholdingEnabled, issuer{name, invoiceNo}, items[{name, amount, withholding}], subtotal, tax, withholdingBase, withholdingTax, total</code>
+- <code>previewInvoice</code> は <code>number</code> と <code>date</code> なしで同じ形を返す想定です。
+- あと2点ほしいです。
+  - <code>openStore(dir)</code>、<code>addClient</code>、<code>setIssuer</code>、<code>findClient(name)</code>、<code>listInvoices</code> の名前と引数。
+  - 「クライアント未登録」と「issuer 未設定」を、文字列判定でなくエラーコードで判別できること。
+
+次のステップは、コアが出たら <code>src/main.ts</code>(<code>init</code> / <code>client add</code> / <code>new</code> / <code>list</code>)をつなぐことです。その際、未登録時の次の一手メッセージ、y/N 確認、README(15行目安・丸め規則への言及)も入れます。[DONE]</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span><span class="turn">#14</span></div><div class="text">T1 → doing</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 鈴木 ひかり</span><span class="turn">#14</span></div><div class="text">ひかりさん、エラーコードを入れました。<code>code</code> は 'NO_ISSUER' / 'CLIENT_NOT_FOUND' / 'CLIENT_EXISTS' / 'INVALID_INPUT' の4種で、<code>err.code</code> で分岐できます。<code>cd workspace &amp;&amp; npm test</code> で13本通っています。
+
+あなたの <code>Invoice</code> 型との違いは3点です。core 側は変えず、<code>main.ts</code> に変換関数を1つ置いてください。
+1. **クライアント**: core は <code>client: {id, name, honorific, withholding}</code> とネストしています。あなたの型は <code>clientName</code> / <code>honorific</code> / <code>withholdingEnabled</code> なので、<code>clientName=client.name</code>、<code>withholdingEnabled=client.withholding</code> と対応づけてください。
+2. **発行者**: core は <code>issuer: {name, invoiceNumber}</code> です。あなたの型の <code>invoiceNo</code> は <code>invoiceNumber</code> に読み替えてください。<code>init</code> でインボイス番号を省略した場合は <code>''</code> になります。そのときの表示は決めてください。
+3. **プレビュー**: <code>previewInvoice</code> は未 <code>init</code> でも通り、その場合 <code>issuer</code> は null です。<code>new</code> の先頭で <code>getIssuer</code> を見て、null なら <code>NO_ISSUER</code> 相当の案内を出してください。<code>createInvoice</code> は未 <code>init</code> だと <code>NO_ISSUER</code> を投げます。
+
+関数の名前と引数は次のとおりです。
+- <code>openStore(dir)</code>
+- <code>initStore(store, {name, invoiceNumber})</code>(<code>setIssuer</code> はこの名前です)
+- <code>getIssuer(store)</code>
+- <code>addClient(store, {name, honorific='御中', withholding=false})</code>
+- <code>listClients(store)</code>
+- <code>findClient(store, idOrName)</code>(見つからなければ null)
+- <code>listInvoices(store)</code>
+- <code>getInvoice(store, number)</code>
+
+<code>previewInvoice</code> と <code>createInvoice</code> の <code>clientId</code> には、id でも名前でも渡せます。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span><span class="turn">#14</span></div><div class="text">T1 → done: 追加の変更です。<code>workspace/src/core.js</code> のエラーに <code>code</code> を付けました。<code>test/core.test.js</code> にコード判別のテストを1本足しました。<code>cd workspace &amp;&amp; npm test</code> で13本が通ります。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span><span class="turn">#15</span></div><div class="text">T2 → done: <code>init</code> / <code>client add</code> / <code>new</code> / <code>list</code> の4コマンドをつなぎ、Markdown/HTML出力まで動きました。<code>cd workspace &amp;&amp; npm test</code> で20本通っています。A4 1ページの実機確認は、まだブラウザで印刷していません。
+
+- **コマンド**: 実装は <code>workspace/src/main.ts</code>、<code>bin/invoice</code> から呼べます。<code>node src/main.ts</code> を引数なしで実行すると14行のヘルプが出ます。先頭に「最初は <code>invoice init</code>」と書いてあります。
+- **<code>new</code> の入力**: <code>--item &quot;顧問料:50000&quot;</code> / <code>&quot;記帳代行:60000:源泉&quot;</code> で入力できます。<code>--item</code> を省略すると「明細 1 の名称は？」と聞く対話になります。
+- **確認画面**: 宛名、対象月、合計、源泉の順に表示し、<code>y</code> のときだけ発行します。Enter や N は何も保存せず、番号も使いません。
+- **山田さんの例**: 手動で確認し、報酬10万円(源泉対象)+実費1万円は、源泉10,210円、請求額110,790円になりました。
+- **出力**: <code>--format md|html</code> で選べ、ファイルはカレントディレクトリに <code>INV-0001.md</code> のような名前で出ます。<code>--out</code> で名前も変えられます。
+- **案内メッセージ**: 未登録のクライアントや未 <code>init</code> のときは、次に打つコマンドまで出します。一覧が0件のときも同様です。
+- **インボイス番号を省略した場合**: 請求書には「(未登録)」と表示します。
+- **テスト**: <code>test/main.test.ts</code> を追加しました。ヘルプの行数、未登録時の案内、Enterで番号が進まないことを見ています。<code>npm test</code> が <code>*.test.ts</code> も走らせるように直しました。これまで <code>render.test.ts</code> は走っていませんでした。
+- **README**: 使い方、保存先、15行の目安を追記しました。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 田中 健, 佐藤 美咲</span><span class="turn">#15</span></div><div class="text">ひかりです。T2 はひとまず完了です(<code>cd workspace &amp;&amp; npm test</code> で20本、ヘルプ1画面、源泉つきの発行まで手で確認済み)。
+- 田中さんへ: <code>createInvoice</code> の発行日が <code>toISOString()</code> でUTC基準です。日本時間の午前9時前に発行すると前日の日付になります。ローカル日付にしてもらえますか?
+- 佐藤さんへ: 保存先は <code>~/.invoice/</code> にしました。明細が多いHTMLのA4 1ページ収まりは、受け入れテストで山田さんに印刷してもらって見たいです。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 鈴木 ひかり, 佐藤 美咲</span><span class="turn">#16</span></div><div class="text">ひかりさん、発行日をローカル日付に直しました。<code>npm test</code> は21本が全部通ります。<code>TZ=Asia/Tokyo</code> でも通りました。
+- <code>src/core.js</code> に <code>localDate()</code> を追加し、<code>createInvoice</code> の発行日に使っています。
+- <code>main.ts</code> の <code>thisMonth</code> も同じ原因で、UTC基準でした。月初の午前9時前に前月になる恐れがあったので、こちらも <code>localDate</code> に直しました。ひかりさんの担当ファイルですが、1行の変更です。
+- <code>test/core.test.js</code> に、午前0時台でも日付が前日にならないテストを1本足しました。
+- 既存の日付テストはUTC固定でした。マイナス時差のタイムゾーンで落ちるので、ローカル時刻で作る形に直しました。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span><span class="turn">#16</span></div><div class="text">T3 → done: 追加の変更です。発行日をローカル日付にしました。<code>workspace/src/core.js</code> の <code>localDate</code> と、<code>test/core.test.js</code> に新しい1本です。<code>cd workspace &amp;&amp; npm test</code> で確認できます。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">memo</span><span class="turn">#17</span></div><div class="text">田中さんが <code>main.ts</code> の <code>thisMonth</code> を直した後も、テストは21本通っている。T2 は完了済みなので、残りはA4印刷の実機確認だけ。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 佐藤 美咲, 田中 健</span><span class="turn">#17</span></div><div class="text">ひかりです。田中さんが直した <code>main.ts</code> の <code>thisMonth</code> を含めて、<code>cd workspace &amp;&amp; npm test</code> で21本全部通ることを確認しました。ありがとうございます。T2 に追加で作るものはありません。残りは次の1点です。
+- HTMLをA4 1ページで印刷できるかの実機確認は、まだ誰も見ていません。受け入れで山田さんに、明細が多い請求書も含めて印刷してもらいたいです。
+- 明細15行を超えたときは、2ページになる前提で README に書いてあります。印刷で崩れたら、すぐ直します。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 佐藤 美咲, 鈴木 ひかり</span><span class="turn">#18</span></div><div class="text">田中です。T1とT3は完了のままで、追加の作業はありません。<code>cd workspace &amp;&amp; npm test</code> を今打ち直して、21本すべて通ることを確認しました。残っているリスクは次の2点です。
+1. 源泉の丸めは、まだ切り捨てを暫定にしています。先生の回答が来たら、<code>calcAmounts</code> の1か所だけを直します。テストの期待値の更新もそこに含まれます。
+2. 同時に複数プロセスで発行する場合は、想定していません。個人利用なので許容しています。複数端末で <code>~/.invoice/</code> を共有する運用が出てきたら、ロックが必要です。
+
+A4 1ページの印刷確認は、ひかりさんの案どおり受け入れで山田さんにお願いします。</div></li></ol></details>
+  <details><summary>周 1 · review <span class="muted">5</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;review&quot; started (iteration 1) — Engineers review each other's work against the acceptance criteria and fix issues. PM checks every task against its acceptance criteria and states what is ready for users.</p></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span><span class="turn">#19</span></div><div class="text">田中です。T2 の <code>main.ts</code> をレビューして、バグを1件直しました。
+- **バグ**: <code>invoice new A &lt;/dev/null</code> のように入力が閉じられると、<code>askItems</code> が「明細が1行も入っていません」を無限に出し続けました。3秒で打ち切るまで止まらず、パイプや CI で固まります。金額の入力ループも同じ形でした。
+- **修正**: 連続3回の不正入力で、<code>--item</code> を案内するエラーにして終了コード1で終わります。<code>src/main.ts</code> の <code>askItems</code> が対象です。ひかりさんの担当ファイルですが、数行の変更です。
+- **テスト**: <code>test/main.test.ts</code> に回帰テストを1本足しました。<code>cd workspace &amp;&amp; npm test</code> で22本通っています。
+- **受け入れ条件との照合**
+  - 4コマンドとヘルプ1画面を確認しました。
+  - 確認画面は宛名、対象月、合計、源泉の順で、Enter と N は何も保存しません。
+  - <code>--format</code> は md か html で選べます。
+  - 発行日と対象月はローカル日付です。
+  - T2 の条件で未確認なのは、HTML の A4 1ページ印刷だけです。受け入れで山田さんに見てもらいます。
+- **残るリスク（変更なし）**
+  1. 源泉の丸めは切り捨てが暫定です。先生の回答待ちで、直すのは <code>calcAmounts</code> の1か所です。
+  2. 複数プロセスの同時発行は、想定していません。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 佐藤 美咲, 田中 健</span><span class="turn">#20</span></div><div class="text">ひかりです。田中さんの <code>core.js</code> をレビューしました。<code>cd workspace &amp;&amp; npm test</code> で22本通っています。
+- T1/T3 の受け入れ条件とコードを照合しました。問題はありません。
+  - 採番は <code>lastSeq</code> の単調増加です。N を選んだときは <code>createInvoice</code> を呼ばないので、欠番は出ません。
+  - 消費税と源泉は <code>calcAmounts</code> 1か所で、どちらも円未満切り捨てです。
+  - 源泉の対象は、クライアントが源泉ありで、かつ明細が源泉対象のものだけです。
+  - 山田さんの例(消費税11,000円、源泉10,210円、請求額110,790円)は、画面の表示とも一致しています。
+- 田中さんへ。<code>main.ts</code> の <code>askItems</code> の修正を確認しました。入力が閉じられたときに止まらなくなり、助かります。
+- 未確認なのは、次の2点です。
+  - HTML の A4 1ページ印刷は、まだ誰も実機で見ていません。受け入れで山田さんに、明細が多い請求書も含めて印刷してもらいたいです。
+  - 源泉の丸め(切り捨て)は、先生の回答待ちの暫定です。
+- 佐藤さんへ。T2 は、A4 印刷の確認を除いて受け入れ条件を満たしています。ユーザーに渡せる状態だと思います。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#21</span></div><div class="text">各タスクを受け入れ基準で確認する。T1/T3は互いのレビューで問題なし。T2はA4印刷のみ未確認。ユーザー受け入れで確認する。山田さんのターミナル利用と初回5分も未確認。reviewは1ラウンドのみなので、ここで締める。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span><span class="turn">#21</span></div><div class="text">佐藤です。受け入れ基準と照らして、各タスクの状態をまとめます。
+
+**ユーザーに渡せる**
+・T1 コア：登録、自動採番(欠番・重複なし)、税と源泉の計算、一覧。山田さんの例(消費税11,000円、源泉10,210円、請求額110,790円)が手計算と一致しています。
+・T3 プレビュー/確定の分離：プレビューは書き込みません。Nでもnを選んでも番号は進みません。丸め規則はREADMEとテストに明記されています。
+・T2 CLI：4コマンド、ヘルプ1画面、確認画面の順(宛名→対象月→合計→源泉)、<code>--format</code>の選択。いずれも満たしています。
+
+**まだ確認が取れていない(受け入れで見る)**
+1. HTMLのA4 1ページ印刷。山田さんに、明細が多い請求書も含めて実機で印刷してもらいます。
+2. 初回セットアップが5分以内か。山田さんがターミナルを使うかの確認も兼ねます。
+3. 源泉の切り捨ては暫定のままです。先生の回答待ちで、直すのは<code>calcAmounts</code>の1か所です。
+
+田中さん、<code>main.ts</code>のバグ修正ありがとうございます。パイプやCIで固まる問題は、見落としたくない点でした。ひかりさん、T2は印刷確認を条件に受け入れ可とします。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#21</span></div><div class="text">Review完了: T1/T3/T2は受け入れ基準を満たす。未確認は、HTMLのA4 1ページ印刷、初回セットアップ5分以内、山田さんのターミナル利用、源泉丸め(切り捨て暫定)。受け入れ(acceptance)で山田さん・Danielさんに確認する。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">ADVANCE</span><span class="turn">#21</span></div><div class="text">End of phase &quot;review&quot;: 各タスクを受け入れ基準で確認済み。未確認の項目は受け入れで検証する。</div></li></ol></details>
+  <details><summary>周 1 · acceptance <span class="muted">7</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;acceptance&quot; started (iteration 1) — Users try what was built (read the workspace, run it if possible) and judge it from their own needs. Each user gives a [VERDICT accept|reject] with reasons. PM summarizes and decides next steps.</p></li><li class="msg user private" data-from="user-yamada"><div class="who"><span class="name">山田 恵子</span> <span class="kind">memo</span><span class="turn">#22</span></div><div class="text">黒い画面は苦手。インストールやコマンド入力が前提。ここは正直に判断する。</div></li><li class="msg user" data-from="user-yamada"><div class="who"><span class="name">山田 恵子</span> <span class="kind reject">VERDICT</span><span class="turn">#22</span></div><div class="text">REJECT: 計算の部分は安心できました。報酬10万円と実費1万円の例で、源泉10,210円、請求額110,790円と、私の電卓の答えと同じでした。確認画面が「宛名→対象月→合計→源泉」の順なのも、私が普段見直す順番です。番号が重ならないのと、Nを押しても番号が進まないのも助かります。
+
+ただ、今のままでは私は使えません。理由は3つです。
+
+1. 黒い画面(ターミナル)で <code>node src/main.ts new 山田商店 --month 2026-09 --item &quot;記帳代行:60000:源泉&quot;</code> のように打つ必要があります。これは私には難しいです。打ち間違えたら、どこが違うのか分かりません。先生(所長)に迷惑をかけたくないので、自信のない道具は仕事に使えません。
+2. 最初に Node.js をインストールする作業が要ります。説明書にもありません。「5分で終わる」とは思えません。
+3. 画面が文字だけで、英語まじりです(<code>--format</code>、<code>client add</code> など)。大きく分かりやすい画面で、ボタンや選ぶ形だとありがたいです。
+
+もう一つ、A4で1ページに印刷できるかは、私の環境では確認できませんでした。紙に印刷できることは私にはとても大事なので、そこも見たいです。
+
+もし次に直すなら、最低限これだけお願いします。
+・ダブルクリックで開ける形にしてください。難しければ、画面の質問に答えるだけで進む形でも構いません。
+・説明書は日本語で、手順を一つずつ書いてください。
+・見本の請求書を、印刷した状態で見せてください。
+
+源泉の切り捨ては、先生に聞いて分かったらお伝えします。</div></li><li class="msg user private" data-from="user-garcia"><div class="who"><span class="name">Daniel García</span> <span class="kind">memo</span><span class="turn">#23</span></div><div class="text">実行はできなかった。説明と仕様から判断する。私はターミナルを使えるので、山田さんとは事情が違う。計算と確認画面は良さそうだ。</div></li><li class="msg user" data-from="user-garcia"><div class="who"><span class="name">Daniel García</span> <span class="kind accept">VERDICT</span><span class="turn">#23</span></div><div class="text">ACCEPT: 条件つきでaccept。ターミナルは問題なく使えるし、「init→client add→new」の流れは5分もかからなさそうです。確認画面の順番も、Nで番号が進まない点も、私の「番号重複で再発行」事故にまっすぐ効きます。ヘルプが14行で1画面なのもいいです。
+
+ただ不満が3つあります。
+1. <code>--item &quot;名称:金額:源泉&quot;</code> を毎回打つのは遅いです。クライアントごとに定番の明細を保存して、<code>invoice new Acme</code> だけで前回の明細を下書きに出せるようにしてください。ただし、確認画面を必ず通す前提です。
+2. EUR換算と売上表への転記が残っています。v2では、せめてJSON出力か <code>list --csv</code> で、Zapierや自分のスクリプトにつなげるようにしてほしいです。
+3. A4で1ページに収まるかを、誰も確認していません。HTMLは納品物なので、ここは早めに見てください。
+
+山田さんのrejectは妥当です。Node.jsのインストールもGUIもなしでは、あの人には無理です。ただ、私のように使える人向けに先に出すのは悪くないと思います。次のイテレーションでは、明細の再利用とCSV出力を優先してください。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#24</span></div><div class="text">山田さん reject、Daniel さん条件つき accept。最終イテレーションなので、スコープを絞る。ブリーフは「ターミナルから」なので GUI は作らない。山田さんの3要望のうち、案内の質（日本語の手順書・質問に答えるだけの進め方・印刷見本）は小さく届けられるので入れる。Daniel さんは明細の再利用を入れ、CSV は軽ければ入れる。EUR換算と売上表連携は対象外のまま。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span><span class="turn">#24</span></div><div class="text">佐藤です。受け入れの結果をまとめます。
+
+**結果**
+・山田さん：reject。計算と確認画面の順番、番号が進まない点は評価をもらいました。ただ、ターミナルと Node.js のインストールが壁です。
+・Daniel さん：条件つき accept。「init→client add→new」の流れは5分以内で使えるとのことです。
+
+**共通の未確認**
+A4 1ページの印刷は、まだ誰も確認していません。
+
+**次のイテレーション（最後）の方針**
+・GUI とダブルクリックのアプリは作りません。理由：ブリーフが「ターミナルから」だからです。トレードオフ：山田さんのような非エンジニアは、今回も完全には救えません。
+・代わりに、ターミナルが不安な人でも迷わない形にします。引数なしで質問に答えるだけで進む形、日本語の手順書（Node.js の入れ方を含む）、印刷した状態の見本です。
+・Daniel さんの要望は、クライアントごとの定番明細の再利用を入れます。確認画面は必ず通します。
+・<code>list --csv</code> は、小さければ入れます。
+・EUR換算と売上表への自動転記は、今回もやりません。
+
+山田さんの先生への源泉の確認は、回答が来たら教えてください。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#24</span></div><div class="text">最終イテレーションは次の3点に絞る。(1) 初心者向けの案内：引数なしで質問に答えるだけで進む形、日本語の手順書、印刷見本。(2) クライアントごとの定番明細の再利用。(3) <code>list --csv</code>。GUI、ダブルクリックのアプリ、EUR換算、売上表連携はやらない。理由：ブリーフの「ターミナルから」を守りつつ、事故の原因に近いものと、初回で離脱する原因だけを直すため。トレードオフ：山田さんには今回も、Node.js を入れる手間が残る。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">TASK</span><span class="turn">#24</span></div><div class="text">T4 owner=eng-frontend: 質問に答えるだけで進む案内と、日本語の手順書、A4印刷見本
+- <code>invoice init</code> と <code>invoice client add</code> も、引数なしで実行すると日本語で1つずつ質問する。<code>invoice new</code> は引数なしでクライアントを選べる。
+- エラーと質問の文言は、英語の引数名を使わず日本語で書く。<code>--format</code> などの英語オプションは、ヘルプの補足に留める。
+- <code>workspace/README.md</code> とは別に、<code>workspace/はじめに.md</code> を作る。Node.js の入れ方、ターミナルの開き方、<code>init</code>→<code>client add</code>→<code>new</code> の手順を1つずつ書く。コピーして貼れるコマンドを載せる。
+- 山田さんの例（報酬10万円＋実費1万円）の見本 <code>workspace/sample/</code> を、MarkdownとHTMLで置く。
+- ヘッドレスブラウザなど手元で使える方法でHTMLをA4に印刷し、明細15行でも1ページに収まることを確認する。収まらなければ直す。確認できなければ、確認できなかったと正直に書く。
+- 初回セットアップを手順書どおりにやって、5分以内に終わることを時間つきで報告する。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">TASK</span><span class="turn">#24</span></div><div class="text">T5 owner=eng-backend: クライアントごとの定番明細の再利用と <code>list --csv</code>
+- <code>client add</code> 時、または発行後に、そのクライアントの定番明細（名称・金額・源泉対象）を保存できる。
+- <code>invoice new &lt;クライアント&gt;</code> で定番明細を下書きとして表示し、修正または採用を選べる。必ず確認画面を通り、y のときだけ発行される。
+- 保存した定番明細を変えても、発行済みの請求書は変わらない（スナップショットをテストで確認）。
+- <code>invoice list --csv</code> が、番号・日付・クライアント・対象月・小計・消費税・源泉・請求額を出す。日本語の項目がExcelで文字化けしない形にする。
+- コマンドは4つのまま、ヘルプも1画面に収める。<code>npm run typecheck &amp;&amp; npm test</code> が通る。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#24</span></div><div class="text">Acceptance R1: 山田=REJECT（ターミナルとNode.jsの導入が壁、英語まじり、A4印刷が未確認。最低限の要望は日本語の手順書・質問に答えるだけの進め方・印刷見本）。Daniel=条件つきACCEPT（定番明細の再利用とlist --csvを希望、A4未確認を懸念）。次の最終イテレーションで、案内・日本語手順書・A4印刷見本、定番明細の再利用、list --csv を実施する。GUI・EUR換算・売上表連携はやらない。未解決：源泉の丸め（先生の回答待ち）。</div></li></ol></details>
+  <details><summary>周 2 · planning <span class="muted">9</span></summary><ol><li class="sys" data-from="system"><p>Iteration 2 begins: 1/2 users rejected (user-yamada).</p></li><li class="sys" data-from="system"><p>Phase &quot;planning&quot; started (iteration 2) — PM turns findings into a small, shippable scope: [TASK] items with clear acceptance criteria, each assigned to an engineer. Engineers challenge feasibility, split or re-assign tasks, and agree on tech choices.</p></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#25</span></div><div class="text">T4とT5は既に定義済み。planning R1では、エンジニアに実現性を確認してもらう。T5の定番明細はT4の対話入力と<code>new</code>の流れで衝突するので、順序を決める。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 田中 健, 鈴木 ひかり</span><span class="turn">#25</span></div><div class="text">佐藤です。最終イテレーションの計画です。T4(ひかりさん)とT5(田中さん)を出しています。スコープは増やしません。確認したい点は3つです。
+1. <code>new</code> の変更が重なります。T4は「引数なしでクライアントを選ぶ」、T5は「定番明細を下書きに出す」です。どちらも <code>main.ts</code> の <code>new</code> を触ります。田中さん、定番明細は core 側に <code>getTemplate</code> / <code>setTemplate</code> のような関数で出してください。ひかりさん、<code>new</code> の下書き表示は、その関数が出るまで質問の流れだけ先に作ってください。インターフェースを先に二人で決めてください。
+2. 定番明細を保存するタイミングは、<code>client add</code> の質問の最後に「定番の明細を登録しますか？(y/N)」と聞く形でお願いします。「発行後に保存」は、<code>new</code> の確認画面でyのあとに「この明細を定番にしますか？」と聞く1問だけにします。理由：入口を2つに絞れば、画面も増えないからです。
+3. <code>list --csv</code> は UTF-8 の BOM つきで出してください。Daniel さんも山田さんもExcelで開く前提だからです。
+あと、A4印刷の確認はこの回で必ず結果を出してください。手元で見る方法がなければ、できなかったと書いてください。山田さんの話に直結するので、曖昧にしないでください。
+リスクや分け方の提案があれば、先に聞かせてください。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">memo</span><span class="turn">#26</span></div><div class="text">core の関数名と挙動を先に決めて共有する。main.ts の衝突を避ける順序も提案する。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 佐藤 美咲, 鈴木 ひかり</span><span class="turn">#26</span></div><div class="text">田中です。T5 は受けます。先にインターフェースを決めます。
+
+**core の追加関数（<code>src/core.js</code>、今日中に先出しします）**
+- <code>getTemplate(store, clientIdOrName)</code> は <code>[{name, amount, withholding}]</code> を返します。未保存なら <code>[]</code>、クライアント未登録なら <code>CLIENT_NOT_FOUND</code> です。
+- <code>setTemplate(store, clientIdOrName, items)</code> は保存済みの定番をまるごと置き換えます。検証は <code>createInvoice</code> の明細と同じで、不正なら <code>INVALID_INPUT</code> を投げます。
+- 保存場所は <code>data.json</code> のクライアント内の <code>template</code> です。返す配列は必ずコピーなので、呼び出し側が書き換えても保存内容は変わりません。
+- 発行済みの請求書は、発行時に明細を自分の中へコピーしています。<code>setTemplate</code> で定番を変えても過去の請求書は変わらないことを、テストで確認します。
+- <code>invoicesToCsv(store)</code> を追加します。列は、番号・日付・クライアント・対象月・小計・消費税・源泉・請求額です。先頭に UTF-8 BOM を付け、改行は CRLF にします。カンマ、引用符、改行を含む値は引用符で囲みます。
+
+**リスクが1点あります。** クライアント名が <code>=</code> や <code>+</code> で始まると、Excel で式として実行されます（CSV インジェクション）。個人利用でも、取引先名のコピペで起こりえます。先頭にシングルクォートを付けて防ぎ、テストも書きます。
+
+**main.ts の分担（<code>new</code> の衝突を避ける順序）**
+1. 私が core とテストを先に出します。<code>npm test</code> が通った時点で連絡します。
+2. ひかりさんは、その連絡までは <code>new</code> の「クライアント選択」の流れだけ進めてください。
+3. 定番の下書き表示と、<code>client add</code> の最後の質問「定番の明細を登録しますか？(y/N)」は、ひかりさんが <code>new</code> / <code>client add</code> の流れの中に入れてください。私の core 呼び出しは <code>getTemplate</code> / <code>setTemplate</code> の2つだけです。
+4. 私は <code>list --csv</code> の分岐だけ <code>main.ts</code> に入れます。触るのは <code>list</code> の関数の中だけにして、<code>new</code> には触れません。
+5. 確認画面でyのあとの「この明細を定番にしますか？」も、ひかりさん側で <code>setTemplate</code> を呼んでください。y のときだけ呼ぶ形です。N と Enter では何も書きません。
+
+**ひかりさんへの確認です。** 定番を下書きに出したあと「修正」を選んだ場合は、<code>--item</code> と同じ質問フローに入る想定でよいですか？ 修正結果は、確認画面でyになるまで保存しません。
+
+ヘルプは今14行です。<code>--csv</code> は <code>list</code> の行に足すだけにして、行数は増やしません。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">memo</span><span class="turn">#27</span></div><div class="text">田中さんの質問に答える。担当ファイルの分け方と A4 確認のリスクも伝える。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 田中 健, 佐藤 美咲</span><span class="turn">#27</span></div><div class="text">ひかりです。田中さんの分担でOKです。
+- **修正の流れ**: 「採用 / 修正 / 最初から入力」の3択にします。Enter は採用です。採用しても確認画面は必ず通ります。「修正」は <code>--item</code> と同じ質問フローに入ります。各行に前回の値を <code>[50000]</code> のように初期値で出し、Enter でそのまま進めます。行の削除と追加もできるようにします。結果は確認画面で y になるまで保存しません。
+- **定番にするか聞く問い**: y のあとの「この明細を定番にしますか？」は、すでに保存済みの定番と同じ内容なら出しません。同じ質問を毎回聞かれるのは邪魔なので。
+- **ファイルの分担**: <code>main.ts</code> の <code>new</code> と <code>client add</code> は私が触ります。田中さんは <code>list</code> の中だけでお願いします。<code>getTemplate</code> / <code>setTemplate</code> が出るまでは、定番まわりをスタブ（常に <code>[]</code>）にして、クライアント選択と質問の流れを先に作ります。
+- **ほかの仕様**: <code>init</code> / <code>client add</code> の質問は全部日本語にします。インボイス番号の質問は「なければ Enter」と添えます。
+- **A4 確認のリスク**: ヘッドレスブラウザがこの環境にあるか、まだ見ていません。最初に調べます。なければ「確認できなかった」と正直に書きます。15行で溢れたら CSS を直します。
+- **5分以内の計測**: 手順書どおりにやって時間を記録します。Node.js のインストール自体は環境の都合で計れないかもしれません。その場合は、計れた範囲を分けて書きます。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span><span class="turn">#27</span></div><div class="text">T4 → doing</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#28</span></div><div class="text">計画は固まった。分担も合意済み。ここで決定を明文化し、フェーズを進める。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 田中 健, 鈴木 ひかり</span><span class="turn">#28</span></div><div class="text">佐藤です。お二人の分担で確定します。
+- 定番の下書きは「採用 / 修正 / 最初から入力」の3択、Enter は採用。必ず確認画面を通ります。
+- y のあとの「定番にしますか？」は、保存済みと同じ内容なら出しません。
+- 田中さん：CSV インジェクション対策（先頭に <code>'</code>）を入れてください。理由：取引先名のコピペで実際に起こるからです。
+- ひかりさん：A4 は最初にヘッドレスブラウザの有無を調べ、無理なら「確認できなかった」と書いてください。15行で溢れたら CSS を直します。
+- 5分計測は、Node.js の導入と、手順書どおりの init→client add→new を分けて時間を書いてください。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#28</span></div><div class="text"><code>new</code> と <code>client add</code> は鈴木さん、<code>list --csv</code> と core(<code>getTemplate</code>/<code>setTemplate</code>/<code>invoicesToCsv</code>)は田中さんが触る。定番の下書きは「採用/修正/最初から入力」で Enter は採用、確認画面は必ず通す。保存済みと同じ内容なら「定番にしますか？」は聞かない。CSVはUTF-8 BOM・CRLF・先頭が <code>=+-@</code> の値は <code>'</code> を付ける。理由：ファイル衝突を避け、Excelでの事故を防ぐため。トレードオフ：CSVの値の先頭に <code>'</code> が付くことがある。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#28</span></div><div class="text">Planning iteration 2 R1: T4(鈴木)/T5(田中)のインターフェースと分担で合意。A4確認とセットアップ5分は結果を必ず報告させる。源泉の丸めは先生の回答待ちのまま。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">ADVANCE</span><span class="turn">#28</span></div><div class="text">計画は合意済みで、T4/T5の受け入れ基準と分担が確定した。</div></li></ol></details>
+  <details><summary>周 2 · build <span class="muted">12</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;build&quot; started (iteration 2) — Engineers implement their own tasks in the workspace (real files, runnable code, tests when sensible), coordinate interfaces with each other, and mark finished work with [TASK_DONE].</p></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span><span class="turn">#29</span></div><div class="text">T5 → doing</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span><span class="turn">#29</span></div><div class="text">T5 → done: core と <code>list --csv</code> は完了しました。定番明細を <code>new</code> / <code>client add</code> から呼ぶ部分は、ひかりさんが入れる分担です。まだ入っていません。<code>cd workspace &amp;&amp; npm test</code> で30本、ルートの <code>npm run typecheck</code> も通ります。
+- **core（<code>src/core.js</code>）**
+  - <code>getTemplate(store, クライアント)</code> は、未保存なら <code>[]</code> を返し、いつもコピーを返します。クライアント未登録は <code>CLIENT_NOT_FOUND</code> です。
+  - <code>setTemplate(store, クライアント, items)</code> は、定番をまるごと置き換えます。検証は請求書の明細と同じで、不正なら <code>INVALID_INPUT</code> を投げ、保存内容は変わりません。
+  - <code>invoicesToCsv(store)</code> の列は、番号・日付・クライアント・対象月・小計・消費税・源泉・請求額です。UTF-8 BOM と CRLF を付けます。先頭が <code>= + - @</code> の値には <code>'</code> を付け、カンマ・引用符・改行を含む値は引用符で囲みます。
+- **CLI（<code>src/main.ts</code>）**
+  - <code>invoice list --csv</code> は標準出力に出します。<code>--out 一覧.csv</code> を付けるとファイルに書きます。
+  - ヘルプは14行のままで、<code>list</code> の行に <code>--csv</code> を足しただけです。
+  - <code>list</code> の分岐の中だけを触りました。<code>new</code> と <code>client add</code> には触れていません。
+- **テスト**
+  - 定番明細: 保存と置き換え、コピーを返すこと、不正入力で保存内容が変わらないこと、定番を変えても発行済みの請求書が変わらないこと（スナップショット）。
+  - CSV: BOM・CRLF・見出し、山田さんの例の行（<code>110000,11000,10210,110790</code>）、0件のとき見出しだけ出ること、<code>=SUM(A1)</code> など式の無効化、引用符の扱い。
+  - <code>main.test.ts</code> に <code>list --csv</code> と <code>--out</code> のテストを1本足しました。
+- **README**: <code>workspace/README.md</code> に定番明細と CSV の節を追記しました。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 鈴木 ひかり, 佐藤 美咲</span><span class="turn">#29</span></div><div class="text">田中です。T5 の core と <code>list --csv</code> を出しました。<code>cd workspace &amp;&amp; npm test</code> で30本、<code>npm run typecheck</code> も通っています。
+- **ひかりさんへ**: <code>getTemplate</code> / <code>setTemplate</code> を使えます。シグネチャは先に共有したとおりです。
+  - <code>getTemplate(store, 名前かid)</code> は <code>[{name, amount, withholding}]</code> を返し、未保存は <code>[]</code> です。
+  - <code>setTemplate(store, 名前かid, items)</code> は、まるごと置き換えます。不正なら <code>INVALID_INPUT</code> を投げます。
+  - 「同じ内容なら聞かない」の判定は、<code>getTemplate</code> の結果と入力を比べてください。<code>withholding</code> は真偽値で揃えてあります。
+  - <code>new</code> と <code>client add</code> には触っていません。<code>main.ts</code> の変更は <code>list</code> の分岐だけです。
+- **佐藤さんへ**: <code>list --csv</code> は標準出力、<code>--out ファイル名</code> でファイル出力です。Excel で開く用途は <code>--out</code> を勧めます。理由は、Windows の PowerShell でリダイレクトすると文字コードが変わる恐れがあるためです。
+- **未確認**: 実際の Excel では開いていません。BOM と CRLF の形式はテストで確認しています。
+- **ひかりさんの編集との同時実行**: 途中で <code>main.test.ts</code> が1本だけ失敗しましたが、再実行したら通りました。ひかりさんが <code>main.ts</code> を編集中だったためだと思います。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span><span class="turn">#30</span></div><div class="text">T4 → done: 引数なしで質問に答えるだけで進む形と、日本語の手順書、見本を作りました。A4 は 15 行まで 1 ページに収まることを確認しました。テスト 32 本と typecheck は通っています。<code>cd workspace &amp;&amp; npm test</code> で確認できます。
+- **質問形式**: <code>init</code> / <code>client add</code> / <code>new</code> を引数なしで実行すると、日本語で 1 つずつ聞きます（<code>src/main.ts</code>）。<code>new</code> は取引先を番号か名前で選べて、対象月は Enter で今月になります。
+- **日本語の文言**: 質問とエラーから英語の引数名を外しました。<code>--format</code> は md か html の指定ミスのときも「出力形式は…」と日本語で案内します。英語オプションはヘルプの補足にだけ残しています。
+- **手順書**: <code>workspace/はじめに.md</code> を作りました。Node.js の入れ方、ターミナルの開き方、<code>init</code>→<code>client add</code>→<code>new</code> と印刷を 1 ステップずつ書いています。貼れるコマンド付きです。
+- **見本**: <code>workspace/sample/見本-山田さんの例.md</code> と <code>.html</code> を置きました。報酬 10 万円（源泉対象）と実費 1 万円で、消費税 11,000 円、源泉 10,210 円、請求額 110,790 円です。
+- **A4 印刷**:
+  - ヘッドレス Chromium（<code>/opt/pw-browsers</code>）で PDF にしました。見本は A4 で 1 ページ、明細 15 行も 1 ページです。
+  - 20 行、25 行、30 行はすべて 2 ページでした。16〜19 行は未確認なので、README には「15 行まで」と書きました。
+  - この環境には日本語フォントがありません。代替表示での計測なので、実機のブラウザでの印刷プレビューは山田さんの環境で見てください。
+- **5 分以内の計測**:
+  - 手順書どおりの 3 コマンド（<code>init</code>→<code>client add</code>→<code>new</code>）は、入力を自動で流して 0.46 秒で終わりました。
+  - 人が打つ時間と Node.js のインストールは、この環境では測れていません。手順は全部で約 12 回の入力です。
+- **定番明細**: 定番の下書き表示と「定番にしますか？」は、田中さんの <code>getTemplate</code> / <code>setTemplate</code> が出てから入れます。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 田中 健, 佐藤 美咲</span><span class="turn">#30</span></div><div class="text">ひかりです。T4 が終わりました。引数なしの質問形式、<code>はじめに.md</code>、<code>sample/</code> の見本ができ、<code>npm test</code> で 32 本と typecheck が通っています。
+- **A4 印刷**: ヘッドレス Chromium で、見本と明細 15 行はどちらも 1 ページでした。20 行以上は 2 ページです。16〜19 行は未確認なので、README は「15 行まで」にしています。
+- **フォント**: この環境には日本語フォントがありません。実機での印刷プレビューは山田さんにお願いします。
+- **5 分以内の計測**: 3 コマンドの処理は 0.46 秒で、人が打つ時間と Node.js の導入は計測できていません。
+- 田中さんへ: <code>getTemplate</code> / <code>setTemplate</code> が出たら連絡ください。<code>new</code> と <code>client add</code> に定番の下書きと「定番にしますか？」を入れます。<code>list</code> は触っていません。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 鈴木 ひかり, 佐藤 美咲</span><span class="turn">#31</span></div><div class="text">田中です。T5 の core と <code>list --csv</code> は完了のままで、追加の作業はありません。いま <code>cd workspace &amp;&amp; npm test</code> を打ち直したところ、32本が全部通りました。ルートの <code>npm run typecheck</code> も通っています。
+- ひかりさんへ: <code>getTemplate</code> / <code>setTemplate</code> は使える状態です。<code>new</code> の下書き表示と <code>client add</code> の「定番にしますか？」は、まだ <code>main.ts</code> に入っていません。入れる前に、T5 の受け入れ条件「<code>new</code> で定番を下書きに出す」は満たせません。
+- 同じ内容かどうかの判定は、<code>getTemplate</code> の結果と入力を比べてください。<code>withholding</code> は真偽値に揃えてあります。
+- 組み込んだあとに、<code>main.test.ts</code> へテストを足してください。見る点は、y のときだけ <code>setTemplate</code> が呼ばれることと、N と Enter では定番が変わらないことです。手が足りなければ、私が書きます。
+- リスクは2点です。
+  1. 実際の Excel では、まだ CSV を開いていません。BOM と CRLF の形式はテストで確認しています。
+  2. 源泉の切り捨ては暫定のままで、先生の回答待ちです。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 田中 健, 佐藤 美咲</span><span class="turn">#32</span></div><div class="text">ひかりです。定番明細を <code>new</code> と <code>client add</code> に入れました。<code>cd workspace &amp;&amp; npm test</code> で34本、ルートの <code>npm run typecheck</code> も通っています。変更は <code>src/main.ts</code> とテスト2本、README の追記です。
+- **<code>client add</code>**: 引数なしで実行したときだけ、最後に「定番の明細を登録しますか？ [y/N]」と聞きます。y なら明細を聞いて <code>setTemplate</code> で保存します。
+- **<code>new</code> の下書き**: 定番があれば一覧を出し、「1 そのまま使う / 2 直す / 3 最初から入力」を聞きます。Enter は 1 です。どれを選んでも確認画面を通り、y のときだけ発行します。
+- **「直す」**: 行ごとに前回の値を <code>[50000]</code> のように出します。Enter でそのまま進み、<code>-</code> で行を消せます。最後に行を足せます。
+- **「定番にしますか？」**: 発行が y のあとに、対話入力で、内容が保存済みと違うときだけ聞きます。y のときだけ <code>setTemplate</code> を呼びます。N と Enter では保存しません。同じ内容なら聞きません。<code>--item</code> を使う非対話の実行では聞きません。
+- **確認画面で N**: 定番は変わらないことをテストで見ています。
+- **直したバグ**: <code>catch</code> 節が <code>key</code> を参照していましたが、<code>key</code> は <code>new</code> の枠の中だけの変数でした。スコープを外に出しました。
+- **未確認**: 定番を使う流れは、テストと手元の入力で見ただけです。実機の対話では見ていません。
+
+田中さん、<code>getTemplate</code> / <code>setTemplate</code> を使わせてもらいました。ありがとうございます。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span><span class="turn">#32</span></div><div class="text">T5 → done: 定番明細の <code>new</code> / <code>client add</code> への組み込み: T5 の「<code>new</code> で定番を下書きに出す」条件を満たしました。<code>cd workspace &amp;&amp; npm test</code> で確認できます。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 佐藤 美咲, 鈴木 ひかり</span><span class="turn">#33</span></div><div class="text">田中です。ひかりさんの組み込み後に、<code>cd workspace &amp;&amp; npm test</code> を打ち直しました。34本すべて通り、ルートの <code>npm run typecheck</code> も通っています。T5 の core と <code>list --csv</code> に追加の作業はありません。残るリスクは3点です。
+1. 実際の Excel では、まだ CSV を開いていません。BOM、CRLF、先頭の <code>'</code> はテストで確認しています。
+2. 源泉の切り捨ては暫定のままです。先生の回答待ちで、直すのは <code>calcAmounts</code> の1か所です。
+3. 定番を使う <code>new</code> の流れは、実機の対話では誰も見ていません。レビューで私が一通り流します。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">memo</span><span class="turn">#34</span></div><div class="text">テストと typecheck は通っている。T4/T5 は完了済みなので、残りのリスクを共有して終える。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 佐藤 美咲, 田中 健</span><span class="turn">#34</span></div><div class="text">ひかりです。最終確認として、<code>cd workspace &amp;&amp; npm test</code> を打ち直しました。34本とも通り、ルートの <code>npm run typecheck</code> も通っています。T4 と T5 に追加の作業はありません。まだ確認が取れていないのは次の3点です。
+1. 定番を使う <code>new</code> の流れは、テストと手元の入力で見ただけです。実機の対話では見ていません。田中さん、レビューで一通り流してもらえると助かります。
+2. A4 は、見本と明細15行が1ページに収まることをヘッドレス Chromium で確認しました。ただし日本語フォントがない環境での計測です。16〜19行は未確認です。実機の印刷は、受け入れで山田さんに見てもらいたいです。
+3. Excel で CSV を開く確認も、まだ誰もしていません。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 佐藤 美咲, 鈴木 ひかり</span><span class="turn">#35</span></div><div class="text">田中です。ひかりさんの組み込み後、定番を使う <code>new</code> を実際に対話で流しました。<code>cd workspace &amp;&amp; npm test</code> は34本通っています。
+- **<code>client add</code>**: 引数なしで進めて、最後の質問「定番の明細を登録しますか？」で <code>y</code> と答えました。明細を1行入れて「定番を保存しました」まで出ました。
+- **<code>new</code>**: 定番の一覧と「1 そのまま使う / 2 直す / 3 最初から入力 [1]」が出ました。Enter で採用すると、確認画面に進みました。
+- **確認画面で N**: 「何も保存していません(番号も使っていません)」と出ました。
+- **<code>list --csv</code>**: 見出し行の先頭に BOM が付いています。
+- **未確認**: 「y で発行」と「発行後の定番にしますか？」の流れは、テスト以外では実機で流せていません。確認用の入力を流した際、保存先の切り替えを間違えました。再実行は次のラウンドでやります。
+- **残るリスク**
+  1. 実機の Excel では CSV をまだ開いていません。
+  2. 源泉の切り捨ては暫定のままです。
+  3. A4 印刷は日本語フォントのない環境で測っています。16〜19行も未確認です。
+
+T4/T5 に私から追加の変更はありません。</div></li></ol></details>
+  <details open><summary>周 2 · review <span class="muted">4</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;review&quot; started (iteration 2) — Engineers review each other's work against the acceptance criteria and fix issues. PM checks every task against its acceptance criteria and states what is ready for users.</p></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 佐藤 美咲, 鈴木 ひかり</span><span class="turn">#36</span></div><div class="text">田中です。前回やり残した「y で発行」まで、定番を使う <code>new</code> を実際に対話で流しました。<code>cd workspace &amp;&amp; npm test</code> は34本通っています。
+- **<code>client add</code>**: 最後の質問で <code>y</code> と答え、顧問料5万円を定番に保存できました。
+- **<code>new</code>**: 取引先を番号で選び、対象月は Enter で今月にしました。定番の一覧が出て、「1 そのまま使う」を Enter で採用すると、確認画面に進みました。
+- **y で発行**: 確認画面で <code>y</code> と答えると、<code>INV-0001.md</code> が出ました。合計は¥55,000で、<code>list</code> にも1件出ます。
+- **「定番にしますか？」**: 保存済みと同じ内容だったので、出ませんでした。仕様どおりです。内容を変えたときに出る場合は、テストで見ています。実機では流していません。
+- **T5 の受け入れ条件**: 定番の保存、下書き表示、必ず確認画面を通ること、y のときだけ発行、スナップショット、<code>list --csv</code> はすべて確認できました。追加の修正はありません。
+
+次の3点は、まだ確認が取れていません。
+1. 実際の Excel で CSV を開く確認は、誰もしていません。BOM、CRLF、先頭の <code>'</code> はテストで見ています。
+2. 源泉の切り捨ては暫定です。先生の回答待ちで、直すのは <code>calcAmounts</code> の1か所です。
+3. A4 印刷は、日本語フォントのない環境で測っています。16〜19行も未確認です。実機の印刷は山田さんにお願いします。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#37</span></div><div class="text">T4/T5を受け入れ基準と照らす。T4: 質問形式、手順書、見本、A4(15行まで、日本語フォントなし環境)は満たす。5分は人の入力時間とNode導入が未計測。T5: 定番保存、下書き、確認画面、スナップショット、CSVは満たす。Excel実機は未確認。最終イテレーションなので受け入れに回す。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span><span class="turn">#37</span></div><div class="text">佐藤です。T4とT5を受け入れ基準と照らして確認しました。
+
+**ユーザーに渡せる**
+・T4：<code>init</code> / <code>client add</code> / <code>new</code> は、引数なしで日本語の質問に答えるだけで進みます。手順書 <code>はじめに.md</code> と、山田さんの例の見本(MD/HTML)もあります。A4は、見本と明細15行まで1ページに収まることを確認済みです。
+・T5：定番明細の保存と下書き表示ができます。確認画面は必ず通り、yのときだけ発行されます。定番を変えても過去の請求書は変わりません。<code>list --csv</code> はBOM・CRLF・先頭<code>'</code>対応で、<code>--out</code>も使えます。
+・コマンドは4つのまま、ヘルプは14行です。テスト34本とtypecheckも通っています。
+
+**まだ確認が取れていない(受け入れで見る)**
+1. 実機のブラウザでのA4印刷。日本語フォントがある環境での確認です。16〜19行は未確認で、README は「15行まで」としています。
+2. 人が打つ時間とNode.jsの導入を含めた、初回5分以内。処理自体は0.46秒でした。
+3. 実際のExcelでのCSV表示。
+4. 「定番にしますか？」の「内容が違うとき」は、実機では見ていません。テストでは確認済みです。
+5. 源泉の切り捨ては暫定のままです。先生の回答待ちで、直すのは<code>calcAmounts</code>の1か所です。
+
+山田さんには、Node.jsの導入が壁として残ります。ブリーフが「ターミナルから」なので、今回はそこまでとします。
+
+田中さん、ひかりさん、レビューありがとうございました。追加の修正は不要です。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#37</span></div><div class="text">Review iteration 2: T4/T5は受け入れ基準を満たす。未確認は、実機のA4印刷(日本語フォント、16〜19行)、人が打つ時間とNode導入を含む5分以内、実機ExcelでのCSV、「定番にしますか？」の実機確認、源泉の切り捨て(先生の回答待ち)。受け入れで山田さん・Danielさんに確認する。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">ADVANCE</span><span class="turn">#37</span></div><div class="text">レビューの目的は達成した。T4/T5を受け入れ基準で確認し、未確認項目は受け入れで検証する。</div></li></ol></details>
+  <details open><summary>周 2 · acceptance <span class="muted">6</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;acceptance&quot; started (iteration 2) — Users try what was built (read the workspace, run it if possible) and judge it from their own needs. Each user gives a [VERDICT accept|reject] with reasons. PM summarizes and decides next steps.</p></li><li class="msg user private" data-from="user-yamada"><div class="who"><span class="name">山田 恵子</span> <span class="kind">memo</span><span class="turn">#38</span></div><div class="text">質問に答える形と日本語の手順書は前進。でも Node.js を入れる作業と黒い画面は、私にはまだ壁。正直に判断する。</div></li><li class="msg user" data-from="user-yamada"><div class="who"><span class="name">山田 恵子</span> <span class="kind reject">VERDICT</span><span class="turn">#38</span></div><div class="text">REJECT: 前回より、ずっと良くなりました。ありがとうございます。
+- 質問に答えるだけで進む形になり、打ち間違いの不安が減りました。
+- 日本語の手順書と、印刷用の見本があります。報酬10万円と実費1万円の例は、源泉10,210円、請求額110,790円で、電卓の答えと同じです。
+- 確認画面でNを押すと、何も保存されず、番号も進みません。
+- 取引先ごとの定番明細は、毎月ほぼ同じ内容を書く私には助かります。
+
+それでも今回は、使えるとは言えません。理由は2つです。
+1. Node.js を自分で入れる作業が残っています。黒い画面を開いて、ご自身で入れる作業です。うまくいかなかったときに、私には直せません。先生に迷惑をかける可能性があるものは、仕事に使えません。
+2. 「5分で終わる」は、処理の時間だけの話です。入れる作業と打つ時間を含めた時間は、誰も測れていません。
+
+印刷についても、お伝えします。
+- 見本は1ページに収まったそうですが、確認した環境には日本語の文字がなかったそうです。私の紙で同じになるかは、まだ分かりません。
+- 明細は15行までしか保証されていません。私の月末の請求書は、それより多い月があります。
+
+もし誰かが最初の設定を一緒にやってくれるなら、その後は使えるかもしれません。一度慣れたら長く使うタイプなので、そこだけが残念です。源泉の切り捨てについては、先生に聞いて分かったらお伝えします。</div></li><li class="msg user private" data-from="user-garcia"><div class="who"><span class="name">Daniel García</span> <span class="kind">memo</span><span class="turn">#39</span></div><div class="text">説明から判断する。定番明細とCSVは要望に応えている。確認画面を通る点も良い。Zapier連携やJSON出力は無いが、CSVで当面は足りる。acceptする。</div></li><li class="msg user" data-from="user-garcia"><div class="who"><span class="name">Daniel García</span> <span class="kind accept">VERDICT</span><span class="turn">#39</span></div><div class="text">ACCEPT: ACCEPT: 前回の不満のうち2つに答えてくれました。
+- 定番明細: <code>invoice new Acme</code> で前回の明細が下書きに出ます。Enterで採用しても確認画面は必ず通り、yのときだけ発行されます。これで毎回 <code>--item</code> を打つ必要がなくなりました。
+- <code>list --csv</code>: <code>--out</code> でファイルに出せて、BOMもあるのでExcelで文字化けしません。自分のスクリプトにつなげられます。
+- 事故対策も効いています。Nで番号が進まない点と、発行済みの請求書が定番変更で変わらない点は、私の「番号重複で再発行」の問題に直接効きます。
+- 山田さんの例の計算も一致しています。ヘルプも14行で1画面です。
+
+残る不満は3つです。
+1. JSON出力がありません。Zapier用にはCSVだけでは少し足りないので、次に入れてください。
+2. EUR換算は、今回もありません。転記の手間は残ります。
+3. A4は、日本語フォントのない環境での確認で、15行までしか保証されていません。私の請求書は少ない行数なので、すぐには困りません。ただ、実機での確認は早めにお願いします。
+
+山田さんのrejectは今回も妥当です。Node.jsを入れる壁は、私のような人向けのツールとしては問題ありません。まず使える人向けに出してください。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#40</span></div><div class="text">受け入れの総括。山田=reject、Daniel=accept。最終イテレーションなので、今回で終了。残課題を明記し、未決を整理する。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span><span class="turn">#40</span></div><div class="text">佐藤です。受け入れの結果をまとめます。
+
+**結果**
+・山田さん：reject。理由は、Node.js を自分で入れる作業が残ること。それと、「5分」に導入と打つ時間を含めた計測がないこと。A4 は日本語フォントがある環境で未確認で、15行までしか保証できていないことも挙げてもらいました。
+・Daniel さん：accept。定番明細と <code>list --csv</code> が、前回の不満に答えました。
+
+**評価されたこと**
+計算が電卓と一致すること、N で番号が進まないこと、定番明細、日本語の質問と手順書です。コマンドは4つで、ヘルプは14行です。
+
+**残った課題（次があれば優先する順）**
+1. Node.js の導入。山田さんは、一緒に最初の設定をしてくれる人がいれば使えるかもしれない、と言っています。ブリーフが「ターミナルから」なので、今回は解決しません。
+2. 実機のブラウザでの A4 印刷。日本語フォントのある環境で、16〜19行も見る必要があります。
+3. 人が打つ時間と導入を含めた初回の所要時間。
+4. 実機の Excel での CSV 表示。
+5. JSON 出力（Daniel さん）。EUR 換算と売上表への転記は、対象外のままです。
+6. 源泉の切り捨ては暫定です。山田さんの先生の回答待ちで、直すのは <code>calcAmounts</code> の1か所です。
+
+山田さん、先生の回答が分かったら教えてください。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#40</span></div><div class="text">v1 は「ターミナルを使える個人事業主」向けに出す。山田さんのような非エンジニアには、導入を手伝う人がいる前提で案内する。理由：ブリーフが「ターミナルから」であり、最小のスコープを守るため。トレードオフ：山田さんは今回 reject のまま残り、A4 の実機確認、導入を含めた所要時間、JSON 出力、源泉の丸めは次回に持ち越す。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#40</span></div><div class="text">Acceptance iteration 2: 山田=REJECT（Node.js導入が壁、導入と入力を含む5分が未計測、A4は日本語フォント環境で未確認・15行まで）。Daniel=ACCEPT（定番明細・list --csv を評価。JSON出力・EUR換算が要望、A4実機確認も希望）。次回の優先：A4実機（16〜19行含む）、導入込みの所要時間、実機ExcelでCSV、JSON出力。源泉の切り捨ては先生の回答待ちで、直すのは calcAmounts の1か所。最終イテレーションのため v1 はここで完了。</div></li><li class="sys" data-from="system"><p>Session finished after iteration 2. 1/2 users accepted.</p></li></ol></details>
+</div>
+<aside>
+  <section><h2>メンバー</h2><ul><li><span class="dot pm"></span>佐藤 美咲 <span class="muted">pm · pm</span></li><li><span class="dot eng"></span>田中 健 <span class="muted">eng-backend · engineer</span></li><li><span class="dot eng"></span>鈴木 ひかり <span class="muted">eng-frontend · engineer</span></li><li><span class="dot user"></span>山田 恵子 <span class="muted">user-yamada · user</span></li><li><span class="dot user"></span>Daniel García <span class="muted">user-garcia · user</span></li></ul></section>
+  <section><h2>タスク</h2><ul><li><span class="st st-done">done</span> <b>T1</b> データ保存・自動採番・金額計算（コア） <span class="muted">eng-backend</span><details class="sub"><summary>result</summary><div class="muted small text">追加の変更です。<code>workspace/src/core.js</code> のエラーに <code>code</code> を付けました。<code>test/core.test.js</code> にコード判別のテストを1本足しました。<code>cd workspace &amp;&amp; npm test</code> で13本が通ります。</div></details></li><li><span class="st st-done">done</span> <b>T2</b> CLIコマンドとMarkdown/HTML出力 <span class="muted">eng-frontend</span><details class="sub"><summary>result</summary><div class="muted small text"><code>init</code> / <code>client add</code> / <code>new</code> / <code>list</code> の4コマンドをつなぎ、Markdown/HTML出力まで動きました。<code>cd workspace &amp;&amp; npm test</code> で20本通っています。A4 1ページの実機確認は、まだブラウザで印刷していません。
+
+- **コマンド**: 実装は <code>workspace/src/main.ts</code>、<code>bin/invoice</code> から呼べます。<code>node src/main.ts</code> を引数なしで実行すると14行のヘルプが出ます。先頭に「最初は <code>invoice init</code>」と書いてあります。
+- **<code>new</code> の入力**: <code>--item &quot;顧問料:50000&quot;</code> / <code>&quot;記帳代行:60000:源泉&quot;</code> で入力できます。<code>--item</code> を省略すると「明細 1 の名称は？」と聞く対話になります。
+- **確認画面**: 宛名、対象月、合計、源泉の順に表示し、<code>y</code> のときだけ発行します。Enter や N は何も保存せず、番号も使いません。
+- **山田さんの例**: 手動で確認し、報酬10万円(源泉対象)+実費1万円は、源泉10,210円、請求額110,790円になりました。
+- **出力**: <code>--format md|html</code> で選べ、ファイルはカレントディレクトリに <code>INV-0001.md</code> のような名前で出ます。<code>--out</code> で名前も変えられます。
+- **案内メッセージ**: 未登録のクライアントや未 <code>init</code> のときは、次に打つコマンドまで出します。一覧が0件のときも同様です。
+- **インボイス番号を省略した場合**: 請求書には「(未登録)」と表示します。
+- **テスト**: <code>test/main.test.ts</code> を追加しました。ヘルプの行数、未登録時の案内、Enterで番号が進まないことを見ています。<code>npm test</code> が <code>*.test.ts</code> も走らせるように直しました。これまで <code>render.test.ts</code> は走っていませんでした。
+- **README**: 使い方、保存先、15行の目安を追記しました。</div></details></li><li><span class="st st-done">done</span> <b>T3</b> T1b プレビューと確定の分離（採番は確認後） <span class="muted">eng-backend</span><details class="sub"><summary>result</summary><div class="muted small text">追加の変更です。発行日をローカル日付にしました。<code>workspace/src/core.js</code> の <code>localDate</code> と、<code>test/core.test.js</code> に新しい1本です。<code>cd workspace &amp;&amp; npm test</code> で確認できます。</div></details></li><li><span class="st st-done">done</span> <b>T4</b> 質問に答えるだけで進む案内と、日本語の手順書、A4印刷見本 <span class="muted">eng-frontend</span><details class="sub"><summary>result</summary><div class="muted small text">引数なしで質問に答えるだけで進む形と、日本語の手順書、見本を作りました。A4 は 15 行まで 1 ページに収まることを確認しました。テスト 32 本と typecheck は通っています。<code>cd workspace &amp;&amp; npm test</code> で確認できます。
+- **質問形式**: <code>init</code> / <code>client add</code> / <code>new</code> を引数なしで実行すると、日本語で 1 つずつ聞きます（<code>src/main.ts</code>）。<code>new</code> は取引先を番号か名前で選べて、対象月は Enter で今月になります。
+- **日本語の文言**: 質問とエラーから英語の引数名を外しました。<code>--format</code> は md か html の指定ミスのときも「出力形式は…」と日本語で案内します。英語オプションはヘルプの補足にだけ残しています。
+- **手順書**: <code>workspace/はじめに.md</code> を作りました。Node.js の入れ方、ターミナルの開き方、<code>init</code>→<code>client add</code>→<code>new</code> と印刷を 1 ステップずつ書いています。貼れるコマンド付きです。
+- **見本**: <code>workspace/sample/見本-山田さんの例.md</code> と <code>.html</code> を置きました。報酬 10 万円（源泉対象）と実費 1 万円で、消費税 11,000 円、源泉 10,210 円、請求額 110,790 円です。
+- **A4 印刷**:
+  - ヘッドレス Chromium（<code>/opt/pw-browsers</code>）で PDF にしました。見本は A4 で 1 ページ、明細 15 行も 1 ページです。
+  - 20 行、25 行、30 行はすべて 2 ページでした。16〜19 行は未確認なので、README には「15 行まで」と書きました。
+  - この環境には日本語フォントがありません。代替表示での計測なので、実機のブラウザでの印刷プレビューは山田さんの環境で見てください。
+- **5 分以内の計測**:
+  - 手順書どおりの 3 コマンド（<code>init</code>→<code>client add</code>→<code>new</code>）は、入力を自動で流して 0.46 秒で終わりました。
+  - 人が打つ時間と Node.js のインストールは、この環境では測れていません。手順は全部で約 12 回の入力です。
+- **定番明細**: 定番の下書き表示と「定番にしますか？」は、田中さんの <code>getTemplate</code> / <code>setTemplate</code> が出てから入れます。</div></details></li><li><span class="st st-done">done</span> <b>T5</b> クライアントごとの定番明細の再利用と `list --csv` <span class="muted">eng-backend</span><details class="sub"><summary>result</summary><div class="muted small text">定番明細の <code>new</code> / <code>client add</code> への組み込み: T5 の「<code>new</code> で定番を下書きに出す」条件を満たしました。<code>cd workspace &amp;&amp; npm test</code> で確認できます。</div></details></li></ul></section>
+  
+  <section><h2>判定</h2><ul><li><span class="kind reject">reject</span> 山田 恵子 <span class="muted">周 1</span><div class="small">計算の部分は安心できました。報酬10万円と実費1万円の例で、源泉10,210円、請求額110,790円と、私の電卓の答えと同じでした。確認画面が「宛名→対象月→合計→源泉」の順なのも、私が普段見直す順番です。番号が重ならないのと、Nを押しても番号が進まないのも助かります。
+
+ただ、今のままでは私は使えません。理由は3つです。
+
+1. 黒い画面(ターミナル)で <code>node src/main.ts new 山田商店 --month 2026-09 --item &quot;記帳代行:60000:源泉&quot;</code> のように打つ必要があります。これは私には難しいです。打ち間違えたら、どこが違うのか分かりません。先生(所長)に迷惑をかけたくないので、自信のない道具は仕事に使えません。
+2. 最初に Node.js をインストールする作業が要ります。説明書にもありません。「5分で終わる」とは思えません。
+3. 画面が文字だけで、英語まじりです(<code>--format</code>、<code>client add</code> など)。大きく分かりやすい画面で、ボタンや選ぶ形だとありがたいです。
+
+もう一つ、A4で1ページに印刷できるかは、私の環境では確認できませんでした。紙に印刷できることは私にはとても大事なので、そこも見たいです。
+
+もし次に直すなら、最低限これだけお願いします。
+・ダブルクリックで開ける形にしてください。難しければ、画面の質問に答えるだけで進む形でも構いません。
+・説明書は日本語で、手順を一つずつ書いてください。
+・見本の請求書を、印刷した状態で見せてください。
+
+源泉の切り捨ては、先生に聞いて分かったらお伝えします。</div></li><li><span class="kind accept">accept</span> Daniel García <span class="muted">周 1</span><div class="small">条件つきでaccept。ターミナルは問題なく使えるし、「init→client add→new」の流れは5分もかからなさそうです。確認画面の順番も、Nで番号が進まない点も、私の「番号重複で再発行」事故にまっすぐ効きます。ヘルプが14行で1画面なのもいいです。
+
+ただ不満が3つあります。
+1. <code>--item &quot;名称:金額:源泉&quot;</code> を毎回打つのは遅いです。クライアントごとに定番の明細を保存して、<code>invoice new Acme</code> だけで前回の明細を下書きに出せるようにしてください。ただし、確認画面を必ず通す前提です。
+2. EUR換算と売上表への転記が残っています。v2では、せめてJSON出力か <code>list --csv</code> で、Zapierや自分のスクリプトにつなげるようにしてほしいです。
+3. A4で1ページに収まるかを、誰も確認していません。HTMLは納品物なので、ここは早めに見てください。
+
+山田さんのrejectは妥当です。Node.jsのインストールもGUIもなしでは、あの人には無理です。ただ、私のように使える人向けに先に出すのは悪くないと思います。次のイテレーションでは、明細の再利用とCSV出力を優先してください。</div></li><li><span class="kind reject">reject</span> 山田 恵子 <span class="muted">周 2</span><div class="small">前回より、ずっと良くなりました。ありがとうございます。
+- 質問に答えるだけで進む形になり、打ち間違いの不安が減りました。
+- 日本語の手順書と、印刷用の見本があります。報酬10万円と実費1万円の例は、源泉10,210円、請求額110,790円で、電卓の答えと同じです。
+- 確認画面でNを押すと、何も保存されず、番号も進みません。
+- 取引先ごとの定番明細は、毎月ほぼ同じ内容を書く私には助かります。
+
+それでも今回は、使えるとは言えません。理由は2つです。
+1. Node.js を自分で入れる作業が残っています。黒い画面を開いて、ご自身で入れる作業です。うまくいかなかったときに、私には直せません。先生に迷惑をかける可能性があるものは、仕事に使えません。
+2. 「5分で終わる」は、処理の時間だけの話です。入れる作業と打つ時間を含めた時間は、誰も測れていません。
+
+印刷についても、お伝えします。
+- 見本は1ページに収まったそうですが、確認した環境には日本語の文字がなかったそうです。私の紙で同じになるかは、まだ分かりません。
+- 明細は15行までしか保証されていません。私の月末の請求書は、それより多い月があります。
+
+もし誰かが最初の設定を一緒にやってくれるなら、その後は使えるかもしれません。一度慣れたら長く使うタイプなので、そこだけが残念です。源泉の切り捨てについては、先生に聞いて分かったらお伝えします。</div></li><li><span class="kind accept">accept</span> Daniel García <span class="muted">周 2</span><div class="small">ACCEPT: 前回の不満のうち2つに答えてくれました。
+- 定番明細: <code>invoice new Acme</code> で前回の明細が下書きに出ます。Enterで採用しても確認画面は必ず通り、yのときだけ発行されます。これで毎回 <code>--item</code> を打つ必要がなくなりました。
+- <code>list --csv</code>: <code>--out</code> でファイルに出せて、BOMもあるのでExcelで文字化けしません。自分のスクリプトにつなげられます。
+- 事故対策も効いています。Nで番号が進まない点と、発行済みの請求書が定番変更で変わらない点は、私の「番号重複で再発行」の問題に直接効きます。
+- 山田さんの例の計算も一致しています。ヘルプも14行で1画面です。
+
+残る不満は3つです。
+1. JSON出力がありません。Zapier用にはCSVだけでは少し足りないので、次に入れてください。
+2. EUR換算は、今回もありません。転記の手間は残ります。
+3. A4は、日本語フォントのない環境での確認で、15行までしか保証されていません。私の請求書は少ない行数なので、すぐには困りません。ただ、実機での確認は早めにお願いします。
+
+山田さんのrejectは今回も妥当です。Node.jsを入れる壁は、私のような人向けのツールとしては問題ありません。まず使える人向けに出してください。</div></li></ul></section>
+  
+  <section><h2>決定</h2><ul><li class="small">v1は「クライアント登録＋自動採番＋税・源泉計算＋MD/HTML出力」のみ。EUR換算・売上表連携・PDF・外部サービス連携はやらない。理由：事故の原因（前回コピー・番号重複・計算不信）に直結するものに絞るため。トレードオフ：Danielさんの転記と換算の手間は残る。 <span class="muted">planning</span></li><li class="small">コマンドは <code>init</code> / <code>client add</code> / <code>new</code> / <code>list</code> の4つで確定。私の「3つ以内」は撤回する。理由：初回の迷いを減らすほうが、コマンド数を1つ減らすより効果が大きいため。トレードオフ：ヘルプに載る項目が1つ増える。ただしヘルプは1画面に収める。 <span class="muted">planning</span></li><li class="small">金額は整数円で持つ。源泉は「報酬のみ」に10.21%を掛けて円未満切り捨てとし、丸め規則をREADMEとテストに明記する。請求書は発行時にスナップショット保存する（宛名・源泉有無・インボイス番号）。理由：計算不信と、過去の請求書が変わる事故を防ぐため。トレードオフ：切り捨てか切り上げかは山田さんの先生に確認が取れるまで暫定。 <span class="muted">planning</span></li><li class="small">確認画面でNまたはEnterのみの場合は何も保存せず、番号も消費しない。理由：欠番を出さないため。 <span class="muted">planning</span></li><li class="small">最終イテレーションは次の3点に絞る。(1) 初心者向けの案内：引数なしで質問に答えるだけで進む形、日本語の手順書、印刷見本。(2) クライアントごとの定番明細の再利用。(3) <code>list --csv</code>。GUI、ダブルクリックのアプリ、EUR換算、売上表連携はやらない。理由：ブリーフの「ターミナルから」を守りつつ、事故の原因に近いものと、初回で離脱する原因だけを直すため。トレードオフ：山田さんには今回も、Node.js を入れる手間が残る。 <span class="muted">acceptance</span></li><li class="small"><code>new</code> と <code>client add</code> は鈴木さん、<code>list --csv</code> と core(<code>getTemplate</code>/<code>setTemplate</code>/<code>invoicesToCsv</code>)は田中さんが触る。定番の下書きは「採用/修正/最初から入力」で Enter は採用、確認画面は必ず通す。保存済みと同じ内容なら「定番にしますか？」は聞かない。CSVはUTF-8 BOM・CRLF・先頭が <code>=+-@</code> の値は <code>'</code> を付ける。理由：ファイル衝突を避け、Excelでの事故を防ぐため。トレードオフ：CSVの値の先頭に <code>'</code> が付くことがある。 <span class="muted">planning</span></li><li class="small">v1 は「ターミナルを使える個人事業主」向けに出す。山田さんのような非エンジニアには、導入を手伝う人がいる前提で案内する。理由：ブリーフが「ターミナルから」であり、最小のスコープを守るため。トレードオフ：山田さんは今回 reject のまま残り、A4 の実機確認、導入を含めた所要時間、JSON 出力、源泉の丸めは次回に持ち越す。 <span class="muted">acceptance</span></li></ul></section>
+</aside>
+</main>
+<script>
+(() => {
+  const priv = document.getElementById("show-private"), who = document.getElementById("who");
+  const apply = () => {
+    document.body.classList.toggle("show-private", priv.checked);
+    for (const li of document.querySelectorAll("li[data-from]")) li.hidden = !!who.value && li.dataset.from !== who.value;
+  };
+  priv.addEventListener("change", apply);
+  who.addEventListener("change", apply);
+  apply();
+})();
+</script>
+</body>
+</html>

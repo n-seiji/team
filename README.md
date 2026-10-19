@@ -35,8 +35,8 @@ Key properties:
 | discovery | PM, users | The PM interviews users and digs into concrete episodes. No solutions yet |
 | planning | PM, engineers | The PM writes tasks with acceptance criteria and assigns owners; engineers debate feasibility, risks and tech choices |
 | build | engineers (**in parallel**) | Each engineer implements their tasks in `workspace/<session>/` and reports `[TASK_DONE]` |
-| review | engineers, PM | Cross-review and fixes; each engineer posts a `[DEMO]` with output they really produced; the PM checks the acceptance criteria |
-| acceptance | users, PM | Users start from the demos (kept in their prompt), read or run the result and give `[VERDICT accept/reject]`; the PM sums up |
+| review | engineers, PM | Cross-review and fixes; each engineer posts a `[DEMO]` with output they really produced and the team declares one verification command with `[VERIFY]`; the PM checks the acceptance criteria |
+| acceptance | users, PM | First the engine itself runs the `[VERIFY]` command and keeps its real output and files (screenshots etc.) as a **trial run**. Users start from that trial run and the demos, read the result and give `[VERDICT accept/reject]`; the PM sums up |
 | wrapup | engineers, PM | Only when the session is about to finish with open tasks, or with decisions made in review / acceptance that nobody has applied yet. Engineers apply them; tasks added in acceptance are handed over, not built, and the PM lists what is left for the real human |
 
 If any user rejects, or the PM turns users' conditions into new tasks in acceptance, and the iteration limit (`maxIterations`) has not been reached, the team goes back to planning so users see the result. Each phase ends after its maximum number of rounds, or earlier when the PM sends `[ADVANCE]`. When the session finishes, the last log line names any task that is still open.
@@ -57,6 +57,7 @@ acceptance criteria (on the following lines)
 [TASK_DROP T1] close a task the team will not do (PM only), with the reason
 [ASK_HUMAN] a question only the real human can answer, plus the default the team goes ahead with
 [DEMO T1] what a user does and sees, with real output (pasted, or a generated file / screenshot path)
+[VERIFY] one shell command that tries the product like a user, prints what it saw and saves screenshots to $TEAM_ARTIFACTS
 [DECISION] a decision the team follows from now on
 [VERDICT accept] / [VERDICT reject] reasons, what they are based on, what could not be checked
 [ADVANCE] end the current phase (PM only)
@@ -77,7 +78,8 @@ Open this repository in Claude Code and run:
 
 Claude Code then repeats `team next` → subagent → `team record`. Anything you say mid-session that is meant for the team ("tell them the budget is small") is shared with every member through `team say`. You can also set a stopping point, such as "just discovery" or "up to the next phase".
 
-- Full conversation, including each member's private thoughts: `.team/sessions/<name>/transcript.md`
+- Full conversation, including each member's private thoughts: `.team/sessions/<name>/transcript.md`, or `transcript.html` to read it in a browser (grouped by phase, filter by member, private memos hidden by default; `team log --html` prints its path and renders it for older sessions)
+- Trial runs and evidence files: `.team/sessions/<name>/artifacts/`
 - The product being built: `workspace/<name>/` (each session gets its own folder)
 
 #### Claude Code on the web and Claude Projects
@@ -165,6 +167,8 @@ src/
   store.ts      persistence under .team/
   overlap.ts    clashes between sessions working on the same repository
   render.ts     log and transcript.md formatting
+  html.ts       transcript.html (the browser view)
+  verify.ts     trial runs of the team's [VERIFY] command before acceptance
   backends/     anthropic / claude-cli / mock
 personas/       member definitions
 .claude/        subagents (agents/) and the team-dev skill (skills/)

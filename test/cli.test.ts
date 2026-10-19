@@ -34,6 +34,15 @@ test("auto mode with the mock backend completes a full iteration", async () => {
   const md = fs.readFileSync(path.join(dir, ".team/sessions/s1/transcript.md"), "utf8");
   assert.match(md, /## Transcript/);
   assert.match(md, /acceptance/);
+  const html = fs.readFileSync(path.join(dir, ".team/sessions/s1/transcript.html"), "utf8");
+  assert.match(html, /<title>s1<\/title>/);
+  assert.match(html, /data-from="pm"/);
+  // the runtime ran the verification command the mock engineer declared, once, before acceptance
+  assert.equal(state.trials.length, 1);
+  assert.equal(state.trials[0].exitCode, 0);
+  assert.match(state.trials[0].output, /journey: ok/);
+  assert.ok(fs.existsSync(path.join(dir, ".team/sessions/s1/artifacts/iteration-1/result.txt")));
+  assert.ok(state.trials[0].artifacts.includes(".team/sessions/s1/artifacts/iteration-1/result.txt"));
 });
 
 test("host mode: next --json gives prompts, record advances the turn", async () => {

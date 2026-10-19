@@ -36,7 +36,7 @@
 | planning | PM, エンジニア | PM が受け入れ基準つきタスクを作って担当を決める。エンジニアは実現性・リスク・技術選定を議論 |
 | build | エンジニア（**並列**） | 自分のタスクを `workspace/<セッション名>/` に実装し `[TASK_DONE]` |
 | review | エンジニア, PM | 相互レビューと修正。PM が受け入れ基準を確認 |
-| acceptance | ユーザー, PM | ユーザーが成果物を見て/動かして `[VERDICT accept/reject]`。PM がまとめる |
+| acceptance | ユーザー, PM | 最初にエンジン自身がチームの `[VERIFY]` コマンドを実行し、本物の出力とファイル (スクリーンショットなど) を**試用ログ**として残す。ユーザーは試用ログとデモから成果物を読んで `[VERDICT accept/reject]`。PM がまとめる |
 
 reject が1件でもあり、イテレーション上限 (`maxIterations`) に達していなければ planning に戻ります。各フェーズは最大ラウンド数で終わるほか、PM が `[ADVANCE]` で早めに切り上げられます。
 
@@ -55,6 +55,7 @@ reject が1件でもあり、イテレーション上限 (`maxIterations`) に�
 [TASK_BLOCKED T1] 実機・アカウント・公開など、人にしかできない作業。人が何をすればよいか
 [TASK_DROP T1] やらないことにしたタスクを閉じる（PM のみ）。理由
 [ASK_HUMAN] 本物の人にしか答えられない質問と、それまでチームが進める既定の案
+[VERIFY] ユーザーと同じ手順でプロダクトを試し、見たものを出力し、スクリーンショットを $TEAM_ARTIFACTS に保存する 1 行のコマンド
 [DECISION] チームの決定事項
 [VERDICT accept] / [VERDICT reject] 理由・何を見て判断したか・確かめられなかったこと
 [ADVANCE] フェーズを終える（PM のみ）
@@ -75,7 +76,8 @@ reject が1件でもあり、イテレーション上限 (`maxIterations`) に�
 
 あとは Claude Code が `team next` → サブエージェント → `team record` を繰り返します。途中で「予算は月1万円までと伝えて」などと話しかければ、`team say` でチーム全員に共有されます。「discovery だけやって」「次のフェーズまで」のように区切りも指定できます。
 
-- 会話の全文（各メンバーの思考を含む）: `.team/sessions/<name>/transcript.md`
+- 会話の全文（各メンバーの思考を含む）: `.team/sessions/<name>/transcript.md`。ブラウザで読むなら `transcript.html`（フェーズごとにまとまり、人で絞り込める。本人だけのメモは既定で隠す。`team log --html` でパスを表示し、古いセッションの分も作る）
+- 試用ログと証拠のファイル: `.team/sessions/<name>/artifacts/`
 - 作られたプロダクト: `workspace/<name>/`（セッションごとに別フォルダ）
 
 #### Claude Code on the web / Claude のプロジェクト
@@ -146,6 +148,8 @@ src/
   prompt.ts     ターンごとのプロンプト生成（ペルソナ・共有状態・記憶）
   store.ts      .team/ への保存
   render.ts     ログ・transcript.md の整形
+  html.ts       transcript.html（ブラウザで読む用）
+  verify.ts     受け入れ前に [VERIFY] コマンドを実行する試用
   backends/     anthropic / claude-cli / mock
 personas/       メンバー定義
 .claude/        サブエージェント (agents/) と team-dev スキル (skills/)

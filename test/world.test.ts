@@ -265,3 +265,31 @@ test("the PM plans the next iteration with last rejections, flagging users who k
   pm = buildPrompt(w.state, "pm", w.emitted, []).user;
   assert.match(pm, /- U1 \(rejected in all 2 iterations so far\): still a terminal/);
 });
+
+test("an engineer's [VERIFY] command is kept; the trial phase is due once per iteration", () => {
+  const w = make(1);
+  toBuild(w);
+  w.record("e1", "[TASK_DONE T1] ok");
+  w.record("e2", "[TASK_DONE T2] ok");
+  w.record("e1", "[VERIFY] `npm run verify`");
+  w.record("e2", "[VERIFY] two\nlines");
+  assert.deepEqual(w.state.verify, { command: "npm run verify", by: "e1" });
+  assert.equal(w.trialDue, false, "not in review");
+  w.record("pm", "ready");
+  assert.equal(w.phase.id, "acceptance");
+  assert.equal(w.trialDue, true);
+  w.addTrial({ command: "npm run verify", exitCode: 1, output: "journey 2 failed", artifacts: [] });
+  assert.equal(w.trialDue, false);
+  assert.match(w.emitted.at(-1)!.text, /exit 1/);
+});
+
+test("users see the trial run's real output in their acceptance prompt", async () => {
+  const { buildPrompt } = await import("../src/prompt.ts");
+  const w = make(1);
+  toAcceptance(w);
+  w.addTrial({ command: "node verify.js", exitCode: 0, output: "opened /day: 3 rows", artifacts: [".team/sessions/t/artifacts/iteration-1/day.png"] });
+  const u = buildPrompt(w.state, "u1", w.emitted, []).user;
+  assert.match(u, /## Trial run \(iteration 1\)/);
+  assert.match(u, /opened \/day: 3 rows/);
+  assert.match(u, /day\.png/);
+});

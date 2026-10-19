@@ -55,6 +55,8 @@ Repeat until the session is `done`, or until the stopping point the user asked f
    Do not edit, summarize or "fix" a reply; if a subagent replied with no tags at all, record it anyway (untagged
    text becomes `[SAY]`). If a reply itself contains a line `TEAM_REPLY_END`, write it to `.team/inbox/<member>.txt`
    and use `--file` instead.
+   When the session enters `acceptance`, that call first runs the team's `[VERIFY]` command (the trial run, up to
+   10 minutes), so give the Bash call recording the last `review` reply a long timeout (600000 ms).
 4. When `phase` in that output changed (or every ~6 turns), give the user a 2–4 line update:
    what happened, key decisions/tasks, what's next. Use `team log --tail 15 --no-thoughts` if you need a recap.
 
@@ -62,7 +64,8 @@ Repeat until the session is `done`, or until the stopping point the user asked f
 
 - Show `team status` (backlog with results, tasks waiting on a person, questions for the human) and the users'
   verdicts, and point to
-  `.team/sessions/<name>/transcript.md` (full conversation including private thoughts) and `workspace/<name>/`.
+  `.team/sessions/<name>/transcript.html` (the full conversation to read in a browser; `transcript.md` is the same in
+  Markdown) and `workspace/<name>/`. Trial runs and screenshots are in `.team/sessions/<name>/artifacts/`.
 - Suggest next steps: another iteration (if users rejected and iterations remain the engine already looped back to
   `planning` — just continue the loop), new personas, or committing the result.
 

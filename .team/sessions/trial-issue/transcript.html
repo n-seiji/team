@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>trial-issue</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+JP:wght@400;600;700&display=swap">
+<style>
+/* Layout: a reading column for the conversation, with the session's records in a side column on wide screens. */
+:root {
+  --bg: #f6f7f8; --panel: #ffffff; --fg: #1d2329; --muted: #5d6873; --line: #dfe3e7;
+  --accent: #1f6f78; --pm: #7a4dbf; --eng: #1f6f78; --user: #b25a1d; --human: #b0324a;
+  --ok: #2c7a3f; --bad: #b0324a; --code: #eef1f3;
+  --body: "IBM Plex Sans JP", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12161a; --panel: #1a2026; --fg: #e3e8ec; --muted: #9aa6b1; --line: #2c343c;
+  --accent: #5fb7bf; --pm: #b796ec; --eng: #5fb7bf; --user: #e59a62; --human: #ec7d92;
+  --ok: #6cc785; --bad: #ec7d92; --code: #232b33; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12161a; --panel: #1a2026; --fg: #e3e8ec; --muted: #9aa6b1; --line: #2c343c;
+  --accent: #5fb7bf; --pm: #b796ec; --eng: #5fb7bf; --user: #e59a62; --human: #ec7d92;
+  --ok: #6cc785; --bad: #ec7d92; --code: #232b33; color-scheme: dark }
+* { box-sizing: border-box }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.65 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header, main { max-width: 1180px; margin: 0 auto }
+header { padding-block: 28px 12px; display: grid; gap: 8px }
+h1 { font-size: 1.6rem; line-height: 1.25; margin: 0; text-wrap: balance }
+h2 { font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px }
+.brief { max-width: 72ch; margin: 0; white-space: pre-wrap }
+.chips { display: flex; flex-wrap: wrap; gap: 6px }
+.chip { font: 12px var(--mono); padding: 2px 8px; border: 1px solid var(--line); border-radius: 99px; background: var(--panel) }
+main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; padding-block: 8px 48px; align-items: start }
+@media (max-width: 860px) { main { grid-template-columns: minmax(0, 1fr) } }
+aside { display: grid; gap: 20px; min-width: 0 }
+aside section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; min-width: 0 }
+aside ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px }
+.controls { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 2; background: var(--bg);
+  display: flex; flex-wrap: wrap; gap: 16px; align-items: center; padding-block: 10px; border-bottom: 1px solid var(--line) }
+.controls label { display: inline-flex; gap: 6px; align-items: center; font-size: .9rem }
+select { font: inherit; padding: 2px 6px }
+details { border-bottom: 1px solid var(--line) }
+summary { cursor: pointer; padding-block: 12px; font-weight: 600; display: flex; gap: 10px; align-items: baseline }
+summary .muted { font-weight: 400; font-size: .85rem }
+summary:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+ol { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 10px }
+.msg { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--c, var(--line)); border-radius: 6px; padding: 10px 14px; min-width: 0 }
+.msg.pm { --c: var(--pm) } .msg.eng { --c: var(--eng) } .msg.user { --c: var(--user) } .msg.human { --c: var(--human) }
+.msg.private { background: transparent; border-style: dashed; color: var(--muted) }
+.who { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; font-size: .85rem }
+.name { font-weight: 700; color: var(--c, var(--fg)) }
+.to, .turn, .muted { color: var(--muted) }
+.turn { margin-left: auto; font: 11px var(--mono) }
+.kind { font: 11px var(--mono); letter-spacing: .04em; padding: 0 6px; border-radius: 4px; background: var(--code) }
+.kind.accept { color: var(--ok) } .kind.reject { color: var(--bad) }
+.text { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 4px }
+.sys { color: var(--muted); font-size: .85rem; padding-inline: 4px }
+.sys p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere }
+pre { background: var(--code); padding: 10px 12px; border-radius: 6px; overflow-x: auto; font: 12.5px/1.5 var(--mono); white-space: pre; margin: 6px 0 }
+code { font: .9em var(--mono); background: var(--code); padding: 0 4px; border-radius: 3px }
+.small { font-size: .85rem }
+details.sub { border: 0 } details.sub summary { padding-block: 2px; font-weight: 400; font-size: .8rem; color: var(--muted) }
+.st { font: 11px var(--mono); padding: 0 6px; border-radius: 4px; background: var(--code) }
+.st-done { color: var(--ok) } .st-blocked { color: var(--human) } .st-dropped { color: var(--muted); text-decoration: line-through }
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; background: var(--muted) }
+.dot.pm { background: var(--pm) } .dot.eng { background: var(--eng) } .dot.user { background: var(--user) }
+body:not(.show-private) .private { display: none }
+</style>
+</head>
+<body>
+<header>
+  <h1>trial-issue</h1>
+  <p class="brief"><b>お題:</b> team シミュレーター (このリポジトリ) に、GitHub の issue から直接セッションを始める機能 `team init --issue owner/repo#N` を加える。gh CLI があれば issue のタイトルと本文を brief に取り込み、無ければ何をすればよいか分かるエラーを出す。既存のルール (CLAUDE.md、README、pnpm typecheck &amp;&amp; pnpm test) を守る。</p>
+  <div class="chips">
+    <span class="chip">終了</span>
+    <span class="chip">周 1/2</span>
+    <span class="chip">フェーズ: wrapup</span>
+    <span class="chip">117 件</span>
+  </div>
+</header>
+<main>
+<div style="min-width:0">
+  <div class="controls">
+    <label><input type="checkbox" id="show-private"> 本人だけのメモも表示</label>
+    <label>表示する人 <select id="who"><option value="">全員</option><option value="pm">佐藤 美咲</option><option value="eng-backend">田中 健</option><option value="eng-frontend">鈴木 ひかり</option><option value="user-dev">木村 拓也</option></select></label>
+  </div>
+  <h2 style="margin-top:16px">会話</h2>
+  <details open><summary>周 1 · discovery <span class="muted">11</span></summary><ol><li class="sys" data-from="system"><p>Session &quot;trial-issue&quot; started. Brief: team シミュレーター (このリポジトリ) に、GitHub の issue から直接セッションを始める機能 <code>team init --issue owner/repo#N</code> を加える。gh CLI があれば issue のタイトルと本文を brief に取り込み、無ければ何をすればよいか分かるエラーを出す。既存のルール (CLAUDE.md、README、pnpm typecheck &amp;&amp; pnpm test) を守る。</p></li><li class="sys" data-from="system"><p>Phase &quot;discovery&quot; started (iteration 1) — PM interviews the users to uncover their real situation, pains and jobs-to-be-done. Users answer strictly in character, with concrete episodes. No solutions yet.</p></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#1</span></div><div class="text">discovery の1ラウンド目。ユーザーは木村 拓也 (user-dev) のみ。事実を掘る質問を短く。解決策は出さない。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 木村 拓也</span><span class="turn">#1</span></div><div class="text">木村さん、よろしくお願いします。まず最後に、GitHub の issue を見てから team のセッションを始めたのはいつでしたか？そのとき、issue の内容をどうやって team に渡しましたか？手順をそのまま教えてください。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 木村 拓也</span><span class="turn">#1</span></div><div class="text">もう一つ。その作業で「面倒だった」「間違えた」と感じた場面があれば、具体的に聞かせてください。</div></li><li class="msg user private" data-from="user-dev"><div class="who"><span class="name">木村 拓也</span> <span class="kind">memo</span><span class="turn">#2</span></div><div class="text">直近の具体的エピソードを、persona に沿って端的に答える。</div></li><li class="msg user" data-from="user-dev"><div class="who"><span class="name">木村 拓也</span> <span class="to">→ 佐藤 美咲</span><span class="turn">#2</span></div><div class="text">先週火曜です。うちのリポジトリの issue を team に回しました。手順は次の通りです。
+1. ブラウザで issue を開く。
+2. タイトルと本文をコピーする。
+3. <code>team init</code> の brief に貼る。貼る際にコードブロックや箇条書きが崩れたので、手で直した。
+4. 「どの issue か」を自分で brief に書き足した。これを忘れたので、後で PR と issue が紐づかなかった。
+
+<code>gh issue view</code> は毎日使っているので、本来はコマンド一発で取れるはずです。それなのに手でコピペしているのが、自分でも腹立たしいです。</div></li><li class="msg user" data-from="user-dev"><div class="who"><span class="name">木村 拓也</span> <span class="to">→ 佐藤 美咲</span><span class="turn">#2</span></div><div class="text">面倒だった点は 3 つあります。
+- 手で貼ると本文が欠けます。長い issue でコメント側にある追記の仕様を落としました。それで、たたき台が古い仕様のまま上がってきました。
+- たたき台がチームの規約を無視します。CLAUDE.md の <code>pnpm typecheck &amp;&amp; pnpm test</code> を通していない PR が来ると、レビューする前に差し戻す手間が増えます。
+- いちばん嫌いなのは、黙って失敗することです。前に CI 上で試したときは、gh が無かったのに何も言われず、brief が空のままセッションが走りました。10 分後に空の brief だと気づきました。エラーには「何を入れれば動くか」まで書いてほしいです。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#3</span></div><div class="text">木村さんの話から、課題が3つ見えた。手コピペでの欠落（コメント側の追記）、規約（pnpm typecheck &amp;&amp; pnpm test）の抜け、黙って失敗すること。issue と PR の紐づけ漏れも出た。解決策にはまだ踏み込まず、事実をあと少し掘って discovery を閉じる。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 木村 拓也</span><span class="turn">#3</span></div><div class="text">ありがとうございます。具体的でとても助かります。追加で3点だけ教えてください。
+1. 「長い issue でコメント側の追記を落とした」とき、たたき台はどの時点で古い仕様だと分かりましたか？誰が、何を見て気づきましたか？
+2. 「PR と issue が紐づかなかった」ことで、実際に何が起きましたか？ 誰が困りましたか？
+3. CI で brief が空のまま走ったときは、どの環境で、gh はどう用意する予定でしたか？ そのとき最初に見たかった画面やメッセージは何でしたか？</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#3</span></div><div class="text">木村さんの実績：先週火曜に issue を手でコピペして team に回した。コードブロック・箇条書きが崩れ、手で直した。issue の参照を brief に書き忘れ、PR と issue が紐づかなかった。長い issue ではコメント側の追記仕様を落とし、古い仕様のたたき台が上がった。CLAUDE.md の <code>pnpm typecheck &amp;&amp; pnpm test</code> を通していない PR が来て差し戻しになった。過去に CI で gh が無いのに何も言われず、brief が空のまま10分走った。「エラーには何を入れれば動くかまで書いてほしい」。<code>gh issue view</code> は毎日使っている。</div></li><li class="msg user private" data-from="user-dev"><div class="who"><span class="name">木村 拓也</span> <span class="kind">memo</span><span class="turn">#4</span></div><div class="text">3 つの質問に、具体的に端的に答える。実装の話はしない。</div></li><li class="msg user" data-from="user-dev"><div class="who"><span class="name">木村 拓也</span> <span class="to">→ 佐藤 美咲</span><span class="turn">#4</span></div><div class="text">1. 気づいたのは私です。PR を開いて、まず diff を見ました。issue 本文のコメント欄に「API は v2 で」と追記があったのに、PR は v1 のままでした。issue を開き直して初めて分かりました。PR の説明には根拠が書かれておらず、どの issue のどの時点の内容を見たのか判別できなかったので、15 分ほど迷いました。
+
+2. 実害が 2 つありました。
+- マージ後に issue が自動で閉じませんでした。<code>Closes #N</code> が PR になかったからです。
+- 翌週、チームメンバーが同じ issue を「未着手」と見て拾い、二重作業になりかけました。困ったのは私とそのメンバーです。
+
+3. 環境は GitHub Actions で、ubuntu-latest です。gh は入っていると思い込んでいました。実際は未インストールで、用意するつもりも特にありませんでした。トークンは <code>GITHUB_TOKEN</code> が既にある前提でした。
+最初に見たかったのは、起動直後の 1 行のエラーです。内容は「gh が無い。インストールするか、<code>GH_TOKEN</code> を設定してください」といったもので、brief が空のまま先に進んでほしくありません。止まってくれるなら、10 分も無駄にしませんでした。</div></li><li class="msg user private" data-from="user-dev"><div class="who"><span class="name">木村 拓也</span> <span class="kind">note</span><span class="turn">#4</span></div><div class="text">木村さんの最重要の不満は、黙って失敗することです。次に、手でコピペすると issue のコメント側の追記が落ちることと、PR に <code>Closes #N</code> が付かず issue と紐づかないことです。環境は CI (GitHub Actions) で、gh が無いことがあります。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#5</span></div><div class="text">十分な事実が揃った。discovery の目的は達成。課題は4つ：欠落（コメント）、issue 参照漏れ、規約抜け、黙って失敗。スコープは最小に絞り、ここで決めて次フェーズへ進める。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 木村 拓也</span><span class="turn">#5</span></div><div class="text">木村さん、ありがとうございます。「起動直後の1行のエラー」「止まってくれるなら10分も無駄にしなかった」という言葉が決め手でした。整理します。
+- 欠落: 本文だけでなくコメントの追記も落ちる（「API は v2 で」）。
+- 紐づけ: <code>Closes #N</code> が無く issue が閉じず、二重作業になりかけた。
+- 規約: <code>pnpm typecheck &amp;&amp; pnpm test</code> が守られず差し戻し。
+- 黙って失敗: gh が無いのに空 brief で10分走った。
+
+次のフェーズで最小スコープに落とします。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#5</span></div><div class="text">木村さんの追加事実：コメント欄の追記（「API は v2 で」）を見落とし、PR を開いて diff を見てから気づくまで15分迷った。PR 説明に issue の根拠が無く判別不能。<code>Closes #N</code> が無く issue が自動で閉じず、翌週チームメンバーが「未着手」と見て二重作業になりかけた。CI は GitHub Actions の ubuntu-latest で gh 未インストール、<code>GITHUB_TOKEN</code> は既にある前提。最初に見たかったのは起動直後の1行エラー（gh が無い／インストールするか <code>GH_TOKEN</code> を設定）で、空 brief のまま進まず止まってほしい。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#5</span></div><div class="text">スコープは最小にする。(1) <code>team init --issue owner/repo#N</code> で gh 経由のタイトル・本文・コメントを brief に取り込む (2) brief に issue 参照を必ず残し、PR に <code>Closes owner/repo#N</code> を入れる前提を示す (3) brief に CLAUDE.md の <code>pnpm typecheck &amp;&amp; pnpm test</code> を守る旨を含める (4) gh が無い、または取得に失敗したら、空 brief のセッションを作らず即座に非0終了し、インストール方法と <code>GH_TOKEN</code> 設定を書いたエラーを出す。理由: 木村さんの実害は欠落・紐づけ漏れ・規約抜け・黙った失敗の4点で、それ以外（複数 issue、ラベル同期など）は後回しにしても困らないため。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">ADVANCE</span><span class="turn">#5</span></div><div class="text">End of phase &quot;discovery&quot;.</div></li></ol></details>
+  <details open><summary>周 1 · planning <span class="muted">21</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;planning&quot; started (iteration 1) — PM turns findings into a small, shippable scope: [TASK] items with clear acceptance criteria, each assigned to an engineer. Engineers challenge feasibility, split or re-assign tasks, and agree on tech choices.</p></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#6</span></div><div class="text">決定済みの4点を、テストできる受け入れ基準にして2人に割り振る。田中さんは gh 取得とエラー処理、鈴木さんは brief 組み立てと README・テスト。コード調査は技術確認としてエンジニアに任せる。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">TASK</span><span class="turn">#6</span></div><div class="text">T1 owner=eng-backend: <code>team init --issue owner/repo#N</code> で gh から issue を取得する
+- <code>team init --issue owner/repo#N</code> を実行すると、<code>gh issue view N -R owner/repo --json title,body,comments,url</code> 相当でタイトル・本文・全コメントを取得し、セッション名と brief を作る。
+- <code>owner/repo#N</code> の形式が不正なら、正しい書式例を添えて非0で終了する。セッションは作らない。
+- gh の実行は差し替え可能にして、テストで gh を偽装できる（実ネットワーク不要）。
+- 既存の <code>team init &lt;brief&gt;</code> の挙動は変えない。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">TASK</span><span class="turn">#6</span></div><div class="text">T2 owner=eng-backend: gh が無い・取得失敗のときは、空 brief のセッションを作らず即停止する
+- gh が PATH に無い場合は、起動直後に1行目で原因が分かるエラーを出して非0終了する。<code>.team/sessions/</code> には何も作らない。
+- エラーには、gh のインストール方法（例: <code>https://cli.github.com</code>）と、<code>GH_TOKEN</code>（Actions なら <code>GITHUB_TOKEN</code> を渡す）の設定方法を必ず書く。
+- gh はあるが、認証失敗・404・ネットワーク失敗になった場合も同様に、原因と対処を書いて非0終了する。空 brief にはしない。
+- 上の2パターンを、gh を偽装したテストで検証する。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">TASK</span><span class="turn">#6</span></div><div class="text">T3 owner=eng-frontend: 取り込んだ issue から brief を組み立てる
+- brief の先頭に <code>Issue: owner/repo#N</code> と URL を必ず入れる。
+- タイトル、本文、コメントを取り込む。コメントは投稿者・日時つきで時系列に並べ、本文との境目が分かるようにする。コードブロックと箇条書きは元の Markdown のまま崩さない。
+- 末尾に「PR 説明に <code>Closes owner/repo#N</code> を入れること」と「<code>pnpm typecheck &amp;&amp; pnpm test</code> を通すこと」を入れる。
+- テストで、コメント内の「API は v2 で」のような追記が brief に含まれることと、参照・Closes・規約の3行があることを確認する。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">TASK</span><span class="turn">#6</span></div><div class="text">T4 owner=eng-frontend: README と最終確認
+- README の init の項に <code>--issue</code> の使い方、gh の要件、<code>GH_TOKEN</code> / <code>GITHUB_TOKEN</code> の説明、エラー例を追記する。
+- <code>pnpm typecheck &amp;&amp; pnpm test</code> が通る。
+- 通した結果を、完了報告に書く。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 田中 健, 鈴木 ひかり</span><span class="turn">#6</span></div><div class="text">スコープは4点だけです。取得（本文＋コメント）、参照と Closes、規約の明記、gh 無し・失敗時の即停止。複数 issue、ラベル同期、gh を使わない API 取得は今回やりません。
+確認したいのは次の3点です。
+1. 田中さん: 取得は <code>gh issue view --json</code> でコメントまで一発で取れますか？ 取れないなら代替案を教えてください。
+2. 田中さん: 失敗時に <code>.team/sessions/</code> を汚さないのは、既存の init の流れで無理がありますか？
+3. 鈴木さん: コメントが非常に長い場合、brief の長さに上限は要りますか？ 要るなら、切り捨てると分かる印を付ける案でお願いします。黙って欠けるのが一番困ります。
+タスクの分け方に異論があれば言ってください。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span><span class="turn">#7</span></div><div class="text">田中です。結論から言います。1 と 2 は問題なし、タスクの分け方は 1 点だけ調整させてください。
+
+1. 取得は一発で取れます。<code>gh issue view N -R owner/repo --json title,body,comments,url</code> で、comments には <code>author.login</code>、<code>createdAt</code>、<code>body</code> が入ります。ページングも gh 側で全件返すので、別 API は要りません。代替案は不要です。
+2. <code>.team/sessions/</code> を汚さない件は、既存の init の流れで無理なくできます。<code>src/cli.ts</code> の init では、状態を書く処理（<code>World.create</code>、<code>mkdirSync</code>、<code>store.save</code>）がすべて brief 確定より後にあります。ただし <code>--force</code> の <code>rmSync</code>（139 行目）は brief 確定より後ですが、既存セッションを消す処理です。issue の取得は、ここより前の brief を決める箇所（131 行目付近）で済ませます。取得に失敗したら、既存セッションも消えません。
+3. 失敗の検出は 2 種類に分けます。gh が無い場合は spawn の <code>ENOENT</code> で判定します。gh があって失敗した場合は、終了コードと stderr の文言（<code>auth</code>、<code>404</code>、<code>Could not resolve</code>）で分類します。
+4. 分け方で調整したい点は、T1 と T3 の境界です。T3 のテストは T1 の取得結果の型に依存します。そこで私が先に <code>src/issue.ts</code> に次の 2 つを置き、鈴木さんに渡します。
+   - 型 <code>Issue = { ref, title, body, url, comments: {author, createdAt, body}[] }</code>
+   - 取得関数 <code>fetchIssue(ref, runGh)</code>
+   <code>runGh</code> は引数で差し替えられる <code>(args, env) =&gt; {status, stdout, stderr, notFound}</code> です。これで鈴木さんは偽の Issue を渡して <code>buildIssueBrief(issue)</code> を書けます。私は gh の偽装でテストを書きます。
+5. セッション名の既定値は <code>issue-&lt;repo&gt;-&lt;N&gt;</code> にします。<code>owner/repo</code> の <code>/</code> はパス区切りになるので、英数字とハイフン以外は <code>-</code> に置換します。<code>--name</code> 指定があればそちらを優先します。
+6. 依存は増やしません。<code>node:child_process</code> の <code>spawnSync</code> だけを使います。
+
+鈴木さんの上限の件には、私からも 1 つ付けます。<code>gh</code> の出力が巨大なとき、<code>spawnSync</code> の <code>maxBuffer</code> 既定 1MB を超えると黙って欠けます。私の側で 16MB に上げ、超えたらエラーにします。brief 側の切り捨てには、鈴木さんが決める印を付けてください。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">task</span><span class="turn">#7</span></div><div class="text">T1 → doing</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">memo</span><span class="turn">#8</span></div><div class="text">計画フェーズなのでファイルは編集しない。上限の方針と印を決め、田中さんの型・関数の渡し方に合意して返す。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 佐藤 美咲, 田中 健</span><span class="turn">#8</span></div><div class="text">鈴木です。タスクの分け方は田中さんの案で賛成です。上限の件と、T3 の仕様を先に決めます。
+
+1. 上限について。コメントが長くても、黙って欠けるのが一番困ります。そこで、本文もコメントも切らない方針を基本にします。理由は、木村さんの実害が「コメントの追記を落とした」ことだからです。切る場合に備えて、上限は次のようにします。
+   - brief 全体で 200KB を上限にします。これを超えたら、新しいコメントから優先して残します。古いコメントは落とします。
+   - 落としたら、brief の先頭付近（Issue 行のすぐ下）に <code>⚠ コメント N 件中 M 件を省略しました（brief の上限 200KB）。全文: &lt;url&gt;</code> を出します。末尾だけに書くと見落とされるので、先頭に置きます。
+   - 本文だけで上限を超える場合は切りません。エラーで止めて、原因と対処を書きます。
+2. brief の形です。T3 の <code>buildIssueBrief(issue)</code> は純関数にします。副作用や gh 呼び出しは持たず、文字列だけを返します。構成は次の順です。
+   - <code>Issue: owner/repo#N</code>
+   - URL
+   - 省略の警告（あれば）
+   - <code># タイトル</code>
+   - 本文（Markdown のまま）
+   - <code>## コメント (N件)</code> 以下に、<code>### @author — 日時 (UTC)</code> の見出しと本文を時系列で並べる
+   - 末尾に規約 2 行
+   本文とコメントの境目は見出し 2 つで分かります。
+3. 崩れ対策です。コメント本文にコードフェンス（```）が閉じていない場合、後続の見出しが飲み込まれます。そこで、フェンスが奇数個なら末尾に閉じフェンスを補います。これもテストに入れます。
+4. 田中さんへのお願いです。<code>Issue</code> 型の <code>comments[].createdAt</code> は gh が返す ISO 文字列のまま渡してください。整形は私の側でやります。<code>ref</code> は <code>{owner, repo, number}</code> の形にしてほしいです。<code>Issue: owner/repo#N</code> を組み立てるのに使います。型と関数のシグネチャは、<code>src/issue.ts</code> に先に置いたら教えてください。それまでは、私は仮の型でテストを書きます。
+5. T4 については、README に載せるエラー例は T2 の実際の出力をそのまま貼ります。T2 の文言が確定してから書きます。文言の案としては、1 行目に原因、2 行目以降にインストール方法と <code>GH_TOKEN</code> の設定方法、の順を希望します。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">note</span><span class="turn">#8</span></div><div class="text">上限方針: brief は 200KB まで。超えたら古いコメントから省略し、Issue 行の直下に省略件数と URL を出す。本文だけで超える場合はエラー。<code>buildIssueBrief(issue)</code> は純関数で、<code>src/issue.ts</code> の <code>Issue</code> 型（田中さん担当）に依存する。コメントのコードフェンスが奇数個なら閉じフェンスを補う。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#9</span></div><div class="text">田中さんと鈴木さんの提案は妥当。受け入れ基準に反映が必要な点を決める。200KB上限・先頭の省略警告・フェンス補完はT3に追加。T1にはmaxBuffer超過エラー、セッション名、型の先行引き渡しを追加。T4はT2の実出力を貼るので順序をT2後にする。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#9</span></div><div class="text">田中さんの分担案を採用する。田中さんが先に <code>src/issue.ts</code> に <code>Issue</code> 型（<code>ref={owner,repo,number}</code>、<code>comments[].createdAt</code> は ISO 文字列のまま）と <code>fetchIssue(ref, runGh)</code> を置き、鈴木さんに通知する。理由: T3 のテストが T1 の型に依存するため。トレードオフは、型を決めるまで鈴木さんが仮の型で待つこと。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#9</span></div><div class="text">セッション名の既定値は <code>issue-&lt;repo&gt;-&lt;N&gt;</code>（英数字とハイフン以外は <code>-</code> に置換）、<code>--name</code> 指定があればそちらを優先する。依存は追加せず <code>spawnSync</code> のみ。gh の出力が 16MB を超えたら黙って欠けさせず、エラーで止める。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#9</span></div><div class="text">brief が 200KB を超える場合は、新しいコメントを優先して残し、古いものを省略する。省略したときは Issue 行の直下に <code>⚠ コメント N 件中 M 件を省略しました（brief の上限 200KB）。全文: &lt;url&gt;</code> を出す。本文だけで上限を超える場合は切らずにエラーで止める。理由: 黙って欠けるのが一番の実害で、末尾の警告は見落とされるため。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#9</span></div><div class="text">README に載せるエラー例は T2 の実出力をそのまま貼る。T4 は T2 の文言が確定してから着手する。エラー文言は、1行目に原因、2行目以降にインストール方法と <code>GH_TOKEN</code> の設定方法の順にする。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">TASK</span><span class="turn">#9</span></div><div class="text">T5 owner=eng-backend: T1 追記: 型の先行引き渡しとセッション名、巨大出力の扱い
+- <code>src/issue.ts</code> に <code>Issue</code> 型（<code>ref={owner,repo,number}</code>、<code>title</code>、<code>body</code>、<code>url</code>、<code>comments[]={author,createdAt(ISO のまま),body}</code>）と <code>fetchIssue(ref, runGh)</code> を置き、置いた時点で鈴木さんに型とシグネチャを伝える。
+- <code>runGh</code> は <code>(args, env) =&gt; {status, stdout, stderr, notFound}</code> で差し替えられ、テストでは gh を偽装する。
+- issue の取得は <code>src/cli.ts</code> の <code>--force</code> の <code>rmSync</code> より前に行う。取得に失敗しても既存セッションは消えない。
+- セッション名の既定値は <code>issue-&lt;repo&gt;-&lt;N&gt;</code>。英数字とハイフン以外は <code>-</code> に置換。<code>--name</code> があればそちらを優先する。
+- gh の出力が 16MB を超えたら、黙って欠けさせずエラーにして非0終了する。テストで確認する。
+- 依存は追加しない。既存の <code>team init &lt;brief&gt;</code> の挙動は変えない。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">TASK</span><span class="turn">#9</span></div><div class="text">T6 owner=eng-frontend: T3 追記: 上限・警告・フェンス補完
+- <code>buildIssueBrief(issue)</code> は副作用のない純関数で、順序は <code>Issue: owner/repo#N</code>、URL、省略警告（あれば）、<code># タイトル</code>、本文、<code>## コメント (N件)</code>、<code>### @author — 日時 (UTC)</code> と本文（時系列）、末尾に規約2行。
+- brief が 200KB を超えたら、新しいコメントを優先して残し、Issue 行の直下に <code>⚠ コメント N 件中 M 件を省略しました（brief の上限 200KB）。全文: &lt;url&gt;</code> を出す。本文だけで超える場合はエラーにする。テストで確認する。
+- コメント本文のコードフェンスが奇数個なら末尾に閉じフェンスを補う。テストで確認する。
+- 先に仮の型でテストを書いてよい。田中さんの型が届いたら合わせる。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 田中 健, 鈴木 ひかり</span><span class="turn">#9</span></div><div class="text">田中さん、鈴木さん、方針を確定しました。分担は田中さんの案どおり、<code>src/issue.ts</code> の型と <code>fetchIssue</code> を先に置いてください。鈴木さんの上限・警告・フェンス補完も採用します。確認は2点です。(1) 田中さん: 型を置いたら鈴木さんに一言ください。(2) 鈴木さん: README は T2 の実出力が出てから書いてください。ここまでで異論や、スコープに入れると重すぎる点があれば教えてください。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">memo</span><span class="turn">#10</span></div><div class="text">計画フェーズなのでファイルは触れない。異論は無し。リスクを数字で2点だけ挙げ、型の引き渡し予定を明言する。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 佐藤 美咲, 鈴木 ひかり</span><span class="turn">#10</span></div><div class="text">田中です。結論から言います。分担、スコープ、上限の方針に異論はありません。重すぎる点も無いです。
+
+確認は2点です。
+1. 型の件は了解です。実装フェーズの最初に <code>src/issue.ts</code> へ <code>Issue</code> 型と <code>fetchIssue(ref, runGh)</code> を置きます。置いた時点で鈴木さんに型とシグネチャを伝えます。鈴木さんはそれまで仮の型で進めてください。型は T5 に書いたとおりで、<code>createdAt</code> は ISO のままにします。
+2. T1・T2・T5 は同じ <code>fetchIssue</code> と <code>cli.ts</code> の init を触ります。そのため、私が1つの流れでまとめて実装します。タスクは分けたままで構いません。T2 のエラー文言は、実装した時点で鈴木さんに共有します。T4 はそれを貼ってください。
+
+実装前に押さえておくリスクが2つあります。
+- gh の <code>author</code> は、削除済みユーザーだと <code>null</code> になることがあります。その場合は <code>ghost</code> として扱い、落ちないようにします。鈴木さんの <code>### @author</code> 見出しも、この前提で書いてください。
+- <code>GH_TOKEN</code> は子プロセスに環境変数ごと引き継ぎます。テストでは <code>runGh</code> を偽装するので、実ネットワークも実トークンも使いません。
+
+次の実装フェーズでは、テストを先に書きます。範囲は、書式不正、gh なし、404、16MB 超過、<code>--force</code> 時に既存セッションが消えないことです。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">memo</span><span class="turn">#11</span></div><div class="text">計画フェーズで編集不可。新たな論点は少ない。田中さんの ghost 前提と型の件に応答し、T6 の細部（サイズ計測はバイト、警告込みの再計算）を確認して終える。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 佐藤 美咲, 田中 健</span><span class="turn">#11</span></div><div class="text">鈴木です。分担・スコープに異論なしです。T6 を始める前に、田中さんに2点だけ共有します。
+1. 削除済みユーザーは <code>author</code> が <code>null</code> になる件、了解です。見出しは <code>### @ghost — 日時 (UTC)</code> にします。型側で <code>ghost</code> に正規化してもらえれば、私の側では null 分岐を持たずに済みます。
+2. 200KB は文字数ではなく UTF-8 のバイト数で数えます。日本語は 1 文字 3 バイトなので、文字数で数えると上限を超えて通ってしまうためです。省略警告の行も予算に含めて数えます。これで、警告を足した結果また上限を超える、ということを防ぎます。
+
+実装フェーズの順番は次のとおりです。
+- 型が届くまでは仮の型でテストを先に書きます。ケースは、コメントの追記が含まれること、参照・Closes・規約の 3 行、時系列、フェンス補完、200KB 超での省略と警告、本文だけで超えたときのエラーです。
+- 型が届いたら合わせます。
+- T4 の README は、T2 の文言が確定してから書きます。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">note</span><span class="turn">#11</span></div><div class="text">200KB は UTF-8 のバイト数で数え、省略警告の行も予算に含める。author が null のときは型側で <code>ghost</code> に正規化してもらい、見出しは <code>### @ghost — 日時 (UTC)</code> とする。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#12</span></div><div class="text">計画は出揃い、異論もない。planning の目的（小さなスコープ、受け入れ基準つきの割り当て）は達成済み。最後に、未確定の点を一つ確認して次へ進める。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span><span class="turn">#12</span></div><div class="text">田中さん、鈴木さん、ありがとうございます。分担とスコープは確定です。実装フェーズの順番だけ確認します。
+1. 田中さん: 最初に <code>src/issue.ts</code> の型と <code>fetchIssue</code> を置き、鈴木さんに一言ください。次に T1・T2・T5 をまとめて実装してください。T2 の実際のエラー文言は、確定したら鈴木さんに共有してください。
+2. 鈴木さん: T6 を先に進めてください。200KB は UTF-8 のバイト数で数え、省略警告の行も予算に含める方針で採用します。T4 の README は、T2 の文言が届いてから書いてください。
+3. 完了の条件は 2 つです。<code>pnpm typecheck &amp;&amp; pnpm test</code> が通ること。既存の <code>team init &lt;brief&gt;</code> の挙動が変わらないことです。結果は完了報告に書いてください。
+スコープは増やしません。複数 issue、ラベル同期、gh を使わない取得は今回やりません。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#12</span></div><div class="text">200KB の上限は UTF-8 のバイト数で数え、省略警告の行も予算に含める。gh の <code>author</code> が null（削除済みユーザー）の場合は、型側で <code>ghost</code> に正規化する。理由: 文字数で数えると日本語で上限を超えて通ってしまい、null 分岐を鈴木さん側に持たせると見出しの処理が複雑になるため。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#12</span></div><div class="text">planning は T1〜T6 で確定。実装順は、田中さんが <code>src/issue.ts</code> の型と <code>fetchIssue</code> を先に置き、鈴木さんに通知する。次に T1・T2・T5 をまとめて実装し、T2 の文言が確定してから T4 の README を書く。完了条件は <code>pnpm typecheck &amp;&amp; pnpm test</code> が通ることと、既存の <code>team init &lt;brief&gt;</code> が変わらないこと。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">ADVANCE</span><span class="turn">#12</span></div><div class="text">planning の目的は達成した。</div></li></ol></details>
+  <details open><summary>周 1 · build <span class="muted">18</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;build&quot; started (iteration 1) — Engineers implement their own tasks in the workspace (real files, runnable code, tests when sensible), coordinate interfaces with each other, and mark finished work with [TASK_DONE].</p></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">memo</span><span class="turn">#13</span></div><div class="text">T1・T2・T5 を実装した。テストは自分の分が通る。鈴木さんの issue-brief.test.ts だけ、BRIEF_LIMIT_BYTES と BriefIssue がまだ無くて型エラーになる。これは T6 側で解消される。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 鈴木 ひかり, 佐藤 美咲</span><span class="turn">#13</span></div><div class="text">田中です。<code>src/issue.ts</code> を置きました。<code>src/cli.ts</code> に <code>--issue</code> を配線済みです。鈴木さんは次の2点を確認してください。
+- 型は <code>Issue = { ref:{owner,repo,number:number}, title, body, url, comments:{author, createdAt(ISO のまま), body}[] }</code> です。<code>author</code> が null のときは型側で <code>ghost</code> にしてあるので、鈴木さん側で null 分岐は要りません。
+- cli は <code>src/issue-brief.ts</code> の <code>buildIssueBrief(issue: Issue): string</code> を import して呼びます。今ある中身は私の仮スタブなので、本物に置き換えてください。署名は維持してください。本文だけで 200KB を超えたときは throw すれば、そのまま非0終了になります。
+
+現状は <code>pnpm test</code> が 39 件通過、1 件失敗です。失敗は <code>test/issue-brief.test.ts</code> で、<code>BRIEF_LIMIT_BYTES</code> と <code>BriefIssue</code> が <code>src/issue-brief.ts</code> に無いため型エラーになっています。鈴木さんの実装が入れば解消するはずです。<code>pnpm typecheck</code> も同じ2件だけが残っています。
+
+T2 のエラー文言は確定です。README にはこの出力を貼ってください。実機で gh が PATH に無い状態で実行した出力です。
+<pre>error: gh コマンドが見つかりません。issue acme/web#1 を取得できないため中止しました (セッションは作っていません)。
+  gh のインストール: https://cli.github.com
+  認証: <code>gh auth login</code>、または環境変数 GH_TOKEN にトークンを設定 (GitHub Actions では env: GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} を渡す)</pre>
+書式不正のときは次のとおりです。
+<pre>error: --issue の書式が不正です: &quot;bad&quot;
+  正しい例: --issue owner/repo#123</pre>
+認証失敗・404・ネットワーク失敗も、同じ形で1行目に原因、続けて対処を出します。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">note</span><span class="turn">#13</span></div><div class="text"><code>main(argv, out, deps)</code> の第3引数 <code>deps.runGh</code> で gh を差し替えられる。16MB 超過は <code>GhResult.overflow</code> で渡す。実 gh は ENOBUFS で判定する。<code>--issue</code> と brief の同時指定はエラーにした。<code>src/issue-brief.ts</code> は私の仮スタブで、本物は鈴木さんが置く。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">task</span><span class="turn">#13</span></div><div class="text">T1 → done: <code>team init --issue owner/repo#N</code> を実装した。<code>src/issue.ts</code> に <code>parseIssueRef</code> と <code>fetchIssue</code> を置いた。<code>gh issue view N -R owner/repo --json title,body,comments,url</code> でタイトル・本文・全コメントを取得し、セッション名と brief を作る。書式が不正なら、正しい例 <code>owner/repo#123</code> を添えて非0で終了し、セッションは作らない。gh は <code>deps.runGh</code> で差し替えられ、実ネットワークなしでテストできる。既存の <code>init &lt;brief&gt;</code> の挙動は変えていない。確認は <code>pnpm test</code>（<code>test/issue.test.ts</code>）で行える。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">task</span><span class="turn">#13</span></div><div class="text">T2 → done: gh が PATH に無い場合は、1行目に原因を出して非0終了する。<code>.team/sessions/</code> には何も作らない。エラーには <code>https://cli.github.com</code>、<code>gh auth login</code>、<code>GH_TOKEN</code>、<code>GITHUB_TOKEN</code>（Actions で渡す方法）を必ず書く。認証失敗・404・ネットワーク失敗・その他の失敗も、原因と対処を書いて非0終了し、空 brief にはしない。gh なしと上の3パターンを、gh を偽装したテストで検証した。実機でも gh を PATH から外して実行し、exit=1 とセッション未作成を確認した。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">task</span><span class="turn">#13</span></div><div class="text">T5 → done: 型の先行引き渡し、セッション名、巨大出力の扱いを入れた。
+- <code>Issue</code> 型と <code>fetchIssue(ref, runGh)</code> を <code>src/issue.ts</code> に置き、<code>runGh</code> は <code>(args, env) =&gt; {status, stdout, stderr, notFound}</code> とした。
+- 取得は <code>cli.ts</code> の <code>--force</code> の <code>rmSync</code> より前で行う。取得に失敗しても既存セッションは消えず、テストで確認した。
+- セッション名の既定値は <code>issue-&lt;repo&gt;-&lt;N&gt;</code> で、英数字とハイフン以外は <code>-</code> に置換する。<code>--name</code> があればそちらを優先する。
+- gh の出力が 16MB を超えたら、黙って欠けさせずエラーにして非0終了する。テストで確認した。
+- 依存は追加していない。使ったのは <code>spawnSync</code> だけである。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">memo</span><span class="turn">#14</span></div><div class="text">T6 は純関数なので先に仕上げた。田中さんの <code>src/issue.ts</code> はまだ無いので、<code>BriefIssue</code> を構造的に同じ型として自前で持った。T4 の README は T2 の文言待ち。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">task</span><span class="turn">#14</span></div><div class="text">T6 → doing</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">task</span><span class="turn">#14</span></div><div class="text">T6 → done: <code>buildIssueBrief(issue)</code> を <code>src/issue-brief.ts</code> に実装し、<code>test/issue-brief.test.ts</code> に 8 ケースを追加した。<code>pnpm typecheck &amp;&amp; pnpm test</code> は通った（33 件中 33 件 pass）。
+- 出力順は次のとおり。
+  - 先頭に <code>Issue: owner/repo#N</code> と URL。
+  - 省略があるときは、その直下に <code>⚠ コメント N 件中 M 件を省略しました（brief の上限 200KB）。全文: &lt;url&gt;</code>。
+  - <code># タイトル</code> と本文。
+  - <code>## コメント (N件)</code> の下に <code>### @author — YYYY-MM-DD HH:MM (UTC)</code> と本文を時系列で並べる。
+  - 末尾に <code>Closes owner/repo#N</code> と <code>pnpm typecheck &amp;&amp; pnpm test</code> の 2 行。
+- 本文とコメントの Markdown は元のまま入れる。コメントのコードフェンスが奇数個なら、末尾に閉じフェンスを補う。
+- 上限は 200×1024 の UTF-8 バイトで数え、警告行も予算に含める。超えたら新しいコメントから残し、古いものを省略する。残したコメントの数は <code>## コメント (N件)</code> に出る。
+- 本文だけで上限を超えたときは <code>Error</code> を投げ、全文の URL を添える。
+- 型は <code>src/issue.ts</code> の <code>Issue</code> と構造が同じ <code>BriefIssue</code> を自前で持っている。田中さんの型が届いたら <code>Issue</code> に差し替える。
+- 実行は <code>node --test test/issue-brief.test.ts</code>。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 田中 健</span><span class="turn">#14</span></div><div class="text">鈴木です。<code>src/issue-brief.ts</code> に <code>buildIssueBrief(issue: BriefIssue): string</code> を置きました。<code>BriefIssue</code> は <code>{ref:{owner,repo,number}, title, body, url, comments:{author,createdAt,body}[]}</code> で、田中さんの <code>Issue</code> と構造が同じなので、そのまま渡せます。<code>cli.ts</code> の init では、<code>fetchIssue</code> の結果を <code>buildIssueBrief</code> に渡して brief にしてください。本文だけで 200KB を超えると <code>Error</code> を投げます。メッセージをそのまま stderr に出して非0終了してください。また <code>author</code> の null は型側で <code>ghost</code> にしてもらう前提です。<code>src/issue.ts</code> を置いたら一言ください。T2 のエラー文言が確定したら、README に貼ります。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 佐藤 美咲</span><span class="turn">#14</span></div><div class="text">T6（T3 の中身を含む）は完了です。T4 の README は、田中さんの T2 の文言待ちで、まだ着手していません。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">memo</span><span class="turn">#15</span></div><div class="text">私の分の T1・T2・T5 は完了済みで、<code>pnpm test</code> の失敗は鈴木さん側の <code>src/issue-brief.ts</code> が原因。実物にはまだ <code>BRIEF_LIMIT_BYTES</code> と <code>BriefIssue</code> の export が無い。確認結果を共有する。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 鈴木 ひかり, 佐藤 美咲</span><span class="turn">#15</span></div><div class="text">田中です。結論から言います。T1・T2・T5 は完了済みで、私の側に残作業はありません。ただ、全体のゲートはまだ通っていません。
+
+- 現状を今実行しました。<code>pnpm test</code> は 40 件中 39 件通過、1 件失敗です。<code>pnpm typecheck</code> は 2 件の型エラーが出ています。
+- 原因は 2 件とも同じです。<code>test/issue-brief.test.ts</code> の 3 行目が <code>src/issue-brief.ts</code> から <code>BRIEF_LIMIT_BYTES</code> と <code>BriefIssue</code> を import していますが、手元の <code>src/issue-brief.ts</code> にはこの 2 つの export がありません。
+- 鈴木さんの完了報告には「33 件中 33 件 pass」とあります。しかし手元のファイルは、私の仮スタブのままのように見えます。鈴木さんの実装が、このワークスペースに反映されていない可能性があります。
+
+鈴木さんにお願いです。<code>src/issue-brief.ts</code> を置き直して、<code>BRIEF_LIMIT_BYTES</code> と <code>BriefIssue</code> を export してください。または、保存先のパスを教えてください。置き直したら、私が <code>pnpm typecheck &amp;&amp; pnpm test</code> を再実行して結果を報告します。
+
+T4 の README は、T2 の文言が確定済みなので着手できます。文言は前回のメッセージに貼ったとおりです。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">memo</span><span class="turn">#16</span></div><div class="text">私の <code>buildIssueBrief</code> が田中さんの仮スタブで上書きされていたので書き直した。README も追記した。typecheck と test は通った。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">task</span><span class="turn">#16</span></div><div class="text">T4 → doing</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">task</span><span class="turn">#16</span></div><div class="text">T4 → done: README の init の項に「Starting from a GitHub issue」を追記した。内容は次のとおり。
+- <code>--issue</code> の使い方と <code>--name</code> の優先。
+- gh の要件と、<code>GH_TOKEN</code> / <code>GITHUB_TOKEN</code>（Actions では <code>env: GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}</code>）。
+- 田中さんの T2 の実出力をそのまま貼ったエラー例 2 つ。
+- 200KB 上限と 16MB の扱い。
+
+<code>pnpm typecheck &amp;&amp; pnpm test</code> は通った（47 件中 47 件 pass、fail 0）。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 田中 健, 佐藤 美咲</span><span class="turn">#16</span></div><div class="text">鈴木です。<code>src/issue-brief.ts</code> が田中さんの仮スタブに戻っていたので、実装を書き直しました。田中さんの指摘どおりです。
+- <code>buildIssueBrief(issue: Issue)</code> に、<code>BRIEF_LIMIT_BYTES</code> と <code>BriefIssue</code>（<code>Issue</code> の別名）を export しました。署名は維持しています。
+- 順序は次のとおりです。
+  - <code>Issue: owner/repo#N</code> と URL。
+  - 省略があるときは、その直下に警告行。
+  - <code># タイトル</code> と本文。
+  - <code>## コメント (N件)</code> の下に、<code>### @author — 日時 (UTC)</code> と本文を時系列で並べる。
+  - 末尾に <code>Closes owner/repo#N</code> と <code>pnpm typecheck &amp;&amp; pnpm test</code> の 2 行。
+- 200KB は UTF-8 バイトで数え、警告行も含めて数えます。超えたら新しいコメントを残して古いものを省略します。本文だけで超えたら <code>Error</code> を投げます。
+- コメントのコードフェンスが奇数個なら、閉じフェンスを補います。
+
+私の手元で <code>pnpm typecheck &amp;&amp; pnpm test</code> を実行し、47 件中 47 件 pass で型エラーは 0 でした。田中さん、再実行して結果を教えてください。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 鈴木 ひかり, 佐藤 美咲</span><span class="turn">#17</span></div><div class="text">田中です。結論から言います。再実行の結果、<code>pnpm typecheck</code> は型エラー 0 で、<code>pnpm test</code> は 47 件中 47 件 pass、fail 0 でした。鈴木さんの <code>src/issue-brief.ts</code> は反映されています。T1・T2・T5 は完了済みで、私の側に残作業はありません。
+
+先に、田中さん側で押さえた点を挙げます。
+- 取得は <code>--force</code> の <code>rmSync</code> より前なので、取得に失敗しても既存セッションは消えません。
+- gh が無い場合、<code>.team/sessions/</code> には何も作りません。
+- gh の出力が 16MB を超えたら、黙って欠けさせずエラーで止めます。
+
+PM に確認があります。未コミットのままなので、コミットするか、このまま受け入れに進むかを指示してください。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 田中 健, 佐藤 美咲</span><span class="turn">#18</span></div><div class="text">鈴木です。もう一度実行して確認しました。<code>pnpm typecheck</code> は型エラー 0 件、<code>pnpm test</code> は 47 件中 47 件 pass、fail 0 でした。<code>src/issue-brief.ts</code> は <code>buildIssueBrief</code>、<code>BRIEF_LIMIT_BYTES</code>、<code>BriefIssue</code>（<code>Issue</code> の別名）を export しています。README の「Starting from a GitHub issue」も入っています。T3、T4、T6 は完了です。<code>src/issue-brief.ts</code> がまた仮スタブで上書きされないよう、触る前に一言ください。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">task</span><span class="turn">#18</span></div><div class="text">T3 → done: <code>buildIssueBrief</code> を <code>src/issue-brief.ts</code> に実装した。先頭に <code>Issue: owner/repo#N</code> と URL を置き、タイトル、本文、コメント（<code>### @author — 日時 (UTC)</code>、時系列）を並べる。末尾に <code>Closes</code> と <code>pnpm typecheck &amp;&amp; pnpm test</code> の 2 行を入れる。コメントの追記が brief に入ること、参照・Closes・規約の 3 行があることは <code>test/issue-brief.test.ts</code> で確認した。確認は <code>pnpm typecheck &amp;&amp; pnpm test</code>（47 件中 47 件 pass）で行える。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 佐藤 美咲, 鈴木 ひかり</span><span class="turn">#19</span></div><div class="text">田中です。結論から言います。T1・T2・T5 は完了済みで、ゲートも通っています。
+- 今回の実行結果です。<code>pnpm typecheck</code> は型エラー 0 件。<code>pnpm test</code> は 47 件中 47 件 pass、fail 0 でした。
+- 変更は <code>README.md</code> と <code>src/cli.ts</code> の修正、<code>src/issue.ts</code>、<code>src/issue-brief.ts</code>、<code>test/issue.test.ts</code>、<code>test/issue-brief.test.ts</code> の新規追加です。すべて未コミットです。
+- 依存の追加はありません。既存の <code>team init &lt;brief&gt;</code> の挙動も変えていません。
+- 佐藤さんへの確認です。コミットの扱いを指示してください。このリポジトリは main 直 push の運用なので、勝手には push しません。
+- 鈴木さんへのお願いです。<code>src/issue-brief.ts</code> は、私も今回の確認で触っていません。このまま維持してください。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 佐藤 美咲, 田中 健</span><span class="turn">#20</span></div><div class="text">鈴木です。もう一度ゲートを実行しました。<code>pnpm typecheck</code> は型エラー 0 件です。<code>pnpm test</code> は 47 件中 47 件 pass、fail 0 でした。T3・T4・T6 は完了で、私の側に残作業はありません。<code>src/issue-brief.ts</code> と README の「Starting from a GitHub issue」は現状のまま維持します。変更はすべて未コミットなので、コミットの扱いは佐藤さんの指示を待ちます。</div></li></ol></details>
+  <details open><summary>周 1 · review <span class="muted">14</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;review&quot; started (iteration 1) — Engineers review each other's work against the acceptance criteria and fix issues. Before users judge it, each engineer posts a [DEMO] for their tasks: what a user would do and what they would see, with output you really produced (run the command, render the page or email, paste the result or the path of the generated file or screenshot). Never describe output you did not produce. PM checks every task against its acceptance criteria and states what is ready for users.</p></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 佐藤 美咲, 鈴木 ひかり</span><span class="turn">#21</span></div><div class="text">田中です。レビューと DEMO の結果です。結論から言うと、T1・T2・T5 の受け入れ条件は満たしています。鈴木さんの T3・T6 も、実行した範囲では問題ありません。
+- ゲートは <code>pnpm typecheck</code> が型エラー 0 件、<code>pnpm test</code> が 47 件中 47 件 pass、fail 0 でした。
+- 指摘は 1 点だけです。偽の gh が不正な JSON を返すと「gh の出力を JSON として読めませんでした」で非0終了し、セッションは作られませんでした。これは意図どおりです。修正は要りません。
+- 未確認の点です。実ネットワークの本物の gh は、この環境では使っていません。偽装した gh と、<code>gh</code> なしの状態で確認しました。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">DEMO</span><span class="turn">#21</span></div><div class="text">T1: 偽の gh で <code>node src/main.ts init --issue acme/web#7</code> を実行しました。出力は次のとおりです。セッション <code>issue-web-7</code> ができ、exit=0 でした。
+<pre>created session &quot;issue-web-7&quot; with 5 members → .team/sessions/issue-web-7/
+session: issue-web-7  status: running  iteration: 1/2</pre>
+state.json の brief は次のとおりです。
+<pre>Issue: acme/web#7
+https://github.com/acme/web/issues/7
+
+# API を v2 にする
+
+- 対応</pre>ts
+const a=1
+<pre>
+## コメント (1件)
+
+### @alice — 2026-10-01 09:30 (UTC)
+
+API は v2 で
+
+PR の説明に <code>Closes acme/web#7</code> を入れること。
+<code>pnpm typecheck &amp;&amp; pnpm test</code> を通すこと。</pre>
+書式不正の <code>--issue bad</code> では、次のように出て exit=1 でした。
+<pre>error: --issue の書式が不正です: &quot;bad&quot;
+  正しい例: --issue owner/repo#123</pre></div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">DEMO</span><span class="turn">#21</span></div><div class="text">T2: gh を PATH から外して <code>init --issue acme/web#1</code> を実行しました。exit=1 で、<code>.team/sessions</code> は作られませんでした。
+<pre>error: gh コマンドが見つかりません。issue acme/web#1 を取得できないため中止しました (セッションは作っていません)。
+  gh のインストール: https://cli.github.com
+  認証: <code>gh auth login</code>、または環境変数 GH_TOKEN にトークンを設定 (GitHub Actions では env: GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} を渡す)</pre></div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">DEMO</span><span class="turn">#21</span></div><div class="text">T5: セッション名の既定値は上の出力のとおり <code>issue-web-7</code> です。<code>--force</code> 時に既存セッションが消えないことと、16MB 超過でエラーになることは、<code>test/issue.test.ts</code> で確認済みです。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#22</span></div><div class="text">鈴木さんの [DEMO] がまだ無い。T3・T4・T6 は出力を見ていないので、受け入れ済みとは言えない。田中さんの T1・T2・T5 は DEMO と 47 件 pass の報告で受け入れ基準を満たしている。実 gh 未確認の点は、偽装 gh とテストで足りるので今回は許容する。コミットは、ユーザーの指示が無いので保留にする。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 鈴木 ひかり</span><span class="turn">#22</span></div><div class="text">鈴木さん、T3・T4・T6 の [DEMO] をお願いします。実際に動かした出力だけを貼ってください。
+1. 偽の gh で <code>init --issue</code> を実行し、brief 全文を貼る。コメントが 2 件以上あり、時系列で並び、コードフェンスと箇条書きが崩れていないこと。
+2. コメントのフェンスが奇数個のとき、閉じフェンスが補われた brief の該当部分。
+3. 200KB を超える issue で、古いコメントが省略され、Issue 行の直下に <code>⚠ コメント N 件中 M 件を省略しました…</code> が出ていること。本文だけで超える場合のエラー出力も添える。
+4. README の「Starting from a GitHub issue」の該当箇所。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 田中 健</span><span class="turn">#22</span></div><div class="text">田中さん、T1・T2・T5 は受け入れ基準を満たしています。ありがとうございます。不正な JSON のときの非0終了も、意図どおりで修正は要りません。コミットは私から指示しません。main への push は佐藤の判断では決めず、ユーザーの確認を取ってからにします。鈴木さんの DEMO が出たら、田中さんにも <code>--force</code> で既存セッションが残る様子を 1 回実機で見せてもらうかもしれません。待機してください。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#22</span></div><div class="text">review 時点で、T1・T2・T5 は DEMO と受け入れ基準の確認が済んだ。T3・T4・T6 は鈴木さんの DEMO 待ち。実 gh での確認は未実施で、偽装 gh とテストのみ。コミットと push は未実施で、ユーザーの確認が必要。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">DEMO</span><span class="turn">#23</span></div><div class="text">T3: 偽の gh（PATH 先頭に置いた簡易スクリプト）で <code>node src/main.ts init --issue acme/web#7 --name demo-hikari-7</code> を実行しました。exit=0 で、セッションが作られました。state.json の brief は次のとおりです。コメントは 3 件あり、投稿順の逆（bob → alice → carol）で返したものを、時系列に並べ替えて出力しています。コードフェンスと箇条書きは崩れていません。carol のコメントはフェンスが閉じていなかったので、末尾に閉じフェンスが補われています。
+<pre>Issue: acme/web#7
+https://github.com/acme/web/issues/7
+
+# API を v2 にする
+
+- 対応</pre>ts
+const a=1
+<pre>
+## コメント (3件)
+
+### @alice — 2026-10-01 09:30 (UTC)
+
+API は v2 で
+
+### @bob — 2026-10-02 10:05 (UTC)
+
+- [ ] 移行手順
+- [ ] 告知
+</pre>sh
+pnpm test
+<pre>
+### @carol — 2026-10-03 00:00 (UTC)
+
+途中で切れた例:</pre>ts
+const b=2
+<pre>
+PR の説明に <code>Closes acme/web#7</code> を入れること。
+<code>pnpm typecheck &amp;&amp; pnpm test</code> を通すこと。</pre></div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">DEMO</span><span class="turn">#23</span></div><div class="text">T6: 200KB 超の issue（#8）を同じ手順で取り込みました。本文は短く、コメントは 10 件で、各約 90KB の日本語です。exit=0 で、brief は 180446 バイト（UTF-8）でした。古い 8 件が省略され、新しい 2 件（u8、u9）だけが残りました。Issue 行の直下に警告が出ています。下は先頭部分です。
+<pre>Issue: acme/web#8
+https://github.com/acme/web/issues/8
+⚠ コメント 10 件中 8 件を省略しました（brief の上限 200KB）。全文: https://github.com/acme/web/issues/8
+
+# 大きい issue
+
+本文
+
+## コメント (2件)
+
+### @u8 — 2026-10-09 00:00 (UTC)
+
+コメント9 ああああ…</pre>
+末尾は、規約 2 行（<code>Closes acme/web#8</code> と <code>pnpm typecheck &amp;&amp; pnpm test</code>）で終わっています。
+
+本文だけで超える issue（#9、本文は日本語 8 万字で約 240KB）は、exit=1 で止まります。出力は次のとおりです。セッションは作られませんでした。
+<pre>error: issue acme/web#9 は本文だけで brief の上限 200KB を超えています。切り捨てずに中止しました。全文: https://github.com/acme/web/issues/9
+  brief を手で用意して <code>team init --brief-file</code> を使ってください。</pre>
+デモ用に作った <code>demo-hikari-7</code> と <code>demo-hikari-8</code> は削除しました。<code>.team/current</code> は元に戻しました。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">DEMO</span><span class="turn">#23</span></div><div class="text">T4: README の「Starting from a GitHub issue」（<code>README.md</code> の 99〜124 行目）を読み直しました。次の内容が入っています。
+- <code>--issue</code> の使い方と、<code>--name</code> が優先されること。
+- gh の要件と、<code>gh auth login</code>、<code>GH_TOKEN</code>、Actions での <code>env: GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}</code>。
+- 田中さんの T2 の実出力をそのまま貼ったエラー例 2 つ。
+- 200KB 上限の挙動と 16MB の扱い。
+
+ゲートは <code>pnpm typecheck &amp;&amp; pnpm test</code> で 47 件中 47 件 pass です。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 佐藤 美咲, 田中 健</span><span class="turn">#23</span></div><div class="text">鈴木です。T3・T4・T6 の DEMO を上に出しました。実際に動かして確認したのは、コメントが時系列に並ぶこと、フェンスの補完、200KB 超での省略警告、本文だけで超えたときのエラーです。
+
+ただ、本物の gh は使っていません。確認は偽装した gh のみです。
+
+見つけた点が 1 つあります。本文だけで超えたときのエラーは「<code>--brief-file</code> で手動に切り替えてください」と案内する文言で、これで合っています。ユーザーが迷わない案内になっていると思います。修正は要りません。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 佐藤 美咲, 鈴木 ひかり</span><span class="turn">#24</span></div><div class="text">田中です。<code>--force</code> で既存セッションが残ることを実機で確認しました。
+- 手順は次のとおりです。まず <code>init --name keep-demo &quot;既存&quot;</code> で既存セッションを作りました。次に、404 を返す偽の gh を PATH 先頭に置いて <code>init --issue acme/web#404 --name keep-demo --force</code> を実行しました。
+- 結果は exit=1 で、<code>.team/sessions/keep-demo</code> は残っていました。出力は次のとおりです。
+<pre>error: issue が見つかりません: acme/web#404 (404)。セッションは作っていません。
+  owner/repo と番号を確認してください。private リポジトリは GH_TOKEN にそのリポジトリを読める権限が必要です。
+  gh の出力: HTTP 404: Not Found</pre>
+- 後片付けとして、デモ用の <code>keep-demo</code> を削除し、<code>.team/current</code> を <code>villa-66</code> に戻しました。
+- 確認できていないのは、本物の gh でのネットワーク取得です。偽装した gh でしか見ていません。
+
+T1・T2・T5 に残作業はありません。コミットは佐藤さんの判断を待ちます。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#25</span></div><div class="text">全タスクの DEMO が揃った。T1〜T6 を受け入れ基準と照らして確認する。実 gh は未確認だが、偽装 gh とテストで足りるので許容する。コミットはユーザー確認待ちにする。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span><span class="turn">#25</span></div><div class="text">佐藤です。レビュー結果です。T1〜T6 は、受け入れ基準を満たしていると判断します。根拠は次のとおりです。
+- T1・T5: 田中さんの DEMO で、セッション名 <code>issue-web-7</code>、書式不正のエラー、<code>--force</code> 時に既存セッションが残ることを確認しました。
+- T2: gh なしの 1 行目のエラーに、<code>https://cli.github.com</code>、<code>gh auth login</code>、<code>GH_TOKEN</code>、<code>GITHUB_TOKEN</code> が入っています。セッションは作られていません。
+- T3・T6: 鈴木さんの DEMO で、コメントが時系列に並び、フェンスと箇条書きが崩れていないことを確認しました。奇数フェンスの補完、200KB 超での省略警告、本文だけで超えたときのエラーも確認しました。
+- T4: README に、使い方、gh の要件、<code>GH_TOKEN</code> の説明、エラー例が入っています。
+- ゲート: <code>pnpm typecheck &amp;&amp; pnpm test</code> は 47 件中 47 件 pass です。
+未確認の点は 2 つです。実際の gh での取得は偽装 gh のみで、実ネットワークは見ていません。コミットと push もしていません。
+
+ユーザーの木村さんには、起動直後の 1 行エラー、コメント追記の取り込み、<code>Closes</code> と規約行の 3 点を見てもらいます。実 gh での取得は、木村さんの環境で確かめてもらう前提にします。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#25</span></div><div class="text">review 完了。T1〜T6 は受け入れ基準を満たし、<code>pnpm typecheck &amp;&amp; pnpm test</code> は 47 件中 47 件 pass。未確認は実 gh での取得で、偽装 gh とテストのみ。コミットと push は未実施で、ユーザーの確認が必要。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">ADVANCE</span><span class="turn">#25</span></div><div class="text">review の目的は達成した。全タスクを受け入れ基準と照らして確認し、ユーザー受け入れに進める。</div></li></ol></details>
+  <details open><summary>周 1 · acceptance <span class="muted">5</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;acceptance&quot; started (iteration 1) — Users try what was built — start from the team's demos, open the files they point to, run it if possible — and judge it from their own needs. Each user gives a [VERDICT accept|reject] with reasons. PM summarizes and decides next steps.</p></li><li class="msg user private" data-from="user-dev"><div class="who"><span class="name">木村 拓也</span> <span class="kind">memo</span><span class="turn">#26</span></div><div class="text">README、エラー文言、brief の構成を確認した。実 gh は試していない。基準は満たしていて、懸念は小さい。</div></li><li class="msg user" data-from="user-dev"><div class="who"><span class="name">木村 拓也</span> <span class="kind accept">VERDICT</span><span class="turn">#26</span></div><div class="text">ACCEPT: 受け入れます。ただし、実 gh でのネットワーク取得は誰も見ていません。
+
+良い点:
+- <code>init --issue owner/repo#N</code> の1コマンドで始まります。issue 本文のコピペが要らず、これが一番助かります。
+- gh が無いとき、1行目に原因が出ます。続けてインストール先、<code>gh auth login</code>、<code>GH_TOKEN</code>、Actions で <code>GITHUB_TOKEN</code> を渡す書き方まで書いてあります。何をすべきかが分かるので、私の基準に合っています。
+- 失敗してもセッションは作られません。<code>--force</code> でも既存セッションは消えません。黙って空 brief になることがありません。
+- コメントが投稿者・日時つきで時系列に入ります。「API は v2 で」のような追記が落ちません。
+- brief の先頭に <code>Issue: owner/repo#N</code> と URL が入ります。末尾に <code>Closes owner/repo#N</code> と <code>pnpm typecheck &amp;&amp; pnpm test</code> の2行が入ります。
+- 200KB 超でも、古いコメントを省略して警告を Issue 行の直下に出します。黙って欠けないのは評価します。
+
+要望です。ブロッカーではありません。
+1. <code>Closes</code> は brief に書いてあるだけです。PR 説明に実際に入るかは、後段の動作を見ないと分かりません。次回は PR 作成まで通して確認させてください。
+2. 実 gh と Actions 環境(<code>GH_TOKEN</code> 経由)での確認をお願いします。私の CI で最初に試して、結果を返します。
+3. 本文が 200KB を超えた場合は、<code>--brief-file</code> に手で切り替える必要があり、手順が1つ増えます。ただ、これは稀なので許容します。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#27</span></div><div class="text">木村さんは accept。要望3点はブロッカーではない。実 gh と PR 作成まで通した確認は次イテレーションか木村さんの CI での確認に回す。スコープを増やさず、ここで受け入れ完了とする。コミット・push はユーザー確認待ちのまま。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span><span class="turn">#27</span></div><div class="text">佐藤です。木村さんの受け入れ、ありがとうございます。結果をまとめます。
+
+- 判定は ACCEPT です。T1〜T6 は受け入れ基準を満たし、<code>pnpm typecheck &amp;&amp; pnpm test</code> は 47 件中 47 件 pass です。
+- 木村さんの要望 3 点は、今回は追加タスクにしません。理由は、どれもブロッカーではなく、スコープを広げると最初のリリースが小さくなくなるからです。
+  1. <code>Closes</code> が PR 説明に実際に入るかは、brief に書いてあるところまでが今回の範囲です。PR 作成まで通す確認は、次の課題に回します。
+  2. 実 gh と Actions（<code>GH_TOKEN</code> / <code>GITHUB_TOKEN</code>）での確認は、木村さんの CI で最初に試してもらい、結果を返してもらいます。誰も実ネットワークの取得を見ていないので、ここが一番の未確認です。
+  3. 本文が 200KB を超える場合の <code>--brief-file</code> への切り替えは、稀なので許容します。
+- コミットと push は、まだしていません。main 直 push の運用なので、ユーザーの確認を取ってからにします。
+
+田中さん、鈴木さん、残作業はありません。ありがとうございました。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#27</span></div><div class="text">受け入れ完了 (iteration 1): 木村さんは ACCEPT。要望は、(1) PR 説明に <code>Closes</code> が実際に入るかを PR 作成まで通して確認、(2) 実 gh と Actions (<code>GH_TOKEN</code>) での確認を木村さんの CI で実施して結果を返す、(3) 本文が 200KB 超のときの <code>--brief-file</code> 手動切り替えは許容。いずれもブロッカーではなく次回に回す。未実施: 実 gh での取得確認、コミットと push（ユーザーの確認が必要）。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#27</span></div><div class="text">今回の <code>team init --issue</code> は、木村さんの ACCEPT をもって受け入れ完了とする。追加の実装タスクは作らない。次の確認事項は、実 gh と Actions での取得、および PR 作成まで通した <code>Closes</code> の確認で、結果は木村さんから受ける。コミットと push は、ユーザーの確認を取ってから行う。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">ADVANCE</span><span class="turn">#27</span></div><div class="text">End of phase &quot;acceptance&quot;.</div></li></ol></details>
+  <details open><summary>周 1 · wrapup <span class="muted">12</span></summary><ol><li class="sys" data-from="system"><p>Wrap-up before finishing: 0 open task(s), 1 late decision(s) to apply.</p></li><li class="sys" data-from="system"><p>Phase &quot;wrapup&quot; started (iteration 1) — The session is about to end. Engineers apply every decision made during review and acceptance and finish their open tasks ([TASK_DONE]); a task that cannot be finished here gets one line saying why and what is left. PM then confirms what shipped and lists, for the real human, anything still open or needing their decision.</p></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 佐藤 美咲, 鈴木 ひかり</span><span class="turn">#28</span></div><div class="text">田中です。wrapup 時点でゲートを再実行しました。<code>pnpm typecheck</code> は型エラー 0 件、<code>pnpm test</code> は 47 件中 47 件 pass、fail 0 です。T1・T2・T5 に未完了のタスクはありません。反映すべき決定は「追加の実装タスクは作らない」だけで、コードの変更はありません。
+
+- 変更は未コミットです。対象は <code>README.md</code> と <code>src/cli.ts</code> の修正、<code>src/issue.ts</code>、<code>src/issue-brief.ts</code>、<code>test/issue.test.ts</code>、<code>test/issue-brief.test.ts</code> の新規追加です。依存の追加はありません。
+- 本物の gh での取得は、誰も実行していません。確認は偽装した gh と、gh なしの状態だけです。
+- コミットと push は、ユーザーの確認を取ってから行います。この環境では私から実行しません。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">task</span><span class="turn">#28</span></div><div class="text">T1 → done: 完了済みで、wrapup での変更はありません。ゲートの通過は再確認しました。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">task</span><span class="turn">#28</span></div><div class="text">T2 → done: 完了済みで、wrapup での変更はありません。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">task</span><span class="turn">#28</span></div><div class="text">T5 → done: 完了済みで、wrapup での変更はありません。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">note</span><span class="turn">#28</span></div><div class="text"><code>team init --issue</code> の実装は未コミットで、本物の gh での取得は未確認。木村さんの CI で実 gh（<code>GH_TOKEN</code> / <code>GITHUB_TOKEN</code>）を試し、結果を受ける予定。PR 説明に <code>Closes</code> が入るところまで通す確認は、次の課題。コミットと push は、ユーザーの確認を取ってから行う。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#29</span></div><div class="text">全タスク done、決定事項に対する追加実装なし。最終確認と、人間に残る事項を列挙して締める。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span><span class="turn">#29</span></div><div class="text">佐藤です。wrapup の確認です。
+
+**出荷したもの**（T1〜T6 すべて done、<code>pnpm typecheck &amp;&amp; pnpm test</code> は 47 件中 47 件 pass）
+- <code>team init --issue owner/repo#N</code> で、gh 経由で issue のタイトル・本文・全コメントを brief に取り込めます。
+- brief の先頭に <code>Issue: owner/repo#N</code> と URL、末尾に <code>Closes</code> と <code>pnpm typecheck &amp;&amp; pnpm test</code> の 2 行が入ります。
+- gh が無い、認証失敗、404、ネットワーク失敗のときは、空 brief のセッションを作らず、原因と対処（インストール先、<code>GH_TOKEN</code> / <code>GITHUB_TOKEN</code>）を書いて非0終了します。
+- 200KB 超は、古いコメントを省略して警告を Issue 行の直下に出します。本文だけで超える場合はエラーにします。
+- README の init の項に使い方とエラー例を追記しました。
+- 既存の <code>team init &lt;brief&gt;</code> の挙動は変えていません。依存の追加もありません。
+
+**人間（ユーザー）に残っていること**
+1. **コミットと push の判断。** 変更はすべて未コミットです。対象は <code>README.md</code>、<code>src/cli.ts</code>、<code>src/issue.ts</code>、<code>src/issue-brief.ts</code>、<code>test/issue.test.ts</code>、<code>test/issue-brief.test.ts</code> です。main 直 push の運用なので、確認を取るまで私たちはやりません。
+2. **実 gh での取得確認。** 確認はすべて偽装 gh です。木村さんの CI（GitHub Actions、<code>GH_TOKEN</code> 経由）で最初に試してもらい、結果を受けます。
+3. **<code>Closes</code> の確認。** brief に書いてあるだけで、PR 説明に実際に入るかは PR 作成まで通して見ていません。次回の確認事項です。
+4. **任意の判断。** 本文が 200KB を超える issue は <code>--brief-file</code> で手動に切り替える仕様のままです。木村さんは許容していますが、頻度が上がったら見直してください。
+
+田中さん、鈴木さん、残作業はありません。ありがとうございました。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#29</span></div><div class="text">wrapup 完了 (iteration 1): T1〜T6 すべて done、47 件 pass。人間に渡した未決事項は、(1) 変更の commit/push（未コミット、main 直 push 運用なのでユーザー確認待ち）、(2) 実 gh と Actions での取得確認（木村さんの CI）、(3) PR 作成まで通した <code>Closes</code> の確認、(4) 本文 200KB 超は <code>--brief-file</code> 手動切り替えのまま。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 佐藤 美咲, 田中 健</span><span class="turn">#30</span></div><div class="text">鈴木です。wrapup 時点でゲートをもう一度実行しました。<code>pnpm typecheck</code> は型エラー 0 件、<code>pnpm test</code> は 47 件中 47 件 pass、fail 0 です。T3・T4・T6 は done のままで、反映すべき決定に、コードを変えるものはありません。残作業もありません。
+- 変更は未コミットです。私の担当分は <code>src/issue-brief.ts</code>、<code>test/issue-brief.test.ts</code>、<code>README.md</code> の「Starting from a GitHub issue」です。コミットと push は、ユーザーの確認を取ってからにします。
+- 未確認なのは、本物の gh での取得です。私は偽装した gh でしか動かしていません。木村さんの CI で最初に試してもらい、結果を受けます。
+- <code>Closes</code> は brief に書いてあるだけで、PR 説明に実際に入るかは見ていません。PR 作成まで通した確認は、次回に回します。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#31</span></div><div class="text">全タスク done、wrapup の確認とユーザー向け未決事項は既に出した。重複を避けて短く締める。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span><span class="turn">#31</span></div><div class="text">佐藤です。最終確認です。T1〜T6 はすべて done で、<code>pnpm typecheck &amp;&amp; pnpm test</code> は 47 件中 47 件 pass です。受け入れの決定（追加の実装タスクは作らない）も反映済みで、コードの変更はありません。
+
+人間（ユーザー）に残っていることは次の 3 点です。
+1. **コミットと push の判断。** 変更はすべて未コミットです。main 直 push の運用なので、確認を取るまで私たちはやりません。
+2. **実 gh と Actions での取得確認。** ここまでは偽装 gh しか見ていません。木村さんの CI（<code>GH_TOKEN</code> / <code>GITHUB_TOKEN</code>）で最初に試して、結果を返してもらいます。
+3. **<code>Closes</code> の確認。** brief に書いてあるだけで、PR 説明に実際に入るかは PR 作成まで通して見ていません。次回の確認事項です。
+
+任意の判断が 1 つあります。本文が 200KB を超える issue は <code>--brief-file</code> に手で切り替える仕様のままです。頻度が上がったら見直してください。
+
+田中さん、鈴木さん、ありがとうございました。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">memo</span><span class="turn">#32</span></div><div class="text">私の全タスクは完了済みで、反映すべき決定にコード変更はない。追加の作業は不要。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 佐藤 美咲, 鈴木 ひかり</span><span class="turn">#32</span></div><div class="text">田中です。wrapup の最終報告です。T1・T2・T5 は done で、反映すべき決定にコード変更はありません。直近のゲートは <code>pnpm typecheck</code> が型エラー 0 件、<code>pnpm test</code> が 47 件中 47 件 pass でした。
+- 未コミットのままです。コミットと push は、ユーザーの確認を取るまで私からは実行しません。
+- 実 gh での取得は未確認です。確認はすべて偽装 gh です。木村さんの CI（<code>GH_TOKEN</code> / <code>GITHUB_TOKEN</code>）で最初に試して、結果を受けます。
+- <code>Closes</code> が PR 説明に実際に入るかは、PR 作成まで通した確認が次回の課題です。
+- 実 gh で ENOBUFS による 16MB 超過の判定を通した確認も、まだありません。テストでは <code>GhResult.overflow</code> で偽装した範囲です。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#33</span></div><div class="text">全タスクが done で、wrapup の最終報告は出し終えている。重複を避けて、セッションを閉じる。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span><span class="turn">#33</span></div><div class="text">佐藤です。wrapup は完了です。T1〜T6 はすべて done で、<code>pnpm typecheck &amp;&amp; pnpm test</code> は 47 件中 47 件 pass です。人間に渡す事項は、先の報告から変わりません。コミットと push の判断、実 gh と Actions での取得確認、<code>Closes</code> が PR 説明に入るかの確認の 3 点です。ありがとうございました。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#33</span></div><div class="text">wrapup 最終確認 (iteration 1): 追加の実装は無く、人間に渡した未決事項も変わっていない。コミットと push は、ユーザーの確認が取れるまで行わない。</div></li><li class="sys" data-from="system"><p>Session finished after iteration 1. 1/1 users accepted.</p></li></ol></details>
+</div>
+<aside>
+  <section><h2>メンバー</h2><ul><li><span class="dot pm"></span>佐藤 美咲 <span class="muted">pm · pm</span></li><li><span class="dot eng"></span>田中 健 <span class="muted">eng-backend · engineer</span></li><li><span class="dot eng"></span>鈴木 ひかり <span class="muted">eng-frontend · engineer</span></li><li><span class="dot user"></span>木村 拓也 <span class="muted">user-dev · user</span></li></ul></section>
+  <section><h2>タスク</h2><ul><li><span class="st st-done">done</span> <b>T1</b> `team init --issue owner/repo#N` で gh から issue を取得する <span class="muted">eng-backend</span><details class="sub"><summary>result</summary><div class="muted small text">完了済みで、wrapup での変更はありません。ゲートの通過は再確認しました。</div></details></li><li><span class="st st-done">done</span> <b>T2</b> gh が無い・取得失敗のときは、空 brief のセッションを作らず即停止する <span class="muted">eng-backend</span><details class="sub"><summary>result</summary><div class="muted small text">完了済みで、wrapup での変更はありません。</div></details></li><li><span class="st st-done">done</span> <b>T3</b> 取り込んだ issue から brief を組み立てる <span class="muted">eng-frontend</span><details class="sub"><summary>result</summary><div class="muted small text"><code>buildIssueBrief</code> を <code>src/issue-brief.ts</code> に実装した。先頭に <code>Issue: owner/repo#N</code> と URL を置き、タイトル、本文、コメント（<code>### @author — 日時 (UTC)</code>、時系列）を並べる。末尾に <code>Closes</code> と <code>pnpm typecheck &amp;&amp; pnpm test</code> の 2 行を入れる。コメントの追記が brief に入ること、参照・Closes・規約の 3 行があることは <code>test/issue-brief.test.ts</code> で確認した。確認は <code>pnpm typecheck &amp;&amp; pnpm test</code>（47 件中 47 件 pass）で行える。</div></details></li><li><span class="st st-done">done</span> <b>T4</b> README と最終確認 <span class="muted">eng-frontend</span><details class="sub"><summary>result</summary><div class="muted small text">README の init の項に「Starting from a GitHub issue」を追記した。内容は次のとおり。
+- <code>--issue</code> の使い方と <code>--name</code> の優先。
+- gh の要件と、<code>GH_TOKEN</code> / <code>GITHUB_TOKEN</code>（Actions では <code>env: GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}</code>）。
+- 田中さんの T2 の実出力をそのまま貼ったエラー例 2 つ。
+- 200KB 上限と 16MB の扱い。
+
+<code>pnpm typecheck &amp;&amp; pnpm test</code> は通った（47 件中 47 件 pass、fail 0）。</div></details></li><li><span class="st st-done">done</span> <b>T5</b> T1 追記: 型の先行引き渡しとセッション名、巨大出力の扱い <span class="muted">eng-backend</span><details class="sub"><summary>result</summary><div class="muted small text">完了済みで、wrapup での変更はありません。</div></details></li><li><span class="st st-done">done</span> <b>T6</b> T3 追記: 上限・警告・フェンス補完 <span class="muted">eng-frontend</span><details class="sub"><summary>result</summary><div class="muted small text"><code>buildIssueBrief(issue)</code> を <code>src/issue-brief.ts</code> に実装し、<code>test/issue-brief.test.ts</code> に 8 ケースを追加した。<code>pnpm typecheck &amp;&amp; pnpm test</code> は通った（33 件中 33 件 pass）。
+- 出力順は次のとおり。
+  - 先頭に <code>Issue: owner/repo#N</code> と URL。
+  - 省略があるときは、その直下に <code>⚠ コメント N 件中 M 件を省略しました（brief の上限 200KB）。全文: &lt;url&gt;</code>。
+  - <code># タイトル</code> と本文。
+  - <code>## コメント (N件)</code> の下に <code>### @author — YYYY-MM-DD HH:MM (UTC)</code> と本文を時系列で並べる。
+  - 末尾に <code>Closes owner/repo#N</code> と <code>pnpm typecheck &amp;&amp; pnpm test</code> の 2 行。
+- 本文とコメントの Markdown は元のまま入れる。コメントのコードフェンスが奇数個なら、末尾に閉じフェンスを補う。
+- 上限は 200×1024 の UTF-8 バイトで数え、警告行も予算に含める。超えたら新しいコメントから残し、古いものを省略する。残したコメントの数は <code>## コメント (N件)</code> に出る。
+- 本文だけで上限を超えたときは <code>Error</code> を投げ、全文の URL を添える。
+- 型は <code>src/issue.ts</code> の <code>Issue</code> と構造が同じ <code>BriefIssue</code> を自前で持っている。田中さんの型が届いたら <code>Issue</code> に差し替える。
+- 実行は <code>node --test test/issue-brief.test.ts</code>。</div></details></li></ul></section>
+  
+  <section><h2>判定</h2><ul><li><span class="kind accept">accept</span> 木村 拓也 <span class="muted">周 1</span><div class="small">受け入れます。ただし、実 gh でのネットワーク取得は誰も見ていません。
+
+良い点:
+- <code>init --issue owner/repo#N</code> の1コマンドで始まります。issue 本文のコピペが要らず、これが一番助かります。
+- gh が無いとき、1行目に原因が出ます。続けてインストール先、<code>gh auth login</code>、<code>GH_TOKEN</code>、Actions で <code>GITHUB_TOKEN</code> を渡す書き方まで書いてあります。何をすべきかが分かるので、私の基準に合っています。
+- 失敗してもセッションは作られません。<code>--force</code> でも既存セッションは消えません。黙って空 brief になることがありません。
+- コメントが投稿者・日時つきで時系列に入ります。「API は v2 で」のような追記が落ちません。
+- brief の先頭に <code>Issue: owner/repo#N</code> と URL が入ります。末尾に <code>Closes owner/repo#N</code> と <code>pnpm typecheck &amp;&amp; pnpm test</code> の2行が入ります。
+- 200KB 超でも、古いコメントを省略して警告を Issue 行の直下に出します。黙って欠けないのは評価します。
+
+要望です。ブロッカーではありません。
+1. <code>Closes</code> は brief に書いてあるだけです。PR 説明に実際に入るかは、後段の動作を見ないと分かりません。次回は PR 作成まで通して確認させてください。
+2. 実 gh と Actions 環境(<code>GH_TOKEN</code> 経由)での確認をお願いします。私の CI で最初に試して、結果を返します。
+3. 本文が 200KB を超えた場合は、<code>--brief-file</code> に手で切り替える必要があり、手順が1つ増えます。ただ、これは稀なので許容します。</div></li></ul></section>
+  
+  <section><h2>決定</h2><ul><li class="small">スコープは最小にする。(1) <code>team init --issue owner/repo#N</code> で gh 経由のタイトル・本文・コメントを brief に取り込む (2) brief に issue 参照を必ず残し、PR に <code>Closes owner/repo#N</code> を入れる前提を示す (3) brief に CLAUDE.md の <code>pnpm typecheck &amp;&amp; pnpm test</code> を守る旨を含める (4) gh が無い、または取得に失敗したら、空 brief のセッションを作らず即座に非0終了し、インストール方法と <code>GH_TOKEN</code> 設定を書いたエラーを出す。理由: 木村さんの実害は欠落・紐づけ漏れ・規約抜け・黙った失敗の4点で、それ以外（複数 issue、ラベル同期など）は後回しにしても困らないため。 <span class="muted">discovery</span></li><li class="small">田中さんの分担案を採用する。田中さんが先に <code>src/issue.ts</code> に <code>Issue</code> 型（<code>ref={owner,repo,number}</code>、<code>comments[].createdAt</code> は ISO 文字列のまま）と <code>fetchIssue(ref, runGh)</code> を置き、鈴木さんに通知する。理由: T3 のテストが T1 の型に依存するため。トレードオフは、型を決めるまで鈴木さんが仮の型で待つこと。 <span class="muted">planning</span></li><li class="small">セッション名の既定値は <code>issue-&lt;repo&gt;-&lt;N&gt;</code>（英数字とハイフン以外は <code>-</code> に置換）、<code>--name</code> 指定があればそちらを優先する。依存は追加せず <code>spawnSync</code> のみ。gh の出力が 16MB を超えたら黙って欠けさせず、エラーで止める。 <span class="muted">planning</span></li><li class="small">brief が 200KB を超える場合は、新しいコメントを優先して残し、古いものを省略する。省略したときは Issue 行の直下に <code>⚠ コメント N 件中 M 件を省略しました（brief の上限 200KB）。全文: &lt;url&gt;</code> を出す。本文だけで上限を超える場合は切らずにエラーで止める。理由: 黙って欠けるのが一番の実害で、末尾の警告は見落とされるため。 <span class="muted">planning</span></li><li class="small">README に載せるエラー例は T2 の実出力をそのまま貼る。T4 は T2 の文言が確定してから着手する。エラー文言は、1行目に原因、2行目以降にインストール方法と <code>GH_TOKEN</code> の設定方法の順にする。 <span class="muted">planning</span></li><li class="small">200KB の上限は UTF-8 のバイト数で数え、省略警告の行も予算に含める。gh の <code>author</code> が null（削除済みユーザー）の場合は、型側で <code>ghost</code> に正規化する。理由: 文字数で数えると日本語で上限を超えて通ってしまい、null 分岐を鈴木さん側に持たせると見出しの処理が複雑になるため。 <span class="muted">planning</span></li><li class="small">今回の <code>team init --issue</code> は、木村さんの ACCEPT をもって受け入れ完了とする。追加の実装タスクは作らない。次の確認事項は、実 gh と Actions での取得、および PR 作成まで通した <code>Closes</code> の確認で、結果は木村さんから受ける。コミットと push は、ユーザーの確認を取ってから行う。 <span class="muted">acceptance</span></li></ul></section>
+</aside>
+</main>
+<script>
+(() => {
+  const priv = document.getElementById("show-private"), who = document.getElementById("who");
+  const apply = () => {
+    document.body.classList.toggle("show-private", priv.checked);
+    for (const li of document.querySelectorAll("li[data-from]")) li.hidden = !!who.value && li.dataset.from !== who.value;
+  };
+  priv.addEventListener("change", apply);
+  who.addEventListener("change", apply);
+  apply();
+})();
+</script>
+</body>
+</html>

@@ -88,6 +88,9 @@ export const ACTION_HELP: Record<string, string> = {
     "anything irreversible), plus the default the team goes ahead with meanwhile. Never for something you can check yourself",
   DEMO:
     "[DEMO T1] what a user does and what they see, with real output you produced (pasted, or the path of a generated file / screenshot)",
+  VERIFY:
+    "[VERIFY] one shell command, run from the workspace, that tries the product the way a user would and prints what it saw " +
+    "(see the phase goal). The latest one counts",
   DECISION: "[DECISION] a decision the team should follow from now on",
   ADVANCE: "[ADVANCE] end the current phase now because its goal is met (PM only)",
   VERDICT:

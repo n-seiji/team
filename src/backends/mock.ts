@@ -33,7 +33,13 @@ export class MockBackend implements Backend {
       case "engineer:review": {
         const mine = s.tasks.filter((t) => t.owner === me.id);
         const demos = mine.map((t) => `[DEMO ${t.id}] README の手順で実行すると「完了」と表示されます。`);
-        return ["[SAY to=all] 相互レビュー完了。受け入れ基準を満たしています。", ...demos].join("\n");
+        const verify =
+          me.id === engineers[0]?.id
+            ? [
+                "[VERIFY] node -e \"require('fs').writeFileSync(require('path').join(process.env.TEAM_ARTIFACTS, 'result.txt'), 'ok'); console.log('journey: ok')\"",
+              ]
+            : [];
+        return ["[SAY to=all] 相互レビュー完了。受け入れ基準を満たしています。", ...demos, ...verify].join("\n");
       }
       case "engineer:wrapup":
         return "[SAY to=all] 受け入れで決まったことを反映しました。";

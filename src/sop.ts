@@ -43,6 +43,10 @@ export const DEFAULT_PHASES: PhaseDef[] = [
       "Before users judge it, each engineer posts a [DEMO] for their tasks: what a user would do and what they would see, " +
       "with output you really produced (run the command, render the page or email, paste the result or the path of the " +
       "generated file or screenshot). Never describe output you did not produce. " +
+      "Keep one verification command for the product and declare it with [VERIFY]: it starts what users would use, " +
+      "walks the main user journeys the way a user would (a browser for a web UI, the real CLI for a CLI), prints what it " +
+      "saw, saves screenshots or generated files into the folder $TEAM_ARTIFACTS, stops everything it started, and exits " +
+      "non-zero when a journey fails. Before acceptance the runtime runs it and shows its real output to users. " +
       "PM checks every task against its acceptance criteria and states what is ready for users.",
     speakers: ["engineer", "pm"],
     mode: "round-robin",
@@ -52,7 +56,8 @@ export const DEFAULT_PHASES: PhaseDef[] = [
   {
     id: "acceptance",
     goal:
-      "Users try what was built — start from the team's demos and open the files they point to — " +
+      "Users try what was built — start from the trial run (real output the runtime produced with the team's " +
+      "verification command), then the team's demos, and open the files they point to — " +
       "and judge it from their own needs. Each user gives a [VERDICT accept|reject] with reasons. " +
       "PM summarizes and decides next steps: every condition a user attached to their verdict becomes a [TASK] or gets a " +
       "one-line reason why not (follow-up tasks start another iteration while iterations remain). " +
@@ -61,6 +66,7 @@ export const DEFAULT_PHASES: PhaseDef[] = [
     speakers: ["user", "pm"],
     mode: "round-robin",
     maxRounds: 1,
+    trial: true,
   },
   {
     id: "wrapup",
@@ -117,11 +123,12 @@ const ROLES: Record<string, RoleDef> = {
       "Other programs (including this team's own runtime) share the machine: when you start a server or any background " +
       "process, stop it by its PID (`kill $PID`); never use pkill, killall or kill by name or pattern. " +
       NEVER_BLOCK,
-    actions: ["TASK", "TASK_START", "TASK_DONE", "TASK_BLOCKED", "DEMO", "ASK_HUMAN"],
+    actions: ["TASK", "TASK_START", "TASK_DONE", "TASK_BLOCKED", "DEMO", "VERIFY", "ASK_HUMAN"],
     subagent: "team-engineer",
     workspace:
       "All product code lives here (relative to the repository root). When the phase allows editing and you have file tools, " +
-      "read and edit files here for real; keep the product runnable and document how to run it in its README.md.",
+      "read and edit files here for real; keep the product runnable and document how to run it in its README.md. " +
+      "Save screenshots and other evidence for demos in the session's artifacts folder (given below), not in /tmp.",
   },
   user: {
     guide:

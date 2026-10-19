@@ -10,6 +10,8 @@ import { buildPrompt, listWorkspace, promptAsText } from "./prompt.ts";
 import { formatBacklog, formatEntry, formatQuestions, displayName } from "./render.ts";
 import { createBackend } from "./backends/index.ts";
 import { findOverlaps, formatOverlap, otherSessionChanges, sameRepoChanges } from "./overlap.ts";
+import { runTrialIfDue } from "./verify.ts";
+import { renderHtml } from "./html.ts";
 import type { BackendConfig } from "./types.ts";
 
 const HELP = `team — PM・エンジニア・ペルソナ(ユーザー)が会話しながら開発するシミュレーター
@@ -21,8 +23,8 @@ Session
                        新しいセッションを作成して current にする (--json は next --json と同じ出力)
                        --workspace: 既存のコードベース (git worktree など) をそのまま作業場所にする
   status [--json]      フェーズ・バックログ・次の発言者を表示
-  log [--tail N] [--md] [--no-thoughts]
-                       会話ログを表示 (--md は transcript.md のパス)
+  log [--tail N] [--md] [--html] [--no-thoughts]
+                       会話ログを表示 (--md / --html は transcript.md / transcript.html のパス。HTML はブラウザで読む用)
   sessions             セッション一覧 / use <name> で切り替え
   overlaps [--json]    同じリポジトリを触る他のセッションと、同じファイル・同じ番号のファイルが重なっていないか確認
   say <text>           人間(あなた)としてチーム全員に発言を差し込む
@@ -60,6 +62,7 @@ const OPTIONS = {
   json: { type: "boolean" },
   inline: { type: "boolean" },
   md: { type: "boolean" },
+  html: { type: "boolean" },
   "no-thoughts": { type: "boolean" },
   help: { type: "boolean", short: "h" },
 } as const;
@@ -81,6 +84,8 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
   /** Schedule the next speaker(s) and print their turn prompts (`next`, and `init --json`). */
   function next(w: World) {
     const ids = w.next();
+    // stderr, so `next --json` stays parseable
+    runTrialIfDue(w, root, (s) => process.stderr.write(s + "\n"));
     const es = store.transcript(w.state.name);
     const view = es.concat(w.emitted);
     const files = listWorkspace(w.state, root);
@@ -201,6 +206,13 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
 
     case "log": {
       const w = load();
+      if (flags.html) {
+        // Rendered on demand too, so sessions saved before the HTML view existed get one.
+        const file = path.join(store.sessionDir(w.state.name), "transcript.html");
+        fs.writeFileSync(file, renderHtml(w.state, store.transcript(w.state.name)));
+        out(file);
+        return;
+      }
       if (flags.md) {
         out(path.join(store.sessionDir(w.state.name), "transcript.md"));
         return;
@@ -256,6 +268,7 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
       const es = store.transcript(w.state.name); // kept in memory for the whole run
       while (w.state.status === "running" && turns < maxTurns) {
         const ids = w.next();
+        if (runTrialIfDue(w, root, out)) out(`[${w.phase.id}] ${formatEntry(w.state, w.emitted.at(-1)!)}`);
         const view = es.concat(w.emitted);
         const files = listWorkspace(w.state, root);
         const others = otherSessionChanges(store, w.state);

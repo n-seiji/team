@@ -41,6 +41,11 @@ export interface PhaseDef {
    * with unfinished tasks or with decisions made after the build (review / acceptance).
    */
   finale?: boolean;
+  /**
+   * Trial phase: before anyone speaks, the runtime runs the team's verification command ([VERIFY]) once per
+   * iteration and shows its real output to everyone, so users judge what actually ran.
+   */
+  trial?: boolean;
 }
 
 /**
@@ -61,6 +66,20 @@ export interface Task {
   iteration?: number;
   /** What was done ([TASK_DONE]), what a person must do ([TASK_BLOCKED]) or why it was dropped ([TASK_DROP]). */
   summary?: string;
+}
+
+/** One run of the team's verification command by the runtime (not by an agent). */
+export interface Trial {
+  iteration: number;
+  /** Empty when the team declared no verification command. */
+  command: string;
+  exitCode: number | null;
+  timedOut?: boolean;
+  /** The tail of stdout/stderr. */
+  output: string;
+  /** Files the command saved in its artifacts folder (paths relative to the repository root). */
+  artifacts: string[];
+  at: string;
 }
 
 /** A question only the real human can answer ([ASK_HUMAN]); the team keeps going on a stated default meanwhile. */
@@ -113,6 +132,10 @@ export interface SessionState {
   demos?: Demo[];
   /** Questions for the real human ([ASK_HUMAN]). Absent in older sessions. */
   questions?: HumanQuestion[];
+  /** The verification command an engineer declared with [VERIFY] (the latest wins). */
+  verify?: { command: string; by: string };
+  /** Runs of that command, one per iteration at the trial phase. */
+  trials?: Trial[];
   /**
    * The workspace is an existing codebase (e.g. a git worktree given with `init --workspace`), not a folder
    * the team created. Engineers then follow its own rules, and claude-cli turns run inside it.
@@ -133,6 +156,7 @@ export type EntryKind =
   | "verdict"
   | "demo"
   | "ask_human"
+  | "verify"
   | "advance"
   | "system";
 

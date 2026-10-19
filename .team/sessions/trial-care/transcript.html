@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>trial-care</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+JP:wght@400;600;700&display=swap">
+<style>
+/* Layout: a reading column for the conversation, with the session's records in a side column on wide screens. */
+:root {
+  --bg: #f6f7f8; --panel: #ffffff; --fg: #1d2329; --muted: #5d6873; --line: #dfe3e7;
+  --accent: #1f6f78; --pm: #7a4dbf; --eng: #1f6f78; --user: #b25a1d; --human: #b0324a;
+  --ok: #2c7a3f; --bad: #b0324a; --code: #eef1f3;
+  --body: "IBM Plex Sans JP", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12161a; --panel: #1a2026; --fg: #e3e8ec; --muted: #9aa6b1; --line: #2c343c;
+  --accent: #5fb7bf; --pm: #b796ec; --eng: #5fb7bf; --user: #e59a62; --human: #ec7d92;
+  --ok: #6cc785; --bad: #ec7d92; --code: #232b33; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12161a; --panel: #1a2026; --fg: #e3e8ec; --muted: #9aa6b1; --line: #2c343c;
+  --accent: #5fb7bf; --pm: #b796ec; --eng: #5fb7bf; --user: #e59a62; --human: #ec7d92;
+  --ok: #6cc785; --bad: #ec7d92; --code: #232b33; color-scheme: dark }
+* { box-sizing: border-box }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.65 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header, main { max-width: 1180px; margin: 0 auto }
+header { padding-block: 28px 12px; display: grid; gap: 8px }
+h1 { font-size: 1.6rem; line-height: 1.25; margin: 0; text-wrap: balance }
+h2 { font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px }
+.brief { max-width: 72ch; margin: 0; white-space: pre-wrap }
+.chips { display: flex; flex-wrap: wrap; gap: 6px }
+.chip { font: 12px var(--mono); padding: 2px 8px; border: 1px solid var(--line); border-radius: 99px; background: var(--panel) }
+main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; padding-block: 8px 48px; align-items: start }
+@media (max-width: 860px) { main { grid-template-columns: minmax(0, 1fr) } }
+aside { display: grid; gap: 20px; min-width: 0 }
+aside section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; min-width: 0 }
+aside ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px }
+.controls { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 2; background: var(--bg);
+  display: flex; flex-wrap: wrap; gap: 16px; align-items: center; padding-block: 10px; border-bottom: 1px solid var(--line) }
+.controls label { display: inline-flex; gap: 6px; align-items: center; font-size: .9rem }
+select { font: inherit; padding: 2px 6px }
+details { border-bottom: 1px solid var(--line) }
+summary { cursor: pointer; padding-block: 12px; font-weight: 600; display: flex; gap: 10px; align-items: baseline }
+summary .muted { font-weight: 400; font-size: .85rem }
+summary:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+ol { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 10px }
+.msg { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--c, var(--line)); border-radius: 6px; padding: 10px 14px; min-width: 0 }
+.msg.pm { --c: var(--pm) } .msg.eng { --c: var(--eng) } .msg.user { --c: var(--user) } .msg.human { --c: var(--human) }
+.msg.private { background: transparent; border-style: dashed; color: var(--muted) }
+.who { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; font-size: .85rem }
+.name { font-weight: 700; color: var(--c, var(--fg)) }
+.to, .turn, .muted { color: var(--muted) }
+.turn { margin-left: auto; font: 11px var(--mono) }
+.kind { font: 11px var(--mono); letter-spacing: .04em; padding: 0 6px; border-radius: 4px; background: var(--code) }
+.kind.accept { color: var(--ok) } .kind.reject { color: var(--bad) }
+.text { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 4px }
+.sys { color: var(--muted); font-size: .85rem; padding-inline: 4px }
+.sys p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere }
+pre { background: var(--code); padding: 10px 12px; border-radius: 6px; overflow-x: auto; font: 12.5px/1.5 var(--mono); white-space: pre; margin: 6px 0 }
+code { font: .9em var(--mono); background: var(--code); padding: 0 4px; border-radius: 3px }
+.small { font-size: .85rem }
+details.sub { border: 0 } details.sub summary { padding-block: 2px; font-weight: 400; font-size: .8rem; color: var(--muted) }
+.st { font: 11px var(--mono); padding: 0 6px; border-radius: 4px; background: var(--code) }
+.st-done { color: var(--ok) } .st-blocked { color: var(--human) } .st-dropped { color: var(--muted); text-decoration: line-through }
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; background: var(--muted) }
+.dot.pm { background: var(--pm) } .dot.eng { background: var(--eng) } .dot.user { background: var(--user) }
+body:not(.show-private) .private { display: none }
+</style>
+</head>
+<body>
+<header>
+  <h1>trial-care</h1>
+  <p class="brief"><b>お題:</b> 遠く離れて一人で暮らす高齢の親が、毎日の薬を飲めているかを、家族が無理なく確かめられるようにしたい。</p>
+  <div class="chips">
+    <span class="chip">終了</span>
+    <span class="chip">周 1/2</span>
+    <span class="chip">フェーズ: wrapup</span>
+    <span class="chip">94 件</span>
+  </div>
+</header>
+<main>
+<div style="min-width:0">
+  <div class="controls">
+    <label><input type="checkbox" id="show-private"> 本人だけのメモも表示</label>
+    <label>表示する人 <select id="who"><option value="">全員</option><option value="pm">佐藤 美咲</option><option value="eng-backend">田中 健</option><option value="eng-frontend">鈴木 ひかり</option><option value="user-daughter">佐々木 由美</option><option value="user-mother">佐々木 トミ</option></select></label>
+  </div>
+  <h2 style="margin-top:16px">会話</h2>
+  <details open><summary>周 1 · discovery <span class="muted">7</span></summary><ol><li class="sys" data-from="system"><p>Session &quot;trial-care&quot; started. Brief: 遠く離れて一人で暮らす高齢の親が、毎日の薬を飲めているかを、家族が無理なく確かめられるようにしたい。</p></li><li class="sys" data-from="system"><p>Phase &quot;discovery&quot; started (iteration 1) — PM interviews the users to uncover their real situation, pains and jobs-to-be-done. Users answer strictly in character, with concrete episodes. No solutions yet.</p></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#1</span></div><div class="text">最初のラウンド。事実を掘る質問を二人に短く投げる。解決策は出さない。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 佐々木 由美, 佐々木 トミ</span><span class="turn">#1</span></div><div class="text">みなさん、集まってくれてありがとうございます。今日は解決策の話はしません。これまでにあった実際の出来事を聞かせてください。
+
+由美さんへ。最後に「お母さんが薬を飲めているか気になった」のはいつでしたか？そのとき何をしましたか？その後どうなりましたか？
+
+トミさんへ。今朝、薬を飲んだときのことを教えてください。何時ごろ、どこで、何をしながら飲みましたか？飲み忘れたのに気づいたのは、最後にいつでしたか？</div></li><li class="msg user private" data-from="user-daughter"><div class="who"><span class="name">佐々木 由美</span> <span class="kind">memo</span><span class="turn">#2</span></div><div class="text">最近の具体的なエピソードを、罪悪感と心配性がにじむ形で話す。解決策には触れない。</div></li><li class="msg user" data-from="user-daughter"><div class="who"><span class="name">佐々木 由美</span><span class="turn">#2</span></div><div class="text">由美です。よろしくお願いします。
+
+最後に気になったのは、先週の火曜です。仕事中の午後 2 時ごろ、ふと「今朝の薬、飲んだかな」と思ったんです。母は朝の薬を、前の晩の電話で確認するだけなので、朝に飲んだかどうかは私には分かりません。
+
+そのときは母に電話しました。出なくて、10 分おきに 3 回かけました。会議の前だったので、廊下に出てかけ直しました。結局 3 時前に折り返しがあって、「畑にいて気づかなかった」と。薬は「飲んだと思う」と言うんです。「思う」では安心できなくて、「テーブルの上の袋を見て」と頼んで、残りの数を数えてもらいました。それでも数が合っているのか、私には分かりません。
+
+そのあとは午後ずっと落ち着きませんでした。母には「うるさく言って悪かったな」と思う一方で、言わなければ何かあったらと思うと怖くて。夜にもう一度電話して、また同じことを聞いてしまいました。母は「大丈夫だって」と言うのですが、声が少し疲れていて、申し訳なくなりました。
+
+毎晩の電話が「薬の確認」になってしまっているのも、正直つらいです。ただの世間話をしたいのに。</div></li><li class="msg user private" data-from="user-mother"><div class="who"><span class="name">佐々木 トミ</span> <span class="kind">memo</span><span class="turn">#3</span></div><div class="text">今朝の薬のことを、実際の暮らしに沿って答える。遠慮がちに、大丈夫だと言いつつ、飲んだか忘れることがあるのを正直に話す。</div></li><li class="msg user" data-from="user-mother"><div class="who"><span class="name">佐々木 トミ</span><span class="turn">#3</span></div><div class="text">トミです。よろしくお願いします。
+
+今朝はな、六時ごろに起きて、台所のテーブルでテレビつけて、朝ごはん食べながら飲んだと思うんだ。天気予報見ながらだったべか。ごはんの後に、五種類をお茶で飲むんだ。
+
+んでもな、飲んだかどうかは、あとで分からなくなるごとがあるんだよ。テレビに気ぃ取られると、手に持ったまま忘れて。壁のお薬カレンダーさ、飲んだら印つけるごどにしてるんだども、つけ忘れる日もあってな。
+
+気づいたのは、おととい。昼前に畑から戻って、袋見たら朝の分が残ってたんだ。慌てて飲んだけど、「いま飲んでいいんだべか」って、分がんねぐなって。娘さ聞けば心配かけるし、そのまま黙ってた。
+
+由美が電話くれるのは、ありがてぇよ。声聞けるのが一番だ。でも薬のごとばっかり聞かれっと、「信用されてねぇのか」って、ちょっと寂しくなる。大丈夫だ。ちゃんとやってる。
+
+畑さ行くときは電話持っていかねぇごどもあって、出られねぇのは悪いなぁと思ってる。</div></li><li class="msg user private" data-from="user-mother"><div class="who"><span class="name">佐々木 トミ</span> <span class="kind">note</span><span class="turn">#3</span></div><div class="text">朝は台所でテレビを見ながら食後に5種類をお茶で飲む。テレビに気を取られて飲んだか忘れる。お薬カレンダーの印つけ忘れもある。おととい朝の分が残っていて昼前に慌てて飲んだが、遅れて飲んでいいか分からず娘に言えなかった。薬の確認ばかり聞かれると信用されていない気がして寂しい。畑では電話を持たないことがある。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#4</span></div><div class="text">最終ラウンド。事実は十分に出た。解決策には入らず、見えた課題とジョブを整理して記録し、discovery を閉じる。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#4</span></div><div class="text">由美さん: 先週火曜 14 時ごろ、「今朝の薬、飲んだかな」と気になった。母に 10 分おきに 3 回電話して、折り返しは 15 時前だった。「飲んだと思う」では安心できず、袋の残数を数えてもらったが、数が合っているかは分からない。夜にも同じことを聞いた。毎晩の電話が「薬の確認」になっていて、「ただの世間話をしたいのに」と言っている。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#4</span></div><div class="text">トミさん: 朝 6 時ごろ台所で、テレビを見ながら朝食後に 5 種類をお茶で飲む。テレビに気を取られて、飲んだかどうか分からなくなる。壁のお薬カレンダーに印をつけているが、つけ忘れる日がある。おととい昼前に朝の分の飲み忘れに気づき、慌てて飲んだ。「いま飲んでいいんだべか」と迷ったが、娘に心配をかけたくなくて黙っていた。薬のことばかり聞かれると「信用されてねぇのか」と寂しくなる。畑には電話を持っていかないことがある。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#4</span></div><div class="text">課題の仮説。①「飲んだかどうか」の記録が、トミさんにも由美さんにも、確かな形で残っていない。②由美さんの不安は電話で確認するしかなく、母娘の会話が「確認」に偏って、お互いに消耗している。③飲み忘れに気づいたときの対処（いま飲んでいいか）を、トミさんは娘に言えず一人で抱えている。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span><span class="turn">#4</span></div><div class="text">ありがとうございました。具体的な話をしてもらえて助かりました。聞こえたことをまとめます。
+
+由美さんは「『思う』では安心できない」。トミさんは「飲んだかどうか、あとで分からなくなる」。二人とも同じ「飲んだ記録がない」ところで困っていて、そのしわ寄せが毎晩の電話に出ているように見えます。トミさんの「信用されてねぇのか」も、由美さんの「ただの世間話をしたいのに」も、そこから来ているのではないでしょうか。
+
+もう一つ気になったのは、おとといの飲み忘れが由美さんに伝わっていないことです。トミさんは心配をかけたくなくて黙っていました。
+
+今日は解決策には進みません。次のフェーズで、この課題を最小のスコープに絞ります。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">ADVANCE</span><span class="turn">#4</span></div><div class="text">discovery の目的は達成した。両者の具体的なエピソードから、課題とジョブの仮説が揃った。</div></li></ol></details>
+  <details open><summary>周 1 · planning <span class="muted">15</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;planning&quot; started (iteration 1) — PM turns findings into a small, shippable scope: [TASK] items with clear acceptance criteria, each assigned to an engineer. Engineers challenge feasibility, split or re-assign tasks, and agree on tech choices.</p></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#5</span></div><div class="text">課題①「飲んだ記録がない」に絞る。最初は、トミさんがボタンを1回押す、由美さんがそれを見る、の2点だけにする。「いま飲んでいいか」の判断は薬の専門家の領域なので今回は外す。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 田中 健, 鈴木 ひかり</span><span class="turn">#5</span></div><div class="text">発見の結果から、最初のリリースは恥ずかしいくらい小さくします。
+
+- トミさん: 朝の薬を飲んだら、大きなボタンを1回押す。
+- 由美さん: 今日の朝の分が「飲んだ・何時」か「まだ」かを、電話せずに見られる。
+
+アカウント登録、通知、グラフ、薬の種類ごとの管理は今回やりません。理由は、課題が「飲んだ記録がない」の一点だからです。トレードオフとして、飲み忘れを自動で知らせる機能はありません。まず記録が残るかを確かめます。
+
+下に3つタスクを切ります。無理そうなところや、分けたほうがいいところがあれば言ってください。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">TASK</span><span class="turn">#5</span></div><div class="text">T1 owner=eng-backend: 服薬記録の保存と取得
+- 「今日の朝の分を飲んだ」を記録でき、記録時刻が保存される。
+- 今日の記録の有無と時刻を取得できる。日付が変わると「まだ」に戻る。
+- 同じ日に2回記録しても、最初の時刻が残る。二重に押しても壊れない。
+- サーバーを再起動しても記録が消えない。
+- 本人用と家族用で、推測されにくい別々のURLを使う。ログインは不要。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">TASK</span><span class="turn">#5</span></div><div class="text">T2 owner=eng-frontend: トミさん用画面（飲んだボタン）
+- スマホで開くと、画面のほとんどを占める大きな「飲んだ」ボタンが1つだけ見える。
+- 押すと「記録しました 6:42」のように時刻つきで表示が変わる。
+- 開き直しても、今日すでに押していれば押した時刻が出る。押し間違いを心配させない文言にする。
+- 文字は大きく、漢字は少なめ、専門用語は使わない。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">TASK</span><span class="turn">#5</span></div><div class="text">T3 owner=eng-frontend: 由美さん用画面（今日の状況）
+- 開くとすぐ、今朝の薬が「飲んだ（6:42）」か「まだ」かが大きく分かる。
+- 「まだ」のときは、責める印象の赤などを使わず、落ち着いた表示にする。
+- 画面には、薬の確認を促す文言（催促の電話や連絡を促すような文）を出さない。
+- 過去3日分の「飲んだ／飲んでない」が一覧で見える。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#5</span></div><div class="text">第1リリースは「トミさんが1回押す、由美さんが見る」だけにする。通知、登録、薬ごとの管理、「いま飲んでいいか」の案内は含めない。理由は、課題を「記録がない」に絞るため。飲み忘れの知らせは次の反復で検討する。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#5</span></div><div class="text">次の反復の候補は、「あとから飲んだ」の記録（トミさんが飲み忘れを一人で抱えない導線）と、飲み忘れの知らせ方。「いま飲んでいいか」は薬剤師など専門家への案内にとどめ、アプリで判断はしない。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">memo</span><span class="turn">#6</span></div><div class="text">T1 は実現可能。リスクは「今日」の定義（タイムゾーン）、二重押し、再起動耐性、URLトークン。依存なしで Node 標準だけでやる。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span><span class="turn">#6</span></div><div class="text">T1 は私が持ちます。このまま着手できますが、決めておきたい点が4つあります。
+
+1. 「今日」の基準は日本時間（Asia/Tokyo）に固定します。サーバーのタイムゾーンに任せると、UTCのサーバーで午前9時に日付が変わります。トミさんは6時台に飲むので、その記録が前日扱いになります。
+2. 保存は JSON ファイル1つにします。書き込みは一時ファイルに書いてから置き換える方式です。DBは入れません。記録は1日1件なので、年間でも365行程度です。再起動しても残ります。
+3. 二重押しは「先着を保持」にします。2回目は同じ記録を返し、時刻は上書きしません。ネットワーク再送でも壊れません。
+4. URL は本人用・家族用で別々の長いランダム文字列を使います。環境変数で渡し、未設定なら起動時に生成して保存します。ログインなしの代わりに、URLが漏れると誰でも見られる点は受け入れる前提です。リスクは小さくないので、READMEに書きます。
+
+依存は Node 標準ライブラリだけで、HTTPサーバーも標準の <code>http</code> を使います。
+
+ひかりさんへ。画面から使う API は次の2つです。
+- 本人用: <code>POST /m/&lt;token&gt;/taken</code>、<code>GET /m/&lt;token&gt;/today</code>。
+- 家族用: <code>GET /f/&lt;token&gt;/status</code>。返すのは今日の分と過去3日分です。
+
+どれも JSON で、時刻は <code>{&quot;taken&quot;:true,&quot;at&quot;:&quot;06:42&quot;}</code> の形です。HTML はひかりさんが静的に置いてください。この形で足りるか、今のうちに確認してください。
+
+美咲さんへ。「朝の分」は、1日1回の記録として扱います。朝・昼・夜の区別はしません。それで合っていますか。合っていれば、次のラウンドでテストを先に書いて実装します。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">note</span><span class="turn">#6</span></div><div class="text">T1 の設計: Node 標準のみ。日付は Asia/Tokyo 固定。保存は JSON 1ファイルで、tmp に書いてから rename する。同じ日の2回目の記録は最初の時刻を保持する。本人用 /m/&lt;token&gt; と家族用 /f/&lt;token&gt; は別トークンで、環境変数で渡し、未設定なら生成して保存する。API は POST /m/&lt;t&gt;/taken、GET /m/&lt;t&gt;/today、GET /f/&lt;t&gt;/status（今日と過去3日）。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">memo</span><span class="turn">#7</span></div><div class="text">計画フェーズ。ファイル編集は不可。API形状を確認し、懸念を伝える。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 田中 健, 佐藤 美咲</span><span class="turn">#7</span></div><div class="text">T2・T3 は私が持ちます。このまま着手できます。API の形は、田中さんの案で足りそうです。ただ、画面側の都合で3点お願いします。
+
+1. <code>/today</code> と <code>/status</code> には、<code>taken:false</code> のときも「今日の日付」を入れてください。例: <code>{&quot;taken&quot;:false,&quot;date&quot;:&quot;2026-10-17&quot;}</code>。由美さんの画面は、過去3日の一覧に日付と曜日を出します。記録のない日も、行として必ず出したいです。
+2. 過去3日は、記録がない日も <code>[{&quot;date&quot;:&quot;…&quot;,&quot;taken&quot;:false}]</code> の形で3件固定で返してください。画面側で日付を数えて穴埋めすると、日付の基準が田中さんとずれます。
+3. 押したあとの <code>POST</code> は、初回でも2回目でも、同じ形で <code>at</code> を返してください。トミさんの画面は、その時刻をそのまま「記録しました 6:42」と表示します。
+
+画面の方針は2つです。
+- 静的 HTML 1枚ずつ、フレームワークなし。JS は <code>fetch</code> だけにします。トミさんのスマホは古い端末かもしれないので、軽くしたいです。
+- トミさんの画面は、押し間違いを心配させない文言にします。例は「記録しました 6:42。もう一度押しても大丈夫です」。ボタンは押したあとも消さず、押し直しても時刻が変わらないことを見せます。漢字は少なめにします。
+
+美咲さんへ、確認が1つあります。由美さんの「まだ」は、朝の時間帯の途中では「まだ」で問題ありません。ただ、夜になっても「まだ」のままだと、責められているように見えるかもしれません。落ち着いた灰色の「まだ」で出し、催促の文言は一切入れません。この表示でよいですか。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">note</span><span class="turn">#7</span></div><div class="text">画面は静的 HTML＋fetch のみ（フレームワークなし）。T2: トミさん用の大きなボタン。押したあとも「もう一度押しても大丈夫」と表示する。T3: 由美さん用の画面。「まだ」は灰色で、催促の文言は出さない。過去3日は3件固定で、記録のない日も行を出す。API に依頼した点は、日付を必ず返すことと、過去3日を3件固定で返すこと。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">memo</span><span class="turn">#8</span></div><div class="text">ひかりさんの3点はどれも妥当。API の形に取り込める。美咲さんの返答（朝の分は1日1回でよいか）はまだ。次のラウンドで実装に入る。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 鈴木 ひかり</span><span class="turn">#8</span></div><div class="text">ひかりさん、3点とも受けます。API の形を次のとおり確定します。
+1. <code>GET /m/&lt;t&gt;/today</code> は、記録がなくても今日の日付を返します。<code>{&quot;taken&quot;:false,&quot;date&quot;:&quot;2026-10-17&quot;}</code>。記録があれば <code>{&quot;taken&quot;:true,&quot;date&quot;:&quot;2026-10-17&quot;,&quot;at&quot;:&quot;06:42&quot;}</code> です。
+2. <code>GET /f/&lt;t&gt;/status</code> は、<code>{&quot;today&quot;:{…},&quot;days&quot;:[…]}</code> の形です。<code>days</code> は今日を除く過去3日で、古い順に3件固定。記録のない日も <code>{&quot;date&quot;:&quot;…&quot;,&quot;taken&quot;:false}</code> を入れます。日付の穴埋めはサーバー側で、基準は Asia/Tokyo です。
+3. <code>POST /m/&lt;t&gt;/taken</code> は、初回でも2回目でも <code>{&quot;taken&quot;:true,&quot;date&quot;:&quot;…&quot;,&quot;at&quot;:&quot;06:42&quot;}</code> を同じ形で返します。時刻は最初の押下のままです。
+
+<code>at</code> は 24 時間表記の <code>HH:MM</code> 固定で、ゼロ埋めします（<code>06:42</code>）。「6:42」と見せたい場合は、画面側で先頭の 0 を落としてください。トークンが違う場合は 404 を返します。理由を細かく返さないためです。
+
+静的 HTML は同じサーバーから <code>/m/&lt;t&gt;/</code> と <code>/f/&lt;t&gt;/</code> で配ります。ひかりさんのファイルは <code>workspace/trial-care/public/m.html</code> と <code>f.html</code> に置いてください。画面側のトークンは URL から取れるので、<code>fetch('today')</code> のような相対パスで呼べます。CORS は不要です。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 佐藤 美咲</span><span class="turn">#8</span></div><div class="text">美咲さん、確認は1点です。「朝の分」は、1日1回の記録として扱います。朝・昼・夜の区別はしません。トミさんの薬は朝に五種類まとめて飲む、と聞いていて、薬ごとの記録も今回は入れない決定です。夕方に押されても記録は取りますが、「朝」かどうかは判定しません。この点で合っていますか。ひかりさんの「まだ」の灰色表示は、私は問題ないと考えます。
+
+次のラウンドで、テストを先に書いて実装します。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">note</span><span class="turn">#8</span></div><div class="text">T1 の API 確定: today は記録がなくても date を返す。status は {today, days}、days は過去3日（今日を除く）を古い順で固定3件。POST は初回も2回目も同じ形で最初の at を返す。at は HH:MM のゼロ埋め。トークン違いは 404。静的 HTML は public/m.html と f.html を /m/&lt;t&gt;/ と /f/&lt;t&gt;/ で配信。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#9</span></div><div class="text">田中さんの確認に答える。1日1回で合っている。ひかりさんの「まだ」灰色表示も了承。夜まで「まだ」の件は、第1リリースでは扱わない。タスクの変更は不要。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 田中 健, 鈴木 ひかり</span><span class="turn">#9</span></div><div class="text">田中さん、合っています。「朝の分」は1日1回の記録として扱ってください。朝・昼・夜の区別も、朝かどうかの判定もなしです。理由は、トミさんは朝にまとめて飲むと聞いていて、薬ごとの記録も今回は入れないと決めたからです。トレードオフとして、夕方に押された記録も「飲んだ」になります。
+
+ひかりさん、「まだ」は落ち着いた灰色で、催促の文言は入れません。その方針で進めてください。夜になっても「まだ」のままの見え方は、使ってもらってから確かめます。今回は時間帯で文言を変えません。
+
+API の形（<code>date</code> の追加、過去3日の3件固定、POST の同一形）と、<code>at</code> のゼロ埋めは、2人で決めたとおりで問題ありません。タスクの中身は変えません。
+
+次のラウンドは、田中さんがテストを先に書いて実装、ひかりさんが画面を作る流れでお願いします。画面は、田中さんの API に合わせて、実機に近い小さい画面で確認してください。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#9</span></div><div class="text">「朝の分」は1日1回の記録で、朝かどうかの判定はしない（夕方に押しても「飲んだ」になる）。日付の基準は Asia/Tokyo。由美さんの「まだ」は落ち着いた灰色で、催促の文言なし。夜になっても「まだ」のときの見え方は、使ってもらって確かめる。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">memo</span><span class="turn">#10</span></div><div class="text">計画フェーズ2巡目。ファイル編集は不可なので、確認と合意だけして終える。新しいタスクの追加は不要。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 田中 健, 佐藤 美咲</span><span class="turn">#10</span></div><div class="text">田中さん、API の確定ありがとうございます。この形で進めます。画面側で決めたことを共有します。
+
+- ファイルは <code>workspace/trial-care/public/m.html</code>（トミさん用）と <code>f.html</code>（由美さん用）に置きます。<code>fetch('today')</code>、<code>fetch('taken', {method:'POST'})</code>、<code>fetch('status')</code> のように、相対パスで呼びます。
+- <code>/m/&lt;t&gt;/</code> と <code>/f/&lt;t&gt;/</code> は末尾スラッシュ付きで配ってください。スラッシュなしで開かれると、相対パスがずれて 404 になります。スラッシュなしで来たら、スラッシュ付きへリダイレクトしてもらえると助かります。トミさんがURLを手で打つことはないはずですが、LINEなどで送るときに末尾が欠けることがあります。
+- <code>at</code> の <code>06:42</code> は、画面側で先頭の 0 を落として「6:42」と表示します。
+- 通信に失敗したときは、トミさんの画面に「うまくいきませんでした。もう一度押してください」と出します。押した記録が残ったかどうか分からない状態を、黙って成功に見せないためです。由美さんの画面は「いま見られません」と表示し、前回の表示は残さないようにします。古い「飲んだ」が残ると、誤解のもとになります。
+- 画面の確認は、幅360pxの小さい画面で行います。文字は大きく、ボタンは画面の高さの7割ほどにします。キーボードだけでも押せるようにします。
+
+美咲さん、「まだ」は灰色で、時間帯での文言変更はしない、了解です。夜になっても「まだ」のままの見え方は、使ってもらってから確かめるとのことなので、そのときに由美さんとトミさんの反応を聞かせてください。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#11</span></div><div class="text">計画は固まっている。タスクの変更は不要。ひかりさんの追加要望（スラッシュなしのリダイレクト、通信失敗時の表示）を確認して、次へ進める。workspace はまだ空なので、このフェーズは終えて build に進める。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 田中 健, 鈴木 ひかり</span><span class="turn">#11</span></div><div class="text">ひかりさんの共有、どれも了承です。
+
+- スラッシュなしのURLは、田中さん、スラッシュ付きへのリダイレクトをお願いします。LINEで送るときに末尾が欠けることがあるためです。T1 の範囲内で扱ってください。
+- 通信に失敗したときは、トミさんの画面は「うまくいきませんでした。もう一度押してください」、由美さんの画面は「いま見られません」で進めてください。前回の「飲んだ」は残さない方針も賛成です。理由は、古い「飲んだ」が一番の誤解のもとだからです。
+- 画面確認は幅360pxで、キーボードでも押せる前提で問題ありません。
+
+タスクの中身は変えません。次のラウンドから、田中さんはテストを先に書いて実装、ひかりさんは画面をお願いします。完成の基準は、T1〜T3 の受け入れ基準を満たすことです。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#11</span></div><div class="text">URLの末尾のスラッシュが欠けた場合は、スラッシュ付きへリダイレクトする（T1 の範囲）。通信失敗時は、トミさんの画面に「うまくいきませんでした。もう一度押してください」、由美さんの画面に「いま見られません」を出し、前回の表示は残さない。理由は、記録が残ったか分からない状態や古い「飲んだ」の表示を、黙って成功に見せないため。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#11</span></div><div class="text">計画は固まった。T1（田中さん）はテスト先行で実装、T2・T3（ひかりさん）は静的HTML。API は <code>/m/&lt;t&gt;/today</code>・<code>/m/&lt;t&gt;/taken</code>・<code>/f/&lt;t&gt;/status</code>。スラッシュなしURLはリダイレクト。画面確認は幅360px。完成後は、由美さんとトミさんに使ってもらい、夜になっても「まだ」の見え方と反応を確かめる。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">ADVANCE</span><span class="turn">#11</span></div><div class="text">計画のゴールは達成した。スコープは T1〜T3 に絞られ、担当・受け入れ基準・API の形・技術選択が揃った。</div></li></ol></details>
+  <details open><summary>周 1 · build <span class="muted">13</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;build&quot; started (iteration 1) — Engineers implement their own tasks in the workspace (real files, runnable code, tests when sensible), coordinate interfaces with each other, and mark finished work with [TASK_DONE].</p></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">task</span><span class="turn">#12</span></div><div class="text">T1 → doing</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">task</span><span class="turn">#12</span></div><div class="text">T1 → done: 服薬記録の保存と取得を実装しました。Node 標準のみで、依存は追加していません。27 件のテストが全部通りました。実際にサーバーを起動して、curl で次を確認しました。
+- ファイルは <code>src/server.ts</code>、<code>store.ts</code>、<code>dates.ts</code>、<code>config.ts</code>、<code>main.ts</code> です。テストは <code>test/*.test.ts</code> に置いています。
+- 起動は <code>node src/main.ts</code> で、起動時に本人用と家族用の URL を表示します。テストは <code>pnpm test</code> です。
+- 日付は日本時間（Asia/Tokyo）で、<code>at</code> は <code>HH:MM</code> のゼロ埋めです。
+- 保存は <code>data/records.json</code> に、一時ファイルを書いてから置き換える方式です。トークンは <code>data/tokens.json</code> に権限 600 で保存します。環境変数 <code>CARE_MOTHER_TOKEN</code> と <code>CARE_FAMILY_TOKEN</code> でも渡せます。本人用と家族用が同じトークンだと起動できません。
+- <code>/m/&lt;t&gt;</code> のようにスラッシュが欠けた URL は、308 で <code>/m/&lt;t&gt;/</code> へ移します。トークンが違う場合は 404 です。
+- 起動し直しても記録は残りました。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">DEMO</span><span class="turn">#12</span></div><div class="text">T1: トミさんが POST で記録すると、<code>{&quot;taken&quot;:true,&quot;date&quot;:&quot;2026-10-17&quot;,&quot;at&quot;:&quot;18:46&quot;}</code> が返ります。1 分後にもう一度押すと、同じ <code>at</code> が返ります。
+- 今日の分を取得すると、記録前は <code>{&quot;taken&quot;:false,&quot;date&quot;:&quot;2026-10-17&quot;}</code>、記録後は <code>{&quot;taken&quot;:true,&quot;date&quot;:&quot;2026-10-17&quot;,&quot;at&quot;:&quot;18:48&quot;}</code> です。サーバーを止めて起動し直しても、記録後の結果のままでした。
+- 家族用の <code>GET /f/&lt;t&gt;/status</code> は <code>{&quot;today&quot;:{&quot;taken&quot;:true,&quot;date&quot;:&quot;2026-10-17&quot;,&quot;at&quot;:&quot;18:46&quot;},&quot;days&quot;:[{&quot;taken&quot;:false,&quot;date&quot;:&quot;2026-10-14&quot;},{&quot;taken&quot;:false,&quot;date&quot;:&quot;2026-10-15&quot;},{&quot;taken&quot;:false,&quot;date&quot;:&quot;2026-10-16&quot;}]}</code> を返します。過去 3 日は古い順で、記録のない日も入ります。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 鈴木 ひかり, 佐藤 美咲</span><span class="turn">#12</span></div><div class="text">T1 は完了です。<code>node src/main.ts</code> で起動すると、本人用と家族用の URL が出ます。<code>public/m.html</code> と <code>f.html</code> は <code>/m/&lt;t&gt;/</code> と <code>/f/&lt;t&gt;/</code> で配信されます。API は先に決めた形のままで、<code>today</code>、<code>taken</code>、<code>status</code> が使えます。
+- ひかりさん: 画面をつなぐときの注意が 2 つあります。API は POST の失敗や 404 のときに本文が JSON とは限りません。レスポンスが <code>ok</code> でなければ、本文を読まずにエラー表示にしてください。また、<code>taken</code> は POST 以外を 405 で返します。
+- 残るリスクは 1 つです。URL が漏れると、誰でも見られたり押されたりします。ログインなしの前提で、README に書いてあります。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">memo</span><span class="turn">#13</span></div><div class="text">m.html と f.html は、すでに計画どおりに入っている。テスト27件が通り、実サーバーでも API の形と HTML の配信を確認できた。ブラウザでの目視確認はできていない。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">task</span><span class="turn">#13</span></div><div class="text">T2 → doing</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">task</span><span class="turn">#13</span></div><div class="text">T3 → doing</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">task</span><span class="turn">#13</span></div><div class="text">T2 → done: トミさん用画面は <code>workspace/trial-care/public/m.html</code> にあります。
+- 画面の大半を占める「飲んだ」ボタンが1つあり、高さは画面の70%（最低280px）です。
+- 押すと「記録しました 6:42」と「もう一度 押しても 大丈夫です。」が出ます。ボタンは押したあとも残ります。
+- 開き直したときは <code>GET today</code> を呼びます。押していなければ「きょうは まだ 押していません」、押していればその時刻を出します。
+- 通信に失敗したときは「うまくいきませんでした。もう一度押してください」を出します。
+- 文字は大きく、ひらがなを多めにし、専門用語は使っていません。キーボードで押せます。フォーカスの枠は太い青です。
+- 動かし方は <code>npm start</code> で、表示された本人用 URL を開きます。確認したのは、サーバーを実際に起動したときの <code>today</code> と <code>taken</code> の応答と HTML の配信です。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">task</span><span class="turn">#13</span></div><div class="text">T3 → done: 由美さん用画面は <code>workspace/trial-care/public/f.html</code> にあります。
+- 一番上に今日の状態を大きく出します。「飲んだ（6:42）」は緑、「まだ」は落ち着いた灰色です。赤は使っていません。
+- 催促や確認を促す文言は入れていません。
+- 過去3日は新しい日が上になる一覧で、日付と曜日を付けます。記録のない日も「飲んでない」の行を出します。
+- 通信に失敗したときは「いま見られません」だけにし、前回の表示は消します。
+- 動かし方は <code>npm start</code> で、表示された家族用 URL を開きます。確認したのは、サーバーを実際に起動したときの <code>status</code> の応答（過去3日が3件固定で返ること）と HTML の配信です。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 佐藤 美咲, 田中 健</span><span class="turn">#13</span></div><div class="text">T2 と T3 の画面を <code>public/m.html</code> と <code>public/f.html</code> に置きました。田中さんの API と合わせて、<code>npm test</code> は27件すべて通ります。実際にサーバーを起動して <code>today</code>、<code>taken</code>、<code>status</code> と HTML の配信も確認しました。
+
+まだ確認できていないことがあります。
+- 幅360pxのスマホ画面を、ブラウザで目視していません。次のラウンドで確認します。
+- 気になるのは、ボタンの高さを画面の70%にしたため、下のメッセージが画面の外に出ることです。出た場合は、メッセージをボタンの上に移します。
+
+美咲さん、由美さんとトミさんに触ってもらう段階に進めます。夜に「まだ」が灰色のまま出ることへの反応も、そのとき聞きたいです。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">memo</span><span class="turn">#14</span></div><div class="text"><code>npm test</code> で 27 件通った。さっきの失敗は、ディレクトリを指定して実行した私のコマンドが悪かった。コードの問題ではない。T1 は done のまま変えない。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 佐藤 美咲, 鈴木 ひかり</span><span class="turn">#14</span></div><div class="text">T1 は完了のままです。念のため <code>npm test</code> を再実行し、27 件すべて通りました。画面を実機で見る確認は、ひかりさんが次のラウンドでやる予定です。そこで API に関わる問題が見つかれば、私が直します。
+
+- ひかりさんへ。ボタンの下のメッセージが画面の外に出る件は、API 側に影響はありません。メッセージをボタンの上に移して問題ありません。
+- 美咲さんへ。リスクが 1 つ残っています。URL が漏れると、誰でも見られたり押されたりします。README に書いてありますが、トミさんと由美さんに URL の扱いを伝えておく必要があります。LINE で共有する場合は、家族以外に転送しないよう伝えてください。
+- 美咲さんへ。もう 1 点あります。夕方に押された記録も「飲んだ」になります。これは先に決めたとおりで、変更は不要です。使ってもらって混乱が出たら、そのときに考えます。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">memo</span><span class="turn">#15</span></div><div class="text">メッセージがボタンの下にあると、押した直後の「記録しました」が画面の外に出る。メッセージをボタンの上に移した。ブラウザでの目視はまだできていない。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 佐藤 美咲, 田中 健</span><span class="turn">#15</span></div><div class="text">前回気にしていた点を直しました。<code>public/m.html</code> で、メッセージ（「記録しました 6:42」「もう一度 押しても 大丈夫です。」）をボタンの上に移しました。
+- ボタンは残りの高さいっぱいに広げ、最低280pxを保ちます。幅360×高さ640の画面なら、メッセージ込みで1画面に収まる計算です。押した直後の時刻が、画面の外に出ません。
+- ボタンの高さは「画面の70%」から「メッセージを除いた残り」に変わりました。画面の大半を占める点は同じです。
+- 文字サイズを少し下げました。メッセージは2rem、補足は1.4remです。大きさは十分あると考えています。
+- <code>npm test</code> は通りました。API は変えていません。
+
+まだできていないのは、実機サイズのブラウザでの目視です。この環境にはブラウザがありません。美咲さん、由美さんとトミさんに触ってもらうときに、次の2点を見てください。
+- 「飲んだ」のあと、時刻が一目で分かるか。
+- 夜に灰色の「まだ」が出たとき、由美さんがどう感じるか。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">task</span><span class="turn">#15</span></div><div class="text">T2 → done: メッセージをボタンの上に移し、押した直後の時刻が画面の外に出ないようにしました。変更は <code>public/m.html</code> です。動かし方は <code>npm start</code> で、表示された本人用 URL を開きます。</div></li></ol></details>
+  <details open><summary>周 1 · review <span class="muted">7</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;review&quot; started (iteration 1) — Engineers review each other's work against the acceptance criteria and fix issues. Before users judge it, each engineer posts a [DEMO] for their tasks: what a user would do and what they would see, with output you really produced (run the command, render the page or email, paste the result or the path of the generated file or screenshot). Never describe output you did not produce. PM checks every task against its acceptance criteria and states what is ready for users.</p></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span><span class="turn">#16</span></div><div class="text">T1 のレビューと DEMO です。T2・T3 の画面も、API につないだ状態でレビューしました。デモ用のデータ置き場を別に作って、実際にサーバーを起動して確認しました。<code>npm test</code> は 27 件すべて通っています。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">DEMO</span><span class="turn">#16</span></div><div class="text">T1: トミさんが「飲んだ」を押した流れを、curl で再現しました。
+- 押す前の <code>GET today</code> は <code>{&quot;taken&quot;:false,&quot;date&quot;:&quot;2026-10-17&quot;}</code> です。
+- 押した直後の <code>POST taken</code> は <code>{&quot;taken&quot;:true,&quot;date&quot;:&quot;2026-10-17&quot;,&quot;at&quot;:&quot;18:50&quot;}</code> です。
+- 61 秒後にもう一度押すと、返ってきた <code>at</code> は同じ <code>18:50</code> でした。最初の時刻が残っています。
+- 由美さんの <code>GET status</code> は <code>{&quot;today&quot;:{&quot;taken&quot;:true,&quot;date&quot;:&quot;2026-10-17&quot;,&quot;at&quot;:&quot;18:50&quot;},&quot;days&quot;:[{&quot;taken&quot;:false,&quot;date&quot;:&quot;2026-10-14&quot;},{&quot;taken&quot;:false,&quot;date&quot;:&quot;2026-10-15&quot;},{&quot;taken&quot;:false,&quot;date&quot;:&quot;2026-10-16&quot;}]}</code> でした。過去 3 日は古い順の 3 件固定で、記録のない日も入っています。
+- URL の末尾のスラッシュが欠けると、<code>308</code> で <code>/m/&lt;t&gt;/</code> へ移ります。
+- トークンが違うと <code>404</code>、<code>taken</code> に GET で来ると <code>405</code> です。
+- 本人用の HTML には「飲んだ」の文字があります。家族用の HTML には「電話」「連絡」「確認」の文言がありません。
+
+再起動しても記録が残る点は、前のラウンドに確認済みです。今回は再確認していません。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 佐藤 美咲, 鈴木 ひかり</span><span class="turn">#16</span></div><div class="text">受け入れ基準に照らした結果です。
+- T1 は 5 項目すべて満たしています。ユーザーに見せられる状態です。
+- T2・T3 は、API のつなぎ込みまで確認しました。HTML の配信と、画面が使う 3 つの API（<code>today</code>、<code>taken</code>、<code>status</code>）の応答です。目視はしていません。この環境にブラウザがなく、幅 360px の見え方と、押した後の時刻の見え方は未確認です。
+- 残るリスクは 1 つです。URL が漏れると、誰でも見られたり押されたりします。美咲さんから二人に、LINE で送った URL を家族以外へ転送しないよう伝えてください。
+- 今回、直す点は見つかりませんでした。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#17</span></div><div class="text">T1 は受け入れ基準 5 項目を満たしている。再起動後も記録が残る点は前ラウンドで確認済み。T2・T3 は API とのつなぎ込みまで確認できているが、幅 360px の目視はできていない。この環境にブラウザがないので、これ以上は待たず、使ってもらって確かめる。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span><span class="turn">#17</span></div><div class="text">レビューありがとうございました。受け入れ基準に照らした結果です。
+
+- **T1 は、ユーザーに見せられます。** 5 項目すべて満たしています。
+  - 記録と時刻の保存、最初の時刻が残ること、日付が変わると「まだ」に戻ること、別々の URL は確認済みです。
+  - 再起動後も記録が残る点は、前のラウンドで確認済みです。
+- **T2 は、見せられます。** 大きなボタンが 1 つあり、押すと時刻つきの文言に変わります。開き直しても時刻が出ます。通信失敗の文言も決めたとおりです。
+- **T3 は、見せられます。** 今日の状態は大きく出ます。「まだ」は灰色で、催促の文言はありません。過去 3 日は、記録のない日も行として出ます。
+- **未確認は 1 点です。** 幅 360px の目視ができていません。ここはトミさんと由美さんに実際に見てもらい、文字や時刻が切れていないかを聞きます。
+- **URL の扱いは、私から二人に伝えます。** LINE で送る URL は家族以外へ転送しないでください。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#17</span></div><div class="text">ユーザーによる確認に進める。見てもらうのは次の 3 点とする。
+- トミさん: 「飲んだ」を押した直後に、時刻が一目で分かるか。
+- 由美さん: 灰色の「まだ」を見て、どう感じるか。夜になっても「まだ」のときの見え方も聞く。
+- 二人とも、画面で切れている文字がないか。
+
+理由は、画面の目視ができておらず、夜の「まだ」の受け止め方も使ってもらうしか確かめようがないため。トレードオフとして、見た目の不具合が見つかれば、次の反復で直す。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">ADVANCE</span><span class="turn">#17</span></div><div class="text">End of phase &quot;review&quot;.</div></li></ol></details>
+  <details open><summary>周 1 · acceptance <span class="muted">11</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;acceptance&quot; started (iteration 1) — Users try what was built — start from the team's demos, open the files they point to, run it if possible — and judge it from their own needs. Each user gives a [VERDICT accept|reject] with reasons. PM summarizes and decides next steps.</p></li><li class="msg user private" data-from="user-daughter"><div class="who"><span class="name">佐々木 由美</span> <span class="kind">memo</span><span class="turn">#18</span></div><div class="text">f.html を読んだ。今日の状態は大きく出て、灰色の「まだ」で、催促の文言はない。ただ、ボタンを押し忘れただけの日も「飲んでない」と出る。知らせてくれる機能はまだない。</div></li><li class="msg user" data-from="user-daughter"><div class="who"><span class="name">佐々木 由美</span><span class="turn">#18</span></div><div class="text">由美です。ブラウザでは開けず、f.html の中身を読んで判断しました。画面が切れていないかは、実際に見ていません。
+
+良いところです。
+- 開いてすぐ、今日が「飲んだ（6:42）」か「まだ」かが大きく分かります。先週の火曜の午後なら、廊下で3回かけ直さずに済んだと思います。
+- 「まだ」が赤ではなく灰色なのは助かります。催促の文言もないので、母を見張っているような感じがしません。
+
+気になるところです。
+- 夜になっても「まだ」だと、かえって不安になります。母が飲んでいないのか、ただ押し忘れたのか、私には区別がつきません。おととい母が畑から戻って慌てて飲んだ話のように、飲んだのに押していない日があるはずです。そのとき私は、また電話してしまいます。
+- 過去3日の「飲んでない」は言い方が強いです。母が見たら傷つくと思います。記録がないだけなので、「記録なし」くらいが合っています。
+- 私が毎回この画面を開きに行く形は、電話の代わりに画面を見に行くだけです。何かあったときだけ知らせてほしいです。ただ、誤報で仕事中に呼び出されるのは困ります。通知は、時間帯を決めて、本当に遅れたときだけにしてください。
+- 画面に更新時刻がないので、いつの情報なのか分かりません。</div></li><li class="msg user" data-from="user-daughter"><div class="who"><span class="name">佐々木 由美</span> <span class="kind accept">VERDICT</span><span class="turn">#18</span></div><div class="text">ACCEPT: 第1リリースとして、電話せずに今日の状況が見られるようになりました。灰色の「まだ」と、催促の文言がないところも、私には合っています。条件があります。次の反復で、「飲んでない」の言い方を直してください。夜まで「まだ」のときの扱いと、遅れたときだけ知らせる通知も、検討してください。通知がないままだと、結局画面を何度も見に行って落ち着かないと思います。</div></li><li class="msg user private" data-from="user-mother"><div class="who"><span class="name">佐々木 トミ</span> <span class="kind">memo</span><span class="turn">#19</span></div><div class="text">私はファイルを開けない。ボタンが1つで大きいことと、押すと時刻が出ることを聞いて判断する。「飲んでない」の言い方は、娘に見られると気になる。</div></li><li class="msg user" data-from="user-mother"><div class="who"><span class="name">佐々木 トミ</span><span class="turn">#19</span></div><div class="text">トミです。わしはらくらくホンだべ。パソコンみたいなもんは開けねぇので、聞いた話で言うな。
+
+ボタンが1つだけで、大きくて、押すと時刻が出る。それならわしにも押せそうだ。「もう一度押しても大丈夫」と書いてあるのは助かる。押し間違えたかと心配になるからな。機械に「飲め」と言われるのは嫌だども、これは何も指図してこねぇのが良い。
+
+気になるのは3つだ。
+- 「飲んでない」と出るのは嫌だ。飲んだのに押し忘れた日もあるべ。由美に「飲んでない」と思われたら心配かけるし、信用されてねぇ気もする。「記録なし」くらいにしてけろ。
+- 朝はテレビを見ながら飲むから、飲んだあとに押すのを忘れそうだ。それで由美がまた電話してくるのは、わしは困る。
+- この画面がらくらくホンで開けるか、わしには分からね。孫でも誰でも、一度開いて見せてけろ。</div></li><li class="msg user" data-from="user-mother"><div class="who"><span class="name">佐々木 トミ</span> <span class="kind accept">VERDICT</span><span class="turn">#19</span></div><div class="text">ACCEPT: 押すボタンが1つだけで大きく、時刻も出るので、わしにも使えそうだ。条件がある。「飲んでない」の言い方は直してけろ。らくらくホンで開けるかも確かめてけろ。押し忘れたときに、わしが責められた気にならねぇようにしてけろ。それなら大丈夫だ。</div></li><li class="msg user private" data-from="user-mother"><div class="who"><span class="name">佐々木 トミ</span> <span class="kind">note</span><span class="turn">#19</span></div><div class="text">トミの受け入れ条件は3つ。1つ目は、由美の画面の「飲んでない」を「記録なし」のようなやわらかい言い方にすること。2つ目は、らくらくホンでこの画面が開けるかを、誰かに確かめてもらうこと。3つ目は、押し忘れても責められた気にならないこと。テレビを見ながら飲むので、飲んだあとに押し忘れやすい。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#20</span></div><div class="text">二人とも ACCEPT。条件は共通で、「飲んでない」の言い方を直すこと。由美さんは夜まで「まだ」の扱いと遅れたときだけの通知、更新時刻を挙げている。トミさんはらくらくホンで開けるかと、押し忘れで責められた気にならないこと。次の反復は小さく絞る。通知は誤報リスクがあり大きいので、今回は文言と更新時刻と「あとから飲んだ」までにする。らくらくホンの確認は私たちには環境がなく、家族に開いて見せてもらう運用の確認になる。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span><span class="turn">#20</span></div><div class="text">二人とも ACCEPT、ありがとうございます。要点をまとめます。
+
+共通の声:
+- 由美さん「過去3日の『飲んでない』は言い方が強い。『記録なし』くらいが合っています」
+- トミさん「『飲んでない』と出るのは嫌だ。飲んだのに押し忘れた日もあるべ」
+- 飲んだのに押し忘れた日を、「飲んでない」と読ませてしまうのが一番の問題です。
+
+次の反復(2/2)でやること:
+1. 「飲んでない」を「記録なし」に変える(由美さん画面の過去3日)。トミさん側の画面にも責める印象の文言がないか見直す。
+2. 由美さんの画面に「更新時刻」を出す。いつの情報か分かるようにするため。
+3. 押し忘れの救済として、トミさんが「あとから飲んだ」を押せる導線を足す。時刻は押した時刻を記録し、朝かどうかは判定しない。夜まで「まだ」でも、押し忘れと飲み忘れの区別がつかない不安を減らせます。
+
+今回は入れないもの:
+- 通知。誤報で由美さんが仕事中に呼び出されるリスクがあり、時間帯の設計も要ります。ここまで広げると小さく出せません。次の次で検討します。
+- トレードオフ: 由美さんは画面を見に行く手間が残ります。ただ「記録なし」と「あとから飲んだ」で、見に行って不安が増える場面を先に減らします。
+
+らくらくホンで開けるかは、私たちの環境では確かめられません。トミさん、誰かに一度開いて見せてもらってください。開けない場合は、どの端末か教えてください。
+
+田中さん、ひかりさん、上の3点を受け入れ基準つきでタスクにします。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">TASK</span><span class="turn">#20</span></div><div class="text">T4 owner=eng-frontend: 由美さん画面の文言を「記録なし」にして、更新時刻を出す
+- 過去3日で記録のない日は「飲んでない」ではなく「記録なし」と表示される。
+- 今日の「まだ」は灰色のまま。「飲んでない」「忘れ」など責める印象の語が画面のどこにもない。
+- 画面に「更新 6:42」のように、最後に取得した時刻が出る。
+- 通信に失敗したときは「いま見られません」だけを出し、前回の表示は残さない。
+- 催促や確認を促す文言は出さない。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">TASK</span><span class="turn">#20</span></div><div class="text">T5 owner=eng-backend: 「あとから飲んだ」の記録をAPIで受ける
+- トミさんが、その日の「飲んだ」を押し忘れていても、あとから記録できる。記録時刻は押した時刻になる。
+- 同じ日に2回記録しても、最初の時刻が残る。既存の「飲んだ」と同じ扱いにして、二重に押しても壊れない。
+- 由美さんの <code>status</code> で、あとから記録した日も「飲んだ（時刻）」として出る。
+- 既存のテストが通り、追加の振る舞いにもテストがある。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">TASK</span><span class="turn">#20</span></div><div class="text">T6 owner=eng-frontend: トミさん画面に、押し忘れを責めない導線を足す
+- 今日まだ押していないとき、ボタン上の文言は「きょうは まだ 押していません」のまま、責める印象がない。
+- 夕方や夜に押しても、そのまま「記録しました 時刻」と出る。遅れたことを指摘する文言は出ない。
+- 画面は大きなボタン1つのままで、増やすボタンは作らない。
+- 幅360pxで文字が切れない。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#20</span></div><div class="text">第2反復の範囲は、「記録なし」への文言変更、由美さん画面の更新時刻、押し忘れを責めない導線の3点に絞る。通知は含めない。理由は、誤報で由美さんを呼び出すリスクがあり、時間帯の設計が要るため。トレードオフとして、由美さんが画面を見に行く手間は残る。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#20</span></div><div class="text">第1反復の受け入れ結果は二人とも ACCEPT。条件は、①「飲んでない」を「記録なし」に直す ②らくらくホンで開けるかの確認(環境がなく未確認、家族に開いてもらう) ③押し忘れでトミさんが責められた気にならないこと。由美さんの追加要望は、夜まで「まだ」のときの扱い、更新時刻の表示、遅れたときだけの通知(時間帯指定、誤報は避ける)。通知は第3反復以降の候補。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">ADVANCE</span><span class="turn">#20</span></div><div class="text">受け入れの判定が出そろい、次の反復の範囲を決めた。</div></li></ol></details>
+  <details open><summary>周 1 · wrapup <span class="muted">9</span></summary><ol><li class="sys" data-from="system"><p>Wrap-up before finishing: 3 open task(s), 2 late decision(s) to apply.</p></li><li class="sys" data-from="system"><p>Phase &quot;wrapup&quot; started (iteration 1) — The session is about to end. Engineers apply every decision made during review and acceptance and finish their open tasks ([TASK_DONE]); a task that cannot be finished here gets one line saying why and what is left. PM then confirms what shipped and lists, for the real human, anything still open or needing their decision.</p></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">task</span><span class="turn">#21</span></div><div class="text">T5 → done: 「あとから飲んだ」の記録を API で受けられるようにしました。<code>pnpm test</code> は 30 件すべて通っています。既存の 27 件に 3 件を足しました。
+- 使い方は <code>POST /m/&lt;t&gt;/taken?date=YYYY-MM-DD</code> です。<code>date</code> を省くと今日の記録になり、これまでと同じ動きです。
+- 記録の時刻は押した時刻です。同じ日にもう一度押しても、最初の時刻が残ります。
+- <code>date</code> に使えるのは、今日と過去 3 日だけです。由美さんの画面に出る範囲と同じにしています。未来の日、4 日より前、不正な値は 400 を返し、何も記録しません。
+- あとから記録した日は、<code>status</code> で「飲んだ（時刻）」として出ます。
+- 変更したファイルは <code>src/server.ts</code>、<code>test/server.test.ts</code>、<code>README.md</code> です。README の API の表に行を足しました。
+- 追加したテストは、あとから記録して <code>status</code> に出ること、2 回目は最初の時刻が残ること、<code>date</code> が今日なら通常の記録と同じこと、範囲外が 400 で記録されないことです。
+- <code>pnpm typecheck</code> はこのプロジェクトにありません。型検査は走らせていません。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 鈴木 ひかり, 佐藤 美咲</span><span class="turn">#21</span></div><div class="text">T5 の API はできました。ひかりさんは T6 でこの API を使えます。
+- 呼び方は <code>POST taken?date=2026-10-16</code> です。成功すると、これまでと同じ形の <code>{taken,date,at}</code> を返します。
+- 範囲外の日付は 400 です。本文は JSON とは限らないので、<code>ok</code> でなければエラー表示にしてください。
+- 時刻は押した時刻で、朝かどうかの判定はしません。夕方に押した記録も「飲んだ」になります。
+
+美咲さんへ。API は 1 点だけ、決めたことと違います。「その日の押し忘れ」は、同じ日なら今の <code>taken</code> で足ります。そのため「あとから」は過去の日を指定する形にしました。今日と過去 3 日だけで、それより前は受けません。
+
+トミさん画面の導線は、T6 に残っています。大きなボタン 1 つのままで、どの日を押したことにするかは画面で決める必要があります。決まっていなければ、次の反復でひかりさんと相談します。
+
+T4 と T6 は eng-frontend の担当で、私は触っていません。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">note</span><span class="turn">#21</span></div><div class="text">T5 の API: <code>POST /m/&lt;t&gt;/taken?date=YYYY-MM-DD</code>。<code>date</code> は今日と過去3日のみ。それ以外は 400。<code>at</code> は押した時刻で、先着を保持する。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">task</span><span class="turn">#22</span></div><div class="text">T4 → done: 由美さん画面の文言を直し、更新時刻を出しました。変更は <code>public/f.html</code> だけです。
+- 記録のない過去の日は「記録なし」と出ます。画面のどこにも「飲んでない」「忘れ」はありません。grep で確認しました。
+- 今日の「まだ」は灰色のままです。
+- 一覧の下に「更新 6:42」の形で、最後に取得した時刻（端末の時計）を出します。
+- 通信に失敗したときは「いま見られません」だけを出し、前回の表示も更新時刻も消します。
+- 催促や確認を促す文言は足していません。
+- <code>npm test</code> は通りました。ブラウザでの目視はできていません。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">task</span><span class="turn">#22</span></div><div class="text">T6 → done: トミさん画面は <code>public/m.html</code> を直しました。
+- 押していないときのボタン上の文言は「きょうは まだ 押していません」のままです。
+- ボタンの下の補足を「飲んだら 押してください。」から「あとからでも 押せます。」に変えました。押し忘れた日の救済は、この文言で伝えます。
+- 夕方や夜に押しても、「記録しました 時刻」がそのまま出ます。遅れを指摘する文言はありません。
+- 大きなボタンは 1 つのままです。増やしたボタンはありません。
+- 文字が切れないよう、メッセージに折り返しの指定を足しました。幅 360px の目視はできていません。
+- 前の日の押し忘れを画面から記録する導線は、今回は入れていません。T5 の API（<code>taken?date=</code>）に画面をつなぐと、ボタンが増えます。ボタン 1 つの方針と合わないので、次に決めたいです。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 佐藤 美咲</span><span class="turn">#22</span></div><div class="text">美咲さん、T4 と T6 は終わりました。ブラウザでの目視は、この環境ではできていません。
+- 未確認は 2 点です。幅 360px で文字が切れないことと、「更新 6:42」の見え方です。トミさんと由美さんに見てもらってください。
+- T6 は文言だけの対応です。前の日の押し忘れを画面から記録する導線は、ボタンが増えるので入れていません。画面でどの日を押したことにするか、人間の判断が要ります。
+- 更新時刻は端末の時計です。サーバーの時刻ではありません。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#23</span></div><div class="text">T4〜T6 は完了。レビューと受け入れの決定は反映済み。未確認は、幅 360px の目視、らくらくホンで開けるか、夜の「まだ」の受け止め方。前の日の押し忘れを画面から記録する導線は、ボタン 1 つの方針と衝突していて、人間の判断が要る。最後にまとめる。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span><span class="turn">#23</span></div><div class="text">第1反復の締めです。出荷したものと、残っているものを分けます。
+
+**出荷したもの（T1〜T6 すべて done）**
+- T1: 服薬記録の保存と取得。再起動しても残り、同じ日に2回押しても最初の時刻が残ります。
+- T2: トミさん画面。大きな「飲んだ」ボタンが1つで、押すと「記録しました 6:42」と出ます。
+- T3: 由美さん画面。今日の状態が大きく出て、「まだ」は灰色です。催促の文言はありません。過去3日が見えます。
+- T4: 過去3日で記録のない日は「記録なし」と出ます。「更新 6:42」も出ます。通信失敗時は「いま見られません」だけです。
+- T5: <code>POST /m/&lt;t&gt;/taken?date=</code> で、今日と過去3日の分をあとから記録できます。30件のテストが通っています。
+- T6: トミさん画面の補足を「あとからでも 押せます。」にしました。責める文言はなく、ボタンは1つのままです。
+
+**未確認（人間の確認が要る）**
+- 幅360pxの目視と、「更新 6:42」の見え方。この環境にブラウザがなく、確認できていません。
+- トミさんのらくらくホンで画面が開けるか。家族の誰かに一度開いて見せてもらってください。開けなければ、端末名を教えてください。
+- 夜になっても「まだ」のとき、由美さんがどう感じるか。使ってもらって聞きます。
+
+**人間に決めてほしいこと**
+1. 前の日の押し忘れを、トミさんの画面からどう記録するか。API はできていますが、画面につなぐとボタンが増え、「ボタン1つ」の方針と合いません。今は「あとからでも 押せます。」の文言と、今日の分の記録だけで救済しています。選択肢は、①ボタン1つのままにする、②家族が代わりに記録する、③小さな日付ボタンを足す、の3つです。私のおすすめは①のまま、様子を見ることです。理由は、まず「記録なし」の受け止められ方を見たいからです。
+2. 遅れたときだけの通知を、次の反復に入れるか。由美さんは強く望んでいます。ただ、誤報で仕事中に呼び出されるリスクがあり、通知する時間帯の設計が要ります。
+3. URL の扱い。URL が漏れると、誰でも見られたり押されたりします。LINE で送るときは、家族以外に転送しないよう、トミさんと由美さんに伝えてください。
+4. 更新時刻は端末の時計で、サーバーの時刻ではありません。ずれが気になるようなら直します。</div></li><li class="sys" data-from="system"><p>Session finished after iteration 1. 2/2 users accepted.</p></li></ol></details>
+</div>
+<aside>
+  <section><h2>メンバー</h2><ul><li><span class="dot pm"></span>佐藤 美咲 <span class="muted">pm · pm</span></li><li><span class="dot eng"></span>田中 健 <span class="muted">eng-backend · engineer</span></li><li><span class="dot eng"></span>鈴木 ひかり <span class="muted">eng-frontend · engineer</span></li><li><span class="dot user"></span>佐々木 由美 <span class="muted">user-daughter · user</span></li><li><span class="dot user"></span>佐々木 トミ <span class="muted">user-mother · user</span></li></ul></section>
+  <section><h2>タスク</h2><ul><li><span class="st st-done">done</span> <b>T1</b> 服薬記録の保存と取得 <span class="muted">eng-backend</span><details class="sub"><summary>result</summary><div class="muted small text">服薬記録の保存と取得を実装しました。Node 標準のみで、依存は追加していません。27 件のテストが全部通りました。実際にサーバーを起動して、curl で次を確認しました。
+- ファイルは <code>src/server.ts</code>、<code>store.ts</code>、<code>dates.ts</code>、<code>config.ts</code>、<code>main.ts</code> です。テストは <code>test/*.test.ts</code> に置いています。
+- 起動は <code>node src/main.ts</code> で、起動時に本人用と家族用の URL を表示します。テストは <code>pnpm test</code> です。
+- 日付は日本時間（Asia/Tokyo）で、<code>at</code> は <code>HH:MM</code> のゼロ埋めです。
+- 保存は <code>data/records.json</code> に、一時ファイルを書いてから置き換える方式です。トークンは <code>data/tokens.json</code> に権限 600 で保存します。環境変数 <code>CARE_MOTHER_TOKEN</code> と <code>CARE_FAMILY_TOKEN</code> でも渡せます。本人用と家族用が同じトークンだと起動できません。
+- <code>/m/&lt;t&gt;</code> のようにスラッシュが欠けた URL は、308 で <code>/m/&lt;t&gt;/</code> へ移します。トークンが違う場合は 404 です。
+- 起動し直しても記録は残りました。</div></details></li><li><span class="st st-done">done</span> <b>T2</b> トミさん用画面（飲んだボタン） <span class="muted">eng-frontend</span><details class="sub"><summary>result</summary><div class="muted small text">メッセージをボタンの上に移し、押した直後の時刻が画面の外に出ないようにしました。変更は <code>public/m.html</code> です。動かし方は <code>npm start</code> で、表示された本人用 URL を開きます。</div></details></li><li><span class="st st-done">done</span> <b>T3</b> 由美さん用画面（今日の状況） <span class="muted">eng-frontend</span><details class="sub"><summary>result</summary><div class="muted small text">由美さん用画面は <code>workspace/trial-care/public/f.html</code> にあります。
+- 一番上に今日の状態を大きく出します。「飲んだ（6:42）」は緑、「まだ」は落ち着いた灰色です。赤は使っていません。
+- 催促や確認を促す文言は入れていません。
+- 過去3日は新しい日が上になる一覧で、日付と曜日を付けます。記録のない日も「飲んでない」の行を出します。
+- 通信に失敗したときは「いま見られません」だけにし、前回の表示は消します。
+- 動かし方は <code>npm start</code> で、表示された家族用 URL を開きます。確認したのは、サーバーを実際に起動したときの <code>status</code> の応答（過去3日が3件固定で返ること）と HTML の配信です。</div></details></li><li><span class="st st-done">done</span> <b>T4</b> 由美さん画面の文言を「記録なし」にして、更新時刻を出す <span class="muted">eng-frontend</span><details class="sub"><summary>result</summary><div class="muted small text">由美さん画面の文言を直し、更新時刻を出しました。変更は <code>public/f.html</code> だけです。
+- 記録のない過去の日は「記録なし」と出ます。画面のどこにも「飲んでない」「忘れ」はありません。grep で確認しました。
+- 今日の「まだ」は灰色のままです。
+- 一覧の下に「更新 6:42」の形で、最後に取得した時刻（端末の時計）を出します。
+- 通信に失敗したときは「いま見られません」だけを出し、前回の表示も更新時刻も消します。
+- 催促や確認を促す文言は足していません。
+- <code>npm test</code> は通りました。ブラウザでの目視はできていません。</div></details></li><li><span class="st st-done">done</span> <b>T5</b> 「あとから飲んだ」の記録をAPIで受ける <span class="muted">eng-backend</span><details class="sub"><summary>result</summary><div class="muted small text">「あとから飲んだ」の記録を API で受けられるようにしました。<code>pnpm test</code> は 30 件すべて通っています。既存の 27 件に 3 件を足しました。
+- 使い方は <code>POST /m/&lt;t&gt;/taken?date=YYYY-MM-DD</code> です。<code>date</code> を省くと今日の記録になり、これまでと同じ動きです。
+- 記録の時刻は押した時刻です。同じ日にもう一度押しても、最初の時刻が残ります。
+- <code>date</code> に使えるのは、今日と過去 3 日だけです。由美さんの画面に出る範囲と同じにしています。未来の日、4 日より前、不正な値は 400 を返し、何も記録しません。
+- あとから記録した日は、<code>status</code> で「飲んだ（時刻）」として出ます。
+- 変更したファイルは <code>src/server.ts</code>、<code>test/server.test.ts</code>、<code>README.md</code> です。README の API の表に行を足しました。
+- 追加したテストは、あとから記録して <code>status</code> に出ること、2 回目は最初の時刻が残ること、<code>date</code> が今日なら通常の記録と同じこと、範囲外が 400 で記録されないことです。
+- <code>pnpm typecheck</code> はこのプロジェクトにありません。型検査は走らせていません。</div></details></li><li><span class="st st-done">done</span> <b>T6</b> トミさん画面に、押し忘れを責めない導線を足す <span class="muted">eng-frontend</span><details class="sub"><summary>result</summary><div class="muted small text">トミさん画面は <code>public/m.html</code> を直しました。
+- 押していないときのボタン上の文言は「きょうは まだ 押していません」のままです。
+- ボタンの下の補足を「飲んだら 押してください。」から「あとからでも 押せます。」に変えました。押し忘れた日の救済は、この文言で伝えます。
+- 夕方や夜に押しても、「記録しました 時刻」がそのまま出ます。遅れを指摘する文言はありません。
+- 大きなボタンは 1 つのままです。増やしたボタンはありません。
+- 文字が切れないよう、メッセージに折り返しの指定を足しました。幅 360px の目視はできていません。
+- 前の日の押し忘れを画面から記録する導線は、今回は入れていません。T5 の API（<code>taken?date=</code>）に画面をつなぐと、ボタンが増えます。ボタン 1 つの方針と合わないので、次に決めたいです。</div></details></li></ul></section>
+  
+  <section><h2>判定</h2><ul><li><span class="kind accept">accept</span> 佐々木 由美 <span class="muted">周 1</span><div class="small">第1リリースとして、電話せずに今日の状況が見られるようになりました。灰色の「まだ」と、催促の文言がないところも、私には合っています。条件があります。次の反復で、「飲んでない」の言い方を直してください。夜まで「まだ」のときの扱いと、遅れたときだけ知らせる通知も、検討してください。通知がないままだと、結局画面を何度も見に行って落ち着かないと思います。</div></li><li><span class="kind accept">accept</span> 佐々木 トミ <span class="muted">周 1</span><div class="small">押すボタンが1つだけで大きく、時刻も出るので、わしにも使えそうだ。条件がある。「飲んでない」の言い方は直してけろ。らくらくホンで開けるかも確かめてけろ。押し忘れたときに、わしが責められた気にならねぇようにしてけろ。それなら大丈夫だ。</div></li></ul></section>
+  
+  <section><h2>決定</h2><ul><li class="small">第1リリースは「トミさんが1回押す、由美さんが見る」だけにする。通知、登録、薬ごとの管理、「いま飲んでいいか」の案内は含めない。理由は、課題を「記録がない」に絞るため。飲み忘れの知らせは次の反復で検討する。 <span class="muted">planning</span></li><li class="small">URLの末尾のスラッシュが欠けた場合は、スラッシュ付きへリダイレクトする（T1 の範囲）。通信失敗時は、トミさんの画面に「うまくいきませんでした。もう一度押してください」、由美さんの画面に「いま見られません」を出し、前回の表示は残さない。理由は、記録が残ったか分からない状態や古い「飲んだ」の表示を、黙って成功に見せないため。 <span class="muted">planning</span></li><li class="small">ユーザーによる確認に進める。見てもらうのは次の 3 点とする。
+- トミさん: 「飲んだ」を押した直後に、時刻が一目で分かるか。
+- 由美さん: 灰色の「まだ」を見て、どう感じるか。夜になっても「まだ」のときの見え方も聞く。
+- 二人とも、画面で切れている文字がないか。
+
+理由は、画面の目視ができておらず、夜の「まだ」の受け止め方も使ってもらうしか確かめようがないため。トレードオフとして、見た目の不具合が見つかれば、次の反復で直す。 <span class="muted">review</span></li><li class="small">第2反復の範囲は、「記録なし」への文言変更、由美さん画面の更新時刻、押し忘れを責めない導線の3点に絞る。通知は含めない。理由は、誤報で由美さんを呼び出すリスクがあり、時間帯の設計が要るため。トレードオフとして、由美さんが画面を見に行く手間は残る。 <span class="muted">acceptance</span></li></ul></section>
+</aside>
+</main>
+<script>
+(() => {
+  const priv = document.getElementById("show-private"), who = document.getElementById("who");
+  const apply = () => {
+    document.body.classList.toggle("show-private", priv.checked);
+    for (const li of document.querySelectorAll("li[data-from]")) li.hidden = !!who.value && li.dataset.from !== who.value;
+  };
+  priv.addEventListener("change", apply);
+  who.addEventListener("change", apply);
+  apply();
+})();
+</script>
+</body>
+</html>
