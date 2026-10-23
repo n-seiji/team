@@ -1,7 +1,7 @@
 // The "world" (TinyWorld analogue): roster, shared transcript, phase/turn
 // scheduling and the effects of each action. Pure state transitions live here;
 // persistence is in store.ts so this module is easy to test.
-import type { Entry, EntryKind, PersonaSpec, PhaseDef, SessionState, Task, TaskStatus, Trial } from "./types.ts";
+import type { Entry, EntryKind, PersonaSpec, PhaseDef, SessionState, Task, TaskStatus, Trial, Verdict } from "./types.ts";
 import { parseReply, type Action } from "./protocol.ts";
 import { allowedActions } from "./sop.ts";
 
@@ -170,6 +170,10 @@ export class World {
             this.log("system", "system", `Warning: ${t.id} replaces unknown task "${old}".`);
             continue;
           }
+          if (o.status === "dropped") {
+            this.log("system", "system", `Ignored replaces=${old} from ${m.id}: ${old} is already dropped.`);
+            continue;
+          }
           this.updateTask(m.id, o, "dropped", `replaced by ${t.id}`);
         }
         break;
@@ -182,6 +186,11 @@ export class World {
         const t = s.tasks.find((x) => x.id === tid);
         if (!t) {
           this.log("system", "system", `Ignored [${a.type}] from ${m.id}: unknown task "${tid ?? ""}".`);
+          break;
+        }
+        // A dropped task is closed for good: an engineer's stale TASK_START must not bring it back.
+        if (t.status === "dropped") {
+          this.log("system", "system", `Ignored [${a.type}] from ${m.id}: ${t.id} is already dropped.`);
           break;
         }
         t.owner ??= m.id;
@@ -307,7 +316,7 @@ export class World {
         this.logPhaseStart();
         return;
       }
-      const vs = s.verdicts.filter((v) => v.iteration === s.iteration);
+      const vs = latestVerdicts(s, s.iteration);
       const rejected = vs.filter((v) => v.verdict === "reject");
       // Tasks added after the last chance to build (e.g. users' conditions in acceptance) are new scope:
       // build them in another iteration so users see them, never silently in wrap-up.
@@ -342,7 +351,7 @@ export class World {
   private finish(): void {
     const s = this.state;
     s.status = "done";
-    const vs = s.verdicts.filter((v) => v.iteration === s.iteration);
+    const vs = latestVerdicts(s, s.iteration);
     const accepted = vs.filter((v) => v.verdict === "accept").length;
     const summary = vs.length ? `${accepted}/${vs.length} users accepted.` : "No user verdicts were given.";
     const list = (status: (t: Task) => boolean) =>
@@ -418,6 +427,13 @@ export function wrapupItems(s: SessionState): {
       ? []
       : s.decisions.filter((d) => d.iteration === s.iteration && s.phases.findIndex((p) => p.id === d.phase) >= lastEdit);
   return { tasks: open.filter((t) => !followUps.includes(t)), decisions, followUps };
+}
+
+/** An iteration's outcome: each user's latest verdict in it (a user may speak again and change their mind). */
+export function latestVerdicts(s: SessionState, iteration: number): Verdict[] {
+  const latest = new Map<string, Verdict>();
+  for (const v of s.verdicts) if (v.iteration === iteration) latest.set(v.by, v);
+  return [...latest.values()];
 }
 
 export function currentPhase(s: SessionState): PhaseDef {

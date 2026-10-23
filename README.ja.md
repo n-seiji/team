@@ -53,7 +53,7 @@ reject が1件でもあり、イテレーション上限 (`maxIterations`) に�
 [TASK owner=eng-backend replaces=T1] T1 を置き換えるタスク（T1 は閉じる）
 [TASK_DONE T1] 何をどのファイルに実装し、どう確認したか（実行したコマンドと結果、または「未実行」）
 [TASK_BLOCKED T1] 実機・アカウント・公開など、人にしかできない作業。人が何をすればよいか
-[TASK_DROP T1] やらないことにしたタスクを閉じる（PM のみ）。理由
+[TASK_DROP T1] やらないことにしたタスクを閉じる（PM のみ）。理由を添える。閉じたタスクは再開できない
 [ASK_HUMAN] 本物の人にしか答えられない質問と、それまでチームが進める既定の案
 [VERIFY] ユーザーと同じ手順でプロダクトを試し、見たものを出力し、スクリーンショットを $TEAM_ARTIFACTS に保存する 1 行のコマンド
 [DECISION] チームの決定事項
@@ -118,6 +118,8 @@ node src/main.ts record --as pm --file reply.txt
 | `mock` | なし | 決まった返答で1イテレーションを流す。テスト・デモ用 |
 
 モデルは `team.config.json` の `backend.model`、`--model`、環境変数 `TEAM_MODEL` で指定できます。
+
+`claude-cli` の各ターンが読み込むのは、プロジェクト（外部ワークスペースならそのワークスペース）の Claude Code 設定と、ユーザー設定のうち deny ルール・`env`・`apiKeyHelper` だけです。グローバルのルール・プラグイン・フック・スキルは読み込みません。
 
 ## カスタマイズ
 

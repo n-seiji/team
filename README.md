@@ -54,7 +54,7 @@ acceptance criteria (on the following lines)
 [TASK owner=eng-backend replaces=T1] a task that supersedes T1 (T1 is closed)
 [TASK_DONE T1] what was implemented, in which files, and how it was verified (the command and its result, or "not run")
 [TASK_BLOCKED T1] only a real person can finish this (a real device, an account, publishing): what they must do
-[TASK_DROP T1] close a task the team will not do (PM only), with the reason
+[TASK_DROP T1] close a task the team will not do (PM only), with the reason; it cannot be reopened
 [ASK_HUMAN] a question only the real human can answer, plus the default the team goes ahead with
 [DEMO T1] what a user does and sees, with real output (pasted, or a generated file / screenshot path)
 [VERIFY] one shell command that tries the product like a user, prints what it saw and saves screenshots to $TEAM_ARTIFACTS
@@ -132,6 +132,8 @@ node src/main.ts record --as pm --file reply.txt
 | `mock` | nothing | Canned replies through one iteration. For tests and demos |
 
 Set the model with `backend.model` in `team.config.json`, `--model`, or the `TEAM_MODEL` environment variable.
+
+`claude-cli` turns load only the project's (and the external workspace's) Claude Code settings plus your deny rules, `env` and `apiKeyHelper` from the user settings. Global rules, plugins, hooks and skills are not loaded.
 
 ## Customization
 

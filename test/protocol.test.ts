@@ -35,3 +35,26 @@ test("handles CRLF line endings (Windows)", () => {
   assert.deepEqual(a.map((x) => x.type), ["SAY", "DONE"]);
   assert.equal(a[0].text, "hi");
 });
+
+test("a colon copied from the transcript format right after a tag is dropped", () => {
+  const a = parseReply("[DECISION]: 日付は ISO 形式\n[NOTE] : 覚えておく\n[SAY to=pm]:\nこんにちは\n[VERDICT accept]:  OK");
+  assert.deepEqual(
+    a.map((x) => [x.type, x.text]),
+    [["DECISION", "日付は ISO 形式"], ["NOTE", "覚えておく"], ["SAY", "こんにちは"], ["VERDICT", "OK"]],
+  );
+  assert.equal(a[2].attrs.to, "pm");
+  assert.equal(a[3].arg, "accept");
+});
+
+test("[ADVANCE]: with nothing after the colon is an empty ADVANCE", () => {
+  const a = parseReply("[ADVANCE]:");
+  assert.deepEqual(a.map((x) => [x.type, x.text]), [["ADVANCE", ""]]);
+});
+
+test("colons that are not right after a tag stay in the text", () => {
+  const a = parseReply("[SAY to=all] 10:30 です\n[NOTE] :smile: ok\n[DECISION] 期限: 金曜\n[SAY] http://x:80");
+  assert.deepEqual(
+    a.map((x) => x.text),
+    ["10:30 です", ":smile: ok", "期限: 金曜", "http://x:80"],
+  );
+});
