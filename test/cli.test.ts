@@ -5,6 +5,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { execFileSync } from "node:child_process";
 import { main } from "../src/cli.ts";
+import { ReplyError } from "../src/usage.ts";
 
 const repo = path.resolve(import.meta.dirname, "..");
 
@@ -210,4 +211,350 @@ test("run keeps going when a member's turn fails twice", async () => {
   } finally {
     MockBackend.prototype.respond = orig;
   }
+});
+
+interface UsageLine {
+  turn: number;
+  member: string;
+  role: string;
+  phase: string;
+  iteration: number;
+  source: string;
+  promptChars?: number;
+  replyChars: number;
+  tokens?: Record<string, number>;
+  reportedTokens?: number;
+  costUsd?: number;
+  durationMs?: number;
+  modelCalls?: number;
+  skipped?: boolean;
+}
+
+function usageFile(dir: string, name: string): string {
+  return path.join(dir, ".team/sessions", name, "usage.jsonl");
+}
+
+function usageLines(dir: string, name: string): UsageLine[] {
+  const f = usageFile(dir, name);
+  return fs.existsSync(f)
+    ? fs.readFileSync(f, "utf8").split("\n").filter((l) => l.trim()).map((l) => JSON.parse(l) as UsageLine)
+    : [];
+}
+
+test("auto mode writes one usage line per turn, in the phase the member spoke in", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "u1", "--brief", "使用量");
+  await run(dir, "run", "--backend", "mock");
+  const state = JSON.parse(fs.readFileSync(path.join(dir, ".team/sessions/u1/state.json"), "utf8"));
+  const lines = usageLines(dir, "u1");
+  assert.equal(lines.length, state.turn);
+  assert.deepEqual(lines.map((l) => l.turn), Array.from({ length: state.turn }, (_, i) => i + 1));
+  for (const l of lines) {
+    assert.equal(l.source, "mock");
+    assert.ok(l.promptChars! > 0, `turn ${l.turn} has a prompt size`);
+    assert.ok(l.replyChars > 0, `turn ${l.turn} has a reply size`);
+    assert.equal(l.tokens, undefined, "the mock backend reports no tokens");
+  }
+  assert.deepEqual(
+    { member: lines[0].member, role: lines[0].role, phase: lines[0].phase, iteration: lines[0].iteration },
+    { member: "pm", role: "pm", phase: "discovery", iteration: 1 },
+  );
+  // a reply that moves the session on still belongs to the phase it was said in
+  const transcript = fs.readFileSync(path.join(dir, ".team/sessions/u1/transcript.jsonl"), "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l));
+  for (const l of lines) {
+    for (const e of transcript.filter((e) => e.turn === l.turn && e.from === l.member)) assert.equal(e.phase, l.phase, `turn ${l.turn}`);
+  }
+});
+
+test("host mode: record --tokens writes a host usage line sized from the prompt that next wrote", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "u2", "--brief", "x");
+  const pending = JSON.parse(await run(dir, "next", "--json")).pending[0];
+  const promptChars = fs.readFileSync(path.join(dir, pending.promptFile), "utf8").length;
+  const reply = writeReply(dir, "[SAY to=user-garcia] 最近いつ家計簿をつけましたか？");
+  await run(dir, "record", "--as", "pm", "--file", reply, "--tokens", "1234", "--duration-ms", "500");
+  const [line, ...rest] = usageLines(dir, "u2");
+  assert.equal(rest.length, 0);
+  assert.equal(line.source, "host");
+  assert.equal(line.turn, 1);
+  assert.equal(line.member, "pm");
+  assert.equal(line.phase, "discovery");
+  assert.equal(line.promptChars, promptChars);
+  assert.equal(line.replyChars, "[SAY to=user-garcia] 最近いつ家計簿をつけましたか？".length);
+  assert.equal(line.reportedTokens, 1234);
+  assert.equal(line.tokens, undefined, "a number the orchestrator reported is not a measured part");
+  assert.equal(line.durationMs, 500);
+
+  // scheduling and reading the session again never add or change lines
+  await run(dir, "next", "--json");
+  await run(dir, "next", "--json");
+  await run(dir, "status");
+  assert.equal(usageLines(dir, "u2").length, 1);
+  await run(dir, "record", "--as", "user-garcia", "--file", writeReply(dir, "[SAY to=pm] 先月です。"), "--json");
+  const lines = usageLines(dir, "u2");
+  assert.equal(lines.length, 2);
+  assert.equal(lines[1].reportedTokens, undefined, "without --tokens nothing is claimed");
+  assert.equal(lines[1].tokens, undefined);
+  assert.equal(lines[1].durationMs, undefined);
+});
+
+test("host mode: the prompt size comes from the member's own newest prompt file", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "u3", "--brief", "x");
+  const pending = JSON.parse(await run(dir, "next", "--json")).pending[0];
+  const turns = path.dirname(path.join(dir, pending.promptFile));
+  // another member whose id ends with "-pm", and an older prompt of pm's own
+  fs.writeFileSync(path.join(turns, "0099-user-pm.prompt.md"), "z".repeat(777));
+  const own = fs.readFileSync(path.join(dir, pending.promptFile), "utf8").length;
+  await run(dir, "record", "--as", "pm", "--file", writeReply(dir, "[SAY to=all] hi"));
+  assert.equal(usageLines(dir, "u3")[0].promptChars, own);
+});
+
+test("host mode: an interjection does not claim an old prompt's size", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "u4", "--brief", "x");
+  const pending = JSON.parse(await run(dir, "next", "--json")).pending[0];
+  fs.writeFileSync(path.join(path.dirname(path.join(dir, pending.promptFile)), "0042-user-garcia.prompt.md"), "z".repeat(777));
+  await run(dir, "record", "--as", "user-garcia", "--force", "--file", writeReply(dir, "[SAY to=all] 割り込みです"));
+  const [line] = usageLines(dir, "u4");
+  assert.equal(line.member, "user-garcia");
+  assert.equal(line.promptChars, undefined);
+});
+
+test("record rejects --tokens and --duration-ms that are not whole non-negative numbers, before using the turn", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "u5", "--brief", "x");
+  await run(dir, "next", "--json");
+  const reply = writeReply(dir, "[SAY to=all] hi");
+  await assert.rejects(run(dir, "record", "--as", "pm", "--file", reply, "--tokens", "abc"), /--tokens/);
+  await assert.rejects(run(dir, "record", "--as", "pm", "--file", reply, "--tokens", "-5"), /--tokens/);
+  await assert.rejects(run(dir, "record", "--as", "pm", "--file", reply, "--tokens", "1.5"), /--tokens/);
+  await assert.rejects(run(dir, "record", "--as", "pm", "--file", reply, "--duration-ms", "soon"), /--duration-ms/);
+  assert.equal(usageLines(dir, "u5").length, 0);
+  assert.equal(JSON.parse(await run(dir, "status", "--json")).turn, 0, "the turn was not recorded");
+  await run(dir, "record", "--as", "pm", "--file", reply, "--tokens", "0");
+  assert.equal(usageLines(dir, "u5")[0].reportedTokens, 0);
+});
+
+// discovery: two measured turns. build: a host turn that only has an orchestrator's number, and a skipped turn whose failed attempts still cost.
+// wrapup: a turn with no token data at all.
+const FIXTURE_LINES = [
+  { turn: 1, member: "pm", role: "pm", phase: "discovery", iteration: 1, at: "t", source: "claude-cli", promptChars: 1000, replyChars: 50, tokens: { input: 10, cacheWrite: 100, cacheRead: 1000, output: 20 }, costUsd: 0.5, durationMs: 4000, modelCalls: 2 },
+  { turn: 2, member: "user-garcia", role: "user", phase: "discovery", iteration: 1, at: "t", source: "claude-cli", promptChars: 2000, replyChars: 70, tokens: { input: 5, cacheWrite: 0, cacheRead: 2000, output: 30 }, costUsd: 0.25, durationMs: 1500, modelCalls: 1 },
+  { turn: 3, member: "eng-backend", role: "engineer", phase: "build", iteration: 1, at: "t", source: "host", promptChars: 3000, replyChars: 90, reportedTokens: 500, durationMs: 2000 },
+  { turn: 4, member: "eng-frontend", role: "engineer", phase: "build", iteration: 1, at: "t", source: "claude-cli", promptChars: 400, replyChars: 30, tokens: { input: 2, cacheRead: 300 }, costUsd: 0.125, durationMs: 900, modelCalls: 1, skipped: true },
+  { turn: 5, member: "pm", role: "pm", phase: "wrapup", iteration: 1, at: "t", source: "mock", promptChars: 10, replyChars: 5 },
+];
+
+test("stats --json totals match the usage lines, per phase and per role", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "s1", "--brief", "x");
+  fs.writeFileSync(usageFile(dir, "s1"), FIXTURE_LINES.map((l) => JSON.stringify(l)).join("\n") + "\n");
+  const stats = JSON.parse(await run(dir, "stats", "--json"));
+  assert.equal(stats.session, "s1");
+  assert.equal(stats.recorded, true);
+  assert.deepEqual(stats.total, {
+    turns: 5,
+    skippedTurns: 1,
+    promptChars: 6410,
+    replyChars: 245,
+    tokens: { input: 17, cacheWrite: 100, cacheRead: 3300, output: 50 },
+    reportedTokens: { total: 500, turns: 1 },
+    costUsd: 0.875,
+    durationMs: 8400,
+    modelCalls: 4,
+    turnsWithoutMeasuredTokens: 2,
+    turnsWithoutCost: 2,
+  });
+  assert.deepEqual(Object.keys(stats.byPhase), ["discovery", "build", "wrapup"]);
+  assert.deepEqual(stats.byPhase.discovery, {
+    turns: 2,
+    skippedTurns: 0,
+    promptChars: 3000,
+    replyChars: 120,
+    tokens: { input: 15, cacheWrite: 100, cacheRead: 3000, output: 50 },
+    costUsd: 0.75,
+    durationMs: 5500,
+    modelCalls: 3,
+    turnsWithoutMeasuredTokens: 0,
+    turnsWithoutCost: 0,
+  });
+  assert.deepEqual(stats.byPhase.build, {
+    turns: 2,
+    skippedTurns: 1,
+    promptChars: 3400,
+    replyChars: 120,
+    tokens: { input: 2, cacheRead: 300 },
+    reportedTokens: { total: 500, turns: 1 },
+    costUsd: 0.125,
+    durationMs: 2900,
+    modelCalls: 1,
+    turnsWithoutMeasuredTokens: 1,
+    turnsWithoutCost: 1,
+  });
+  // nothing was measured, so nothing is claimed: no zeros that look like measurements
+  assert.deepEqual(stats.byPhase.wrapup, { turns: 1, skippedTurns: 0, promptChars: 10, replyChars: 5, turnsWithoutMeasuredTokens: 1, turnsWithoutCost: 1 });
+  assert.deepEqual(Object.keys(stats.byRole), ["pm", "user", "engineer"]);
+  assert.equal(stats.byRole.engineer.turns, 2);
+  assert.equal(stats.byRole.engineer.skippedTurns, 1);
+  assert.deepEqual(stats.byRole.engineer.reportedTokens, { total: 500, turns: 1 });
+});
+
+test("stats prints measured parts and the orchestrator's number apart, with no grand total of tokens", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "s2", "--brief", "x");
+  fs.writeFileSync(usageFile(dir, "s2"), FIXTURE_LINES.map((l) => JSON.stringify(l)).join("\n") + "\n");
+  const out = await run(dir, "stats");
+  const line = (label: string) => out.split("\n").find((l) => l.trimStart().startsWith(`${label}:`)) ?? assert.fail(`no line for ${label} in\n${out}`);
+  assert.match(line("session s2"), /5 turns \(1 skipped\)/);
+  assert.match(out, /by phase/);
+  assert.match(out, /by role/);
+  const discovery = line("discovery");
+  assert.match(discovery, /input 15, cache write 100, cache read 3,000, output 50/);
+  assert.match(discovery, /\$0\.7500/);
+  assert.match(discovery, /3 model calls/);
+  assert.match(discovery, /5\.5s/);
+  assert.doesNotMatch(discovery, /reported by orchestrator/);
+  const build = line("build");
+  assert.match(build, /2 turns \(1 skipped\)/);
+  assert.match(build, /input 2, cache read 300 \(on 1 of 2 turns\)/);
+  assert.match(build, /reported by orchestrator: 500 over 1 turn/);
+  assert.match(build, /\$0\.1250 \(on 1 of 2 turns\)/);
+  assert.match(line("wrapup"), /tokens -.*cost -/);
+  assert.doesNotMatch(out, /3,467|3,967|3,665/, "no sum of cache reads with the other parts, or with the orchestrator's number");
+});
+
+test("stats on a real mock run counts every turn", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "s3", "--brief", "x");
+  await run(dir, "run", "--backend", "mock");
+  const lines = usageLines(dir, "s3");
+  const stats = JSON.parse(await run(dir, "stats", "--json"));
+  assert.equal(stats.total.turns, lines.length);
+  assert.equal(stats.total.turnsWithoutMeasuredTokens, lines.length);
+  assert.equal(stats.total.turnsWithoutCost, lines.length);
+  for (const key of ["tokens", "reportedTokens", "costUsd", "durationMs", "modelCalls"]) assert.ok(!(key in stats.total), `${key} is left out when nothing reported it`);
+  assert.equal(stats.total.promptChars, lines.reduce((n, l) => n + l.promptChars!, 0));
+  assert.equal(stats.total.replyChars, lines.reduce((n, l) => n + l.replyChars, 0));
+  assert.equal(Object.values<{ turns: number }>(stats.byPhase).reduce((n, p) => n + p.turns, 0), lines.length);
+  assert.equal(Object.values<{ turns: number }>(stats.byRole).reduce((n, r) => n + r.turns, 0), lines.length);
+});
+
+test("stats on a session saved before usage was recorded says so", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "old", "--brief", "x");
+  assert.match(await run(dir, "stats"), /no usage recorded/i);
+  assert.deepEqual(JSON.parse(await run(dir, "stats", "--json")), { session: "old", recorded: false });
+});
+
+/** Runs the mock backend with `respond` wrapped, so a test can add usage to a reply or fail an attempt. */
+async function runWithBackend(
+  dir: string,
+  wrap: (p: { member: string }, original: () => Promise<{ text: string; usage?: object }>) => Promise<{ text: string; usage?: object }>,
+): Promise<string> {
+  const { MockBackend } = await import("../src/backends/mock.ts");
+  const orig = MockBackend.prototype.respond;
+  MockBackend.prototype.respond = function (p, ctx) {
+    return wrap(p, () => orig.call(this, p, ctx));
+  };
+  try {
+    return await run(dir, "run", "--backend", "mock");
+  } finally {
+    MockBackend.prototype.respond = orig;
+  }
+}
+
+test("auto mode records the usage a backend reports for each turn", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "r1", "--brief", "x");
+  await runWithBackend(dir, async (_p, original) => ({
+    ...(await original()),
+    usage: { tokens: { input: 10, cacheRead: 100, output: 5 }, costUsd: 0.5, durationMs: 1000, modelCalls: 2 },
+  }));
+  const lines = usageLines(dir, "r1");
+  assert.ok(lines.length > 0);
+  for (const l of lines) {
+    assert.deepEqual(l.tokens, { input: 10, cacheRead: 100, output: 5 }, `turn ${l.turn}`);
+    assert.equal(l.costUsd, 0.5);
+    assert.equal(l.durationMs, 1000);
+    assert.equal(l.modelCalls, 2);
+    assert.equal(l.skipped, undefined);
+  }
+  const { total } = JSON.parse(await run(dir, "stats", "--json"));
+  const n = lines.length;
+  assert.deepEqual(total.tokens, { input: 10 * n, cacheRead: 100 * n, output: 5 * n });
+  assert.equal(total.costUsd, 0.5 * n);
+  assert.equal(total.durationMs, 1000 * n);
+  assert.equal(total.modelCalls, 2 * n);
+  assert.equal(total.turnsWithoutCost, 0);
+});
+
+test("a turn that works on the retry records what both attempts cost", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "r2", "--brief", "x");
+  let failed = false;
+  const out = await runWithBackend(dir, async (p, original) => {
+    if (p.member !== "pm") return original();
+    if (!failed) {
+      failed = true;
+      throw new ReplyError("API Error: overloaded", { tokens: { input: 100, cacheRead: 1000 }, costUsd: 0.5, durationMs: 700, modelCalls: 1 });
+    }
+    return { ...(await original()), usage: { tokens: { input: 10, output: 5 }, costUsd: 0.25, durationMs: 300, modelCalls: 2 } };
+  });
+  assert.match(out, /retrying once/);
+  const first = usageLines(dir, "r2")[0];
+  assert.equal(first.member, "pm");
+  assert.deepEqual(first.tokens, { input: 110, cacheRead: 1000, output: 5 });
+  assert.equal(first.costUsd, 0.75);
+  assert.equal(first.durationMs, 1000);
+  assert.equal(first.modelCalls, 3);
+  assert.equal(first.skipped, undefined);
+  assert.ok(first.replyChars > "[SAY to=all] (could not attend this turn)".length, "the reply is the retry's, not the skip notice");
+});
+
+test("a skipped turn is marked, and keeps what its failed attempts cost", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "r3", "--brief", "x");
+  const attempts = [
+    { tokens: { input: 100, cacheRead: 1000 }, costUsd: 0.5, durationMs: 700, modelCalls: 1 },
+    { tokens: { input: 50, output: 3 }, costUsd: 0.25, durationMs: 200, modelCalls: 2 },
+  ];
+  const out = await runWithBackend(dir, async (p, original) => {
+    const usage = p.member === "user-yamada" ? attempts.shift() : undefined;
+    if (usage) throw new ReplyError("API Error: flagged", usage);
+    return original();
+  });
+  assert.match(out, /user-yamada skips this turn: API Error: flagged/);
+  const lines = usageLines(dir, "r3");
+  const skipped = lines.filter((l) => l.skipped);
+  assert.equal(skipped.length, 1);
+  assert.equal(skipped[0].member, "user-yamada");
+  assert.deepEqual(skipped[0].tokens, { input: 150, cacheRead: 1000, output: 3 });
+  assert.equal(skipped[0].costUsd, 0.75);
+  assert.equal(skipped[0].durationMs, 900);
+  assert.equal(skipped[0].modelCalls, 3);
+  const { total, byRole } = JSON.parse(await run(dir, "stats", "--json"));
+  assert.equal(total.turns, lines.length);
+  assert.equal(total.skippedTurns, 1);
+  assert.equal(total.costUsd, 0.75, "the skipped turn's cost is in the total");
+  assert.equal(byRole.user.skippedTurns, 1);
+  assert.match(await run(dir, "stats"), /1 skipped/);
+});
+
+test("stats ignores a half-written last line of usage.jsonl, but not a damaged line before it", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "t1", "--brief", "x");
+  const whole = JSON.stringify(FIXTURE_LINES[0]);
+  fs.writeFileSync(usageFile(dir, "t1"), `${whole}\n{"turn":2,"member":"user-gar`);
+  assert.equal(JSON.parse(await run(dir, "stats", "--json")).total.turns, 1);
+  fs.writeFileSync(usageFile(dir, "t1"), `{"turn":1,"mem\n${whole}\n`);
+  await assert.rejects(run(dir, "stats", "--json"), SyntaxError);
+});
+
+test("the transcript is still read strictly: a half-written last line is an error", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "t2", "--brief", "x");
+  await run(dir, "next", "--json");
+  fs.appendFileSync(path.join(dir, ".team/sessions/t2/transcript.jsonl"), '{"turn":1,"at":"t');
+  await assert.rejects(run(dir, "log"), SyntaxError);
 });

@@ -8,7 +8,8 @@ import * as path from "node:path";
 import type { BackendConfig } from "../types.ts";
 import type { TurnPrompt } from "../prompt.ts";
 import { promptAsText } from "../prompt.ts";
-import type { Backend, TurnContext } from "./index.ts";
+import { ReplyError, nonNegative, tokensFromApi } from "../usage.ts";
+import type { Backend, BackendReply, TurnContext } from "./index.ts";
 
 const READ_ONLY = ["Read", "Glob", "Grep"];
 const BUILDER = ["Read", "Glob", "Grep", "Write", "Edit", "Bash"];
@@ -35,6 +36,32 @@ function userSettingsToForward(): string | undefined {
   return Object.keys(out).length > 0 ? JSON.stringify(out) : undefined;
 }
 
+/**
+ * Reads what `claude -p --output-format json` printed. It prints a result object even when it exits 1 (API errors, refusals), so the
+ * object is read before the exit code is judged. An `is_error` result is a failure even when claude exits 0, and a failure still
+ * carries the tokens and cost claude reported for it.
+ */
+function settle(code: number | null, stdout: string, stderr: string): BackendReply {
+  const raw = stdout.trim();
+  let r: Record<string, unknown> | undefined;
+  try {
+    const parsed = JSON.parse(raw);
+    if (typeof parsed === "object" && parsed !== null) r = parsed;
+  } catch {}
+  const usage = r && {
+    tokens: tokensFromApi(r.usage),
+    costUsd: nonNegative(r.total_cost_usd),
+    durationMs: nonNegative(r.duration_ms),
+    modelCalls: nonNegative(r.num_turns),
+  };
+  const reason = (typeof r?.result === "string" && r.result) || undefined;
+  if (code !== 0) throw new ReplyError(`claude exited with ${code}: ${(reason ?? (stderr.trim() || raw)).slice(0, 500)}`, usage);
+  if (!r) throw new ReplyError(`claude output is not JSON: ${raw.slice(0, 500)}`);
+  if (r.is_error) throw new ReplyError(reason ?? `claude reported an error: ${raw.slice(0, 500)}`, usage);
+  if (typeof r.result !== "string") throw new ReplyError(`claude's JSON has no result: ${raw.slice(0, 500)}`, usage);
+  return { text: r.result.trim(), usage };
+}
+
 export class ClaudeCliBackend implements Backend {
   private model?: string;
   private bin: string;
@@ -46,12 +73,12 @@ export class ClaudeCliBackend implements Backend {
     this.userSettings = userSettingsToForward();
   }
 
-  respond(p: TurnPrompt, ctx: TurnContext): Promise<string> {
+  respond(p: TurnPrompt, ctx: TurnContext): Promise<BackendReply> {
     // Fixed context is paid on every turn (~62k tokens for a tiny prompt, ~5k with these flags): load only the granted tool definitions
     // (--allowedTools just permits them), only the project's and workspace's settings (--setting-sources: no user-level rules,
     // plugins, hooks or skills) and no MCP servers (--strict-mcp-config). The user's deny/env/apiKeyHelper come back via --settings.
     const tools = (p.canEdit ? BUILDER : READ_ONLY).join(",");
-    const args = ["-p", "--output-format", "text", "--strict-mcp-config", "--allowedTools", tools, "--tools", tools];
+    const args = ["-p", "--output-format", "json", "--strict-mcp-config", "--allowedTools", tools, "--tools", tools];
     args.push("--setting-sources", "project,local", "--disable-slash-commands");
     if (this.userSettings) args.push("--settings", this.userSettings);
     if (p.canEdit) args.push("--permission-mode", "acceptEdits");
@@ -73,13 +100,19 @@ export class ClaudeCliBackend implements Backend {
       });
       let out = "";
       let err = "";
+      // decode whole characters: a chunk boundary can fall inside a multi-byte one
+      child.stdout.setEncoding("utf8");
+      child.stderr.setEncoding("utf8");
       child.stdout.on("data", (d) => (out += d));
       child.stderr.on("data", (d) => (err += d));
       child.on("error", (e) => reject(new Error(`failed to start "${this.bin}": ${e.message}`)));
-      child.on("close", (code) =>
-                // `claude -p` prints API errors (e.g. a safety refusal) on stdout, so report both streams.
-        code === 0 ? resolve(out.trim()) : reject(new Error(`claude exited with ${code}: ${(err.trim() || out.trim()).slice(0, 500)}`)),
-      );
+      child.on("close", (code) => {
+        try {
+          resolve(settle(code, out, err));
+        } catch (e) {
+          reject(e);
+        }
+      });
       child.stdin.end(input);
     });
   }

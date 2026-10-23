@@ -171,6 +171,48 @@ export interface Entry {
   text: string;
 }
 
+/** Token counts a backend measured for one reply. Cache reads cost about a tenth of the other parts, so the parts are never added up. */
+export interface TokenUsage {
+  input?: number;
+  cacheWrite?: number;
+  cacheRead?: number;
+  output?: number;
+}
+
+export type UsageSource = "claude-cli" | "anthropic" | "host" | "mock";
+
+/** What a backend measured for one reply; everything is optional because a backend may measure nothing. */
+export interface ReplyUsage {
+  tokens?: TokenUsage;
+  costUsd?: number;
+  durationMs?: number;
+  /** Model calls the reply took (`claude -p` agentic turns). */
+  modelCalls?: number;
+}
+
+/** One line of usage.jsonl: what one recorded reply cost. */
+export interface TurnUsage extends ReplyUsage {
+  /** `state.turn` after the reply was recorded. */
+  turn: number;
+  member: string;
+  role: Role;
+  /** The phase and iteration the reply was given in (before recording it moved the schedule on). */
+  phase: string;
+  iteration: number;
+  at: string;
+  /** Size of the prompt the member got, when known (a host reply with no prompt file has none). */
+  promptChars?: number;
+  replyChars: number;
+  source: UsageSource;
+  /**
+   * The one token number an orchestrator reported for the reply (`record --tokens`), kept as given. It is not one of the measured
+   * parts and never added to them: whether it counts cache reads, or all of a subagent's calls so far, is not known.
+   */
+  reportedTokens?: number;
+  /** Every attempt failed, so the member skipped the turn; the usage is what the failed attempts cost. */
+  skipped?: boolean;
+}
+
 export interface TeamConfig {
   language?: string;
   /** Parent folder for products; each session builds in `<workspace>/<session name>/`. */

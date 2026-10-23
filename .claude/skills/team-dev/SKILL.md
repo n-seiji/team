@@ -52,6 +52,10 @@ Repeat until the session is `done`, or until the stopping point the user asked f
    TEAM_REPLY_END
    ```
    The `--json` output is the next step 1 result, so go straight to step 2 (no separate `team next`).
+   When the Agent result reports a token total for the subagent (shown as `subagent_tokens` in Claude Code), pass
+   it to that member's `record` as `--tokens <n>` (and `--duration-ms <n>` if a duration is reported). The number is
+   recorded as reported and `team stats` keeps it apart from the tokens the engine measures itself, so do not adjust,
+   add up or estimate it. Leave the flags off when no number is reported.
    Do not edit, summarize or "fix" a reply; if a subagent replied with no tags at all, record it anyway (untagged
    text becomes `[SAY]`). If a reply itself contains a line `TEAM_REPLY_END`, write it to `.team/inbox/<member>.txt`
    and use `--file` instead.
@@ -62,8 +66,8 @@ Repeat until the session is `done`, or until the stopping point the user asked f
 
 ## 3. Finish
 
-- Show `team status` (backlog with results, tasks waiting on a person, questions for the human) and the users'
-  verdicts, and point to
+- Show `team status` (backlog with results, tasks waiting on a person, questions for the human), the users'
+  verdicts and `team stats` (tokens, cost and prompt size per phase and role), and point to
   `.team/sessions/<name>/transcript.html` (the full conversation to read in a browser; `transcript.md` is the same in
   Markdown) and `workspace/<name>/`. Trial runs and screenshots are in `.team/sessions/<name>/artifacts/`.
 - Suggest next steps: another iteration (if users rejected and iterations remain the engine already looped back to

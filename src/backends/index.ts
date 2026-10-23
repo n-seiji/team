@@ -1,4 +1,4 @@
-import type { BackendConfig, SessionState } from "../types.ts";
+import type { BackendConfig, ReplyUsage, SessionState } from "../types.ts";
 import type { TurnPrompt } from "../prompt.ts";
 import { AnthropicBackend } from "./anthropic.ts";
 import { ClaudeCliBackend } from "./claude-cli.ts";
@@ -9,9 +9,15 @@ export interface TurnContext {
   root: string;
 }
 
-/** Something that can produce an agent's reply for one turn. */
+export interface BackendReply {
+  text: string;
+  /** Whatever the backend could measure for this reply. */
+  usage?: ReplyUsage;
+}
+
+/** Something that can produce an agent's reply for one turn. A failed attempt that still cost something rejects with a `ReplyError` that carries its usage. */
 export interface Backend {
-  respond(prompt: TurnPrompt, ctx: TurnContext): Promise<string>;
+  respond(prompt: TurnPrompt, ctx: TurnContext): Promise<BackendReply>;
 }
 
 export function createBackend(cfg: BackendConfig): Backend {

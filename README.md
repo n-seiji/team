@@ -80,6 +80,7 @@ Claude Code then repeats `team next` → subagent → `team record`. Anything yo
 
 - Full conversation, including each member's private thoughts: `.team/sessions/<name>/transcript.md`, or `transcript.html` to read it in a browser (grouped by phase, filter by member, private memos hidden by default; `team log --html` prints its path and renders it for older sessions)
 - Trial runs and evidence files: `.team/sessions/<name>/artifacts/`
+- What each reply really cost: `.team/sessions/<name>/usage.jsonl`, one line per recorded reply with the member, phase, iteration, prompt and reply size in characters, and what the backend measured: the four token counts (input, cache write, cache read, output), USD cost, duration and model calls. Failed attempts count too, and a turn skipped after two failures is marked `skipped`. The one token number an orchestrator passes to `record --tokens` is stored as `reportedTokens`, apart from the measured counts, which it is never added to. `team stats` sums the lines by phase and role and never adds cache reads to the other counts. `team stats --json` prints `{ session, recorded: true, total, byPhase, byRole }`, where each group has its turn counts (`turns`, `skippedTurns`, `turnsWithoutCost`, `turnsWithoutMeasuredTokens`) and leaves out any figure nobody reported (`tokens`, `costUsd`, `durationMs`, `modelCalls`, `reportedTokens`); a session with no usage lines (saved before this, or nothing recorded yet) prints `{ session, recorded: false }`
 - The product being built: `workspace/<name>/` (each session gets its own folder)
 
 #### Claude Code on the web and Claude Projects
@@ -99,6 +100,7 @@ node src/main.ts run --backend claude-cli                        # auto mode: ea
 ANTHROPIC_API_KEY=... node src/main.ts run --backend anthropic   # auto mode: Messages API directly
 node src/main.ts run --backend mock                              # walk the flow without any LLM
 node src/main.ts log --tail 20 --no-thoughts                     # transcript
+node src/main.ts stats                                           # real tokens and cost per phase and role (--json for scripts)
 node src/main.ts say "Let's focus on sole proprietors"           # speak to the team as the human
 ```
 
@@ -121,7 +123,7 @@ To drive host mode yourself (for example from another agent framework):
 ```bash
 node src/main.ts next --json          # → pending: [{ member, role, subagent, canEdit, promptFile }]
 # give promptFile to an LLM and collect its reply
-node src/main.ts record --as pm --file reply.txt
+node src/main.ts record --as pm --file reply.txt [--tokens N] [--duration-ms N]   # optional: the token total and duration the orchestrator reported for the turn, for team stats
 ```
 
 | Backend | Requires | Notes |
@@ -171,6 +173,7 @@ src/
   render.ts     log and transcript.md formatting
   html.ts       transcript.html (the browser view)
   verify.ts     trial runs of the team's [VERIFY] command before acceptance
+  usage.ts      token counts from backends and the totals behind team stats
   backends/     anthropic / claude-cli / mock
 personas/       member definitions
 .claude/        subagents (agents/) and the team-dev skill (skills/)
