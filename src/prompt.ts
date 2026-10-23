@@ -7,7 +7,7 @@ import type { Entry, SessionState, Trial } from "./types.ts";
 import { ACTION_HELP, PROTOCOL_HELP } from "./protocol.ts";
 import { EXTERNAL_WORKSPACE_GUIDE, allowedActions, canEdit, roleGuide, workspaceGuide } from "./sop.ts";
 import { formatBacklog, formatEntry, formatQuestions } from "./render.ts";
-import { currentPhase, findMember, latestVerdicts, visibleTo, wrapupItems } from "./world.ts";
+import { answersByQuestion, currentPhase, findMember, latestVerdicts, visibleTo, wrapupItems } from "./world.ts";
 
 export interface TurnPrompt {
   member: string;
@@ -66,7 +66,9 @@ export function buildPrompt(
   const showDemos = demos.length > 0 && (m.role !== "engineer" || phase.finale);
   const wrap = phase.finale ? wrapupItems(s) : undefined;
   const others = m.role === "engineer" ? (extra.others ?? []) : [];
-  const questions = m.role !== "user" && s.questions?.length ? formatQuestions(s) : "";
+  const answers = answersByQuestion(entries);
+  const openQuestions = m.role !== "user" ? formatQuestions(s, answers, "open") : "";
+  const answeredQuestions = m.role !== "user" ? formatQuestions(s, answers, "answered") : "";
   const trial = s.trials?.find((t) => t.iteration === s.iteration);
   const lastSay = entries.findLast((e) => e.kind === "say" && e.from === m.id);
   const longLast = lastSay && lastSay.text.length > LONG_SAY ? lastSay.text.length : 0;
@@ -98,8 +100,16 @@ export function buildPrompt(
           ),
         ]
       : []),
-    ...(questions
-      ? ["", "## Questions already sent to the human (unanswered unless the human said otherwise; keep going on the defaults)", questions]
+    ...(openQuestions
+      ? [
+          "",
+          "## Open questions sent to the human (keep going on the stated defaults unless the human said otherwise)",
+          "Ids are assigned by the engine: do not number your own questions and do not write \"Answer to Qn\" lines.",
+          openQuestions,
+        ]
+      : []),
+    ...(answeredQuestions
+      ? ["", "## Answered by the human (an answer overrides the default the team stated)", answeredQuestions]
       : []),
     ...(rejections.length
       ? [

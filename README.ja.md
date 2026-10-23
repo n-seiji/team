@@ -74,7 +74,7 @@ reject が1件でもあり、イテレーション上限 (`maxIterations`) に�
 /team-dev フリーランス向けの、ターミナルから数十秒で請求書を作れるツール
 ```
 
-あとは Claude Code が `team next` → サブエージェント → `team record` を繰り返します。途中で「予算は月1万円までと伝えて」などと話しかければ、`team say` でチーム全員に共有されます。「discovery だけやって」「次のフェーズまで」のように区切りも指定できます。
+あとは Claude Code が `team next` → サブエージェント → `team record` を繰り返します。途中で「予算は月1万円までと伝えて」などと話しかければ、`team say` でチーム全員に共有されます。メンバーが `[ASK_HUMAN]` で質問したときは、チームは自分たちの既定の案で先へ進みます。質問には `team status` で id (`Q1`, `Q2`, ...) が付いて見えるので、`team answer Q2 "..."` でその質問に答えます（以降のプロンプトでは答えが既定の案より優先されます）。「discovery だけやって」「次のフェーズまで」のように区切りも指定できます。
 
 - 会話の全文（各メンバーの思考を含む）: `.team/sessions/<name>/transcript.md`。ブラウザで読むなら `transcript.html`（フェーズごとにまとまり、人で絞り込める。本人だけのメモは既定で隠す。`team log --html` でパスを表示し、古いセッションの分も作る）
 - 試用ログと証拠のファイル: `.team/sessions/<name>/artifacts/`
@@ -98,6 +98,7 @@ ANTHROPIC_API_KEY=... node src/main.ts run --backend anthropic   # 自動実行 
 node src/main.ts run --backend mock                              # LLM なしで流れだけ確認
 node src/main.ts log --tail 20 --no-thoughts                     # 会話ログ
 node src/main.ts say "ターゲットは個人事業主に絞りたい"           # 人間として発言を差し込む
+node src/main.ts answer Q2 "公開してよいです"                     # チームの質問 Q2 に答える (id は status に出る)
 ```
 
 `pnpm team <command>` や、`pnpm link --global` して `team <command>` でも同じです。
@@ -105,7 +106,7 @@ node src/main.ts say "ターゲットは個人事業主に絞りたい"         
 host モードを自分で回す場合（他のエージェント基盤から使う場合など）:
 
 ```bash
-node src/main.ts next --json          # → pending: [{ member, role, subagent, canEdit, promptFile }]
+node src/main.ts next --json          # → pending: [{ member, role, subagent, canEdit, promptFile }], openQuestions: [{ id, by, text }]
 # promptFile を LLM に渡して返答を得る
 node src/main.ts record --as pm --file reply.txt
 ```
