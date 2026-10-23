@@ -175,6 +175,7 @@ src/
   verify.ts     trial runs of the team's [VERIFY] command before acceptance
   backends/     anthropic / claude-cli / mock
 personas/       member definitions
+scripts/        prompt-snapshot.ts: dumps every prompt so `diff -r before after` proves a prompt.ts change altered no byte
 .claude/        subagents (agents/) and the team-dev skill (skills/)
 ```
 

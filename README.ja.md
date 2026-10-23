@@ -156,6 +156,7 @@ src/
   verify.ts     受け入れ前に [VERIFY] コマンドを実行する試用
   backends/     anthropic / claude-cli / mock
 personas/       メンバー定義
+scripts/        prompt-snapshot.ts: 全プロンプトを書き出す。`diff -r` の前後比較で prompt.ts の変更が 1 バイトも変えていないことを確かめる
 .claude/        サブエージェント (agents/) と team-dev スキル (skills/)
 ```
 
