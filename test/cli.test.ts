@@ -541,6 +541,96 @@ test("a skipped turn is marked, and keeps what its failed attempts cost", async 
   assert.match(await run(dir, "stats"), /1 skipped/);
 });
 
+// A claude that never answers, so every turn runs into TEAM_TURN_TIMEOUT. `starts` gets one byte per start. TEAM_FAKE_FAIL_FIRST makes
+// its first start fail the way an overloaded API does, with what that call cost.
+const API_ERROR = JSON.stringify({
+  type: "result",
+  is_error: true,
+  result: "API Error: overloaded",
+  num_turns: 1,
+  duration_ms: 700,
+  total_cost_usd: 0.5,
+  usage: { input_tokens: 100, cache_read_input_tokens: 1000, output_tokens: 0 },
+});
+const HANGING_CLAUDE = `#!/usr/bin/env node
+if (process.argv[2] === "--warm") process.exit(0);
+const fs = require("node:fs");
+const starts = __dirname + "/starts";
+const earlier = fs.existsSync(starts) ? fs.statSync(starts).size : 0;
+fs.appendFileSync(starts, "x");
+process.stdin.resume();
+if (process.env.TEAM_FAKE_FAIL_FIRST && earlier === 0) {
+  process.stdin.on("end", () => {
+    process.stdout.write(${JSON.stringify(API_ERROR)});
+    process.exitCode = 1;
+  });
+} else {
+  setTimeout(() => {}, 30000); // ends by itself if a test is abandoned
+}
+`;
+const timeoutTest = { skip: process.platform === "win32" && "the fake claude is a shebang script", timeout: 30_000 };
+
+/** Runs the first turn of a new session (the PM's) against a claude that hangs, with a two second limit per turn. */
+async function runWithHangingClaude(name: string, failFirst: boolean) {
+  const dir = sandbox();
+  await run(dir, "init", "--name", name, "--brief", "x");
+  const bin = path.join(dir, "claude");
+  fs.writeFileSync(bin, HANGING_CLAUDE);
+  fs.chmodSync(bin, 0o755);
+  // The first run of a new executable is slow (macOS checks it first). Take that before the clock of a turn's timeout starts.
+  execFileSync(bin, ["--warm"]);
+  const env: Record<string, string | undefined> = {
+    TEAM_CLAUDE_BIN: bin,
+    TEAM_TURN_TIMEOUT: "2",
+    CLAUDE_CONFIG_DIR: dir,
+    TEAM_FAKE_FAIL_FIRST: failFirst ? "1" : undefined,
+  };
+  const saved = Object.fromEntries(Object.keys(env).map((k) => [k, process.env[k]]));
+  const setEnv = (vars: Record<string, string | undefined>) => {
+    for (const [k, v] of Object.entries(vars)) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+  };
+  setEnv(env);
+  try {
+    const out = await run(dir, "run", "--backend", "claude-cli", "--turns", "1");
+    const starts = fs.existsSync(path.join(dir, "starts")) ? fs.statSync(path.join(dir, "starts")).size : 0;
+    return { out, starts, lines: usageLines(dir, name) };
+  } finally {
+    setEnv(saved);
+  }
+}
+
+test("a turn that times out is skipped without a retry, and its line keeps the time it took", timeoutTest, async () => {
+  const { out, starts, lines } = await runWithHangingClaude("to1", false);
+  assert.equal(starts, 1, "claude was started once: a hang is not tried again");
+  assert.match(out, /pm skips this turn without a retry: claude turn timed out after 2 seconds/);
+  assert.doesNotMatch(out, /retrying once/);
+  assert.match(out, /could not attend this turn/);
+  assert.equal(lines.length, 1);
+  const [line] = lines;
+  assert.equal(line.member, "pm");
+  assert.equal(line.skipped, true);
+  assert.ok(line.durationMs! >= 1900 && line.durationMs! < 10_000, `durationMs ${line.durationMs}`);
+  assert.equal(line.tokens, undefined);
+  assert.equal(line.costUsd, undefined);
+  assert.equal(line.modelCalls, undefined);
+});
+
+test("a retry that times out is skipped with what the first attempt cost plus the time spent", timeoutTest, async () => {
+  const { out, starts, lines } = await runWithHangingClaude("to2", true);
+  assert.equal(starts, 2);
+  assert.match(out, /pm's turn failed, retrying once: claude exited with 1: API Error: overloaded/);
+  assert.match(out, /pm skips this turn: claude turn timed out after 2 seconds/);
+  const [line] = lines;
+  assert.equal(line.skipped, true);
+  assert.deepEqual(line.tokens, { input: 100, cacheRead: 1000, output: 0 });
+  assert.equal(line.costUsd, 0.5);
+  assert.equal(line.modelCalls, 1);
+  assert.ok(line.durationMs! >= 2600 && line.durationMs! < 10_000, `durationMs ${line.durationMs}: 700 ms of the first attempt, two seconds of the second`);
+});
+
 test("stats ignores a half-written last line of usage.jsonl, but not a damaged line before it", async () => {
   const dir = sandbox();
   await run(dir, "init", "--name", "t1", "--brief", "x");

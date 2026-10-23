@@ -80,7 +80,7 @@ Claude Code then repeats `team next` → subagent → `team record`. Anything yo
 
 - Full conversation, including each member's private thoughts: `.team/sessions/<name>/transcript.md`, or `transcript.html` to read it in a browser (grouped by phase, filter by member, private memos hidden by default; `team log --html` prints its path and renders it for older sessions)
 - Trial runs and evidence files: `.team/sessions/<name>/artifacts/`
-- What each reply really cost: `.team/sessions/<name>/usage.jsonl`, one line per recorded reply with the member, phase, iteration, prompt and reply size in characters, and what the backend measured: the four token counts (input, cache write, cache read, output), USD cost, duration and model calls. Failed attempts count too, and a turn skipped after two failures is marked `skipped`. The one token number an orchestrator passes to `record --tokens` is stored as `reportedTokens`, apart from the measured counts, which it is never added to. `team stats` sums the lines by phase and role and never adds cache reads to the other counts. `team stats --json` prints `{ session, recorded: true, total, byPhase, byRole }`, where each group has its turn counts (`turns`, `skippedTurns`, `turnsWithoutCost`, `turnsWithoutMeasuredTokens`) and leaves out any figure nobody reported (`tokens`, `costUsd`, `durationMs`, `modelCalls`, `reportedTokens`); a session with no usage lines (saved before this, or nothing recorded yet) prints `{ session, recorded: false }`
+- What each reply really cost: `.team/sessions/<name>/usage.jsonl`, one line per recorded reply with the member, phase, iteration, prompt and reply size in characters, and what the backend measured: the four token counts (input, cache write, cache read, output), USD cost, duration and model calls. Failed attempts count too, and a turn skipped after two failures or a timeout is marked `skipped`. The one token number an orchestrator passes to `record --tokens` is stored as `reportedTokens`, apart from the measured counts, which it is never added to. `team stats` sums the lines by phase and role and never adds cache reads to the other counts. `team stats --json` prints `{ session, recorded: true, total, byPhase, byRole }`, where each group has its turn counts (`turns`, `skippedTurns`, `turnsWithoutCost`, `turnsWithoutMeasuredTokens`) and leaves out any figure nobody reported (`tokens`, `costUsd`, `durationMs`, `modelCalls`, `reportedTokens`); a session with no usage lines (saved before this, or nothing recorded yet) prints `{ session, recorded: false }`
 - The product being built: `workspace/<name>/` (each session gets its own folder)
 
 #### Claude Code on the web and Claude Projects
@@ -135,6 +135,8 @@ node src/main.ts record --as pm --file reply.txt [--tokens N] [--duration-ms N] 
 
 Set the model with `backend.model` in `team.config.json`, `--model`, or the `TEAM_MODEL` environment variable.
 
+A `claude-cli` turn that runs longer than `TEAM_TURN_TIMEOUT` seconds (default 1800) is stopped by killing the turn's process tree and process groups, and the member skips it without a retry, since a hang would only repeat. Its `usage.jsonl` line is marked `skipped` and keeps the time it took. A process whose parent has already exited can no longer be traced to the turn and may survive.
+
 `claude-cli` turns load only the project's (and the external workspace's) Claude Code settings plus your deny rules, `env` and `apiKeyHelper` from the user settings. Global rules, plugins, hooks and skills are not loaded.
 
 ## Customization
@@ -184,5 +186,5 @@ personas/       member definitions
 - Simulated users do not replace real users. Use them to widen hypotheses and catch obvious problems, then confirm important decisions with real people.
 - Users judge only what the team shows them: the demos and the files they can open. They cannot use a browser or a phone, so anything not demonstrated stays unverified, and they are told to say so.
 - Engineers in the build phase edit the same `workspace/<session>/` in parallel. They are told to keep to their own files, and conflicts are expected to be fixed in review.
-- In auto mode a turn that fails (for example an API error) is retried once; if it fails again the member skips that turn and the run goes on.
+- In auto mode a turn that fails (for example an API error) is retried once; if it fails again the member skips that turn and the run goes on. A turn that times out is skipped without a retry.
 - The `claude-cli` backend gives engineers Bash and edit tools in phases that allow editing. Run it in a trusted environment, such as a container or a cloud session.

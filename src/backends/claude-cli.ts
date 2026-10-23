@@ -8,11 +8,15 @@ import * as path from "node:path";
 import type { BackendConfig } from "../types.ts";
 import type { TurnPrompt } from "../prompt.ts";
 import { promptAsText } from "../prompt.ts";
-import { ReplyError, nonNegative, tokensFromApi } from "../usage.ts";
+import { ReplyError, TurnTimeoutError, nonNegative, tokensFromApi } from "../usage.ts";
 import type { Backend, BackendReply, TurnContext } from "./index.ts";
+import { ProcessTree } from "./process-tree.ts";
 
 const READ_ONLY = ["Read", "Glob", "Grep"];
 const BUILDER = ["Read", "Glob", "Grep", "Write", "Edit", "Bash"];
+const DEFAULT_TURN_TIMEOUT_SECONDS = 1800;
+const MAX_TIMER_MS = 2 ** 31 - 1; // a longer setTimeout fires after 1 ms instead
+const DRAIN_MS = 500; // how long output still in the pipes gets to arrive once claude has exited
 
 /**
  * `--setting-sources project,local` skips the user's settings.json, which would also drop what must keep applying:
@@ -62,15 +66,27 @@ function settle(code: number | null, stdout: string, stderr: string): BackendRep
   return { text: r.result.trim(), usage };
 }
 
+/** `TEAM_TURN_TIMEOUT`, in seconds. Without a limit one tool call that never returns (a test that keeps a server open) hangs the run for ever. */
+function turnTimeoutSeconds(): number {
+  const raw = process.env.TEAM_TURN_TIMEOUT;
+  const seconds = raw === undefined ? DEFAULT_TURN_TIMEOUT_SECONDS : Number(raw);
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    throw new Error(`TEAM_TURN_TIMEOUT must be a positive number of seconds, got ${JSON.stringify(raw)}`);
+  }
+  return seconds;
+}
+
 export class ClaudeCliBackend implements Backend {
   private model?: string;
   private bin: string;
   private userSettings?: string;
+  private timeoutSeconds: number;
 
   constructor(cfg: BackendConfig) {
     this.model = process.env.TEAM_MODEL ?? cfg.model;
     this.bin = process.env.TEAM_CLAUDE_BIN ?? "claude";
     this.userSettings = userSettingsToForward();
+    this.timeoutSeconds = turnTimeoutSeconds();
   }
 
   respond(p: TurnPrompt, ctx: TurnContext): Promise<BackendReply> {
@@ -93,26 +109,69 @@ export class ClaudeCliBackend implements Backend {
       where +
       "\nUse your tools if needed, then make your FINAL message consist only of the action tags described above.\n";
     return new Promise((resolve, reject) => {
+      const started = Date.now();
       const child = spawn(this.bin, args, {
         cwd,
         shell: process.platform === "win32", // resolves claude.cmd on Windows
         stdio: ["pipe", "pipe", "pipe"],
+        // On POSIX this starts a new session (setsid): a process group of its own, so a timeout can take down the tools claude started,
+        // and no controlling terminal, so a tool that opens /dev/tty fails at once instead of hanging on a prompt nobody sees.
+        detached: process.platform !== "win32",
       });
+      const tree = child.pid === undefined ? undefined : new ProcessTree(child.pid);
+      const unwatch = tree?.watch();
       let out = "";
       let err = "";
-      // decode whole characters: a chunk boundary can fall inside a multi-byte one
-      child.stdout.setEncoding("utf8");
-      child.stderr.setEncoding("utf8");
-      child.stdout.on("data", (d) => (out += d));
-      child.stderr.on("data", (d) => (err += d));
-      child.on("error", (e) => reject(new Error(`failed to start "${this.bin}": ${e.message}`)));
-      child.on("close", (code) => {
+      let over = false; // the first of the timeout, claude's end and a failed start decides the turn
+      let drain: NodeJS.Timeout | undefined;
+      const release = () => {
+        clearTimeout(timer);
+        clearTimeout(drain);
+        unwatch?.();
+        // something that outlived claude may still hold the pipes open, and would keep this process from ending
+        for (const stream of [child.stdin, child.stdout, child.stderr]) stream.destroy();
+      };
+      const timer = setTimeout(async () => {
+        over = true;
+        try {
+          await tree?.terminate();
+        } catch (e) {
+          process.stderr.write(`warning: could not kill the processes of the timed-out claude turn: ${(e as Error).message}\n`);
+        } finally {
+          release();
+          const s = this.timeoutSeconds;
+          const message = `claude turn timed out after ${s} second${s === 1 ? "" : "s"} and was killed (TEAM_TURN_TIMEOUT)`;
+          reject(new TurnTimeoutError(message, Date.now() - started));
+        }
+      }, Math.min(this.timeoutSeconds * 1000, MAX_TIMER_MS));
+      const conclude = (code: number | null) => {
+        if (over) return;
+        over = true;
+        release();
         try {
           resolve(settle(code, out, err));
         } catch (e) {
           reject(e);
         }
+      };
+      // decode whole characters: a chunk boundary can fall inside a multi-byte one
+      child.stdout.setEncoding("utf8");
+      child.stderr.setEncoding("utf8");
+      child.stdout.on("data", (d) => (out += d));
+      child.stderr.on("data", (d) => (err += d));
+      child.on("error", (e) => {
+        if (over) return;
+        over = true;
+        release();
+        reject(new Error(`failed to start "${this.bin}": ${e.message}`));
       });
+      // `close` waits until every holder of the pipes has let go, and a tool that outlives claude (a server it started) may never do
+      child.on("exit", (code) => {
+        tree?.rootExited();
+        drain = setTimeout(conclude, DRAIN_MS, code);
+      });
+      child.on("close", conclude);
+      child.stdin.on("error", () => {}); // EPIPE: claude died before it read its prompt, and "close" says how it ended
       child.stdin.end(input);
     });
   }

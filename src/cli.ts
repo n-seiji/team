@@ -13,7 +13,7 @@ import type { BackendReply } from "./backends/index.ts";
 import { findOverlaps, formatOverlap, otherSessionChanges, sameRepoChanges } from "./overlap.ts";
 import { runTrialIfDue } from "./verify.ts";
 import { renderHtml } from "./html.ts";
-import { ReplyError, addUsage, formatStats, summarizeUsage } from "./usage.ts";
+import { ReplyError, TurnTimeoutError, addUsage, formatStats, summarizeUsage } from "./usage.ts";
 import type { BackendConfig, ReplyUsage, TurnUsage } from "./types.ts";
 
 const HELP = `team — PM・エンジニア・ペルソナ(ユーザー)が会話しながら開発するシミュレーター
@@ -365,14 +365,20 @@ function recordTurn(
 }
 
 /**
- * One retry per turn; if that also fails, the member skips the turn so a single bad call does not stop the run.
+ * One retry per turn; if that also fails, the member skips the turn so a single bad call does not stop the run. A turn that timed out
+ * is skipped at once: it would only hang for the whole limit again, and the members of its step are waiting for it.
  * The usage of the reply is what every attempt cost, failed ones included.
  */
 async function respondWithRetry(call: () => Promise<BackendReply>, id: string, out: (s: string) => void): Promise<BackendReply & { skipped?: boolean }> {
   const spentOn = (e: unknown) => (e instanceof ReplyError ? e.usage : undefined);
+  const skipped = (usage?: ReplyUsage) => ({ text: "[SAY to=all] (could not attend this turn)", usage, skipped: true });
   try {
     return await call();
   } catch (first) {
+    if (first instanceof TurnTimeoutError) {
+      out(`warning: ${id} skips this turn without a retry: ${first.message}`);
+      return skipped(first.usage);
+    }
     out(`warning: ${id}'s turn failed, retrying once: ${(first as Error).message.split("\n")[0]}`);
     try {
       const reply = await call();
@@ -380,7 +386,7 @@ async function respondWithRetry(call: () => Promise<BackendReply>, id: string, o
     } catch (e) {
       const reason = (e as Error).message.split("\n")[0].slice(0, 200);
       out(`warning: ${id} skips this turn: ${reason}`);
-      return { text: "[SAY to=all] (could not attend this turn)", usage: addUsage(spentOn(first), spentOn(e)), skipped: true };
+      return skipped(addUsage(spentOn(first), spentOn(e)));
     }
   }
 }
