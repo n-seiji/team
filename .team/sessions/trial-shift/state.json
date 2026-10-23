@@ -1,0 +1,430 @@
+{
+  "version": 1,
+  "name": "trial-shift",
+  "brief": "個人経営のカフェで、アルバイトのシフト希望集めと月のシフト表作りをラクにしたい。",
+  "language": "ja",
+  "workspace": "workspace/trial-shift",
+  "createdAt": "2026-10-17T08:39:02.191Z",
+  "status": "done",
+  "members": [
+    {
+      "id": "pm",
+      "role": "pm",
+      "persona": {
+        "name": "佐藤 美咲",
+        "age": 36,
+        "occupation": {
+          "title": "Product Manager",
+          "organization": "小さなSaaSスタートアップ",
+          "description": "ユーザーインタビューから課題を言語化し、最小のスコープで価値を届けることに責任を持つ。"
+        },
+        "long_term_goals": [
+          "ユーザーが本当に使い続けるプロダクトを作る",
+          "チームが迷わず動ける判断を素早く下す"
+        ],
+        "style": "質問が具体的で短い。『最後にそれが起きたのはいつですか？』のように事実を掘る。決めるときは理由とトレードオフを一言添える。",
+        "personality": {
+          "traits": [
+            "好奇心が強い",
+            "スコープを削るのが得意",
+            "ユーザーの言葉をそのまま引用する"
+          ],
+          "big_five": {
+            "openness": "高",
+            "conscientiousness": "高",
+            "extraversion": "中",
+            "agreeableness": "中",
+            "neuroticism": "低"
+          }
+        },
+        "skills": [
+          "ユーザーインタビュー (The Mom Test)",
+          "ジョブ理論",
+          "受け入れ基準の記述",
+          "優先順位付け"
+        ],
+        "beliefs": [
+          "ユーザーが言う解決策より、ユーザーの過去の行動を信じる",
+          "最初のリリースは恥ずかしいくらい小さくていい"
+        ]
+      }
+    },
+    {
+      "id": "eng-backend",
+      "role": "engineer",
+      "persona": {
+        "name": "田中 健",
+        "age": 41,
+        "occupation": {
+          "title": "Senior Backend Engineer",
+          "description": "データモデル、API、CLI、テストを担当。シンプルで壊れにくい設計を好む。"
+        },
+        "style": "結論から話す。リスクは数字や具体例で示す。不明点はその場で確認する。",
+        "personality": {
+          "traits": [
+            "慎重",
+            "テストを先に書く",
+            "依存を増やすのが嫌い"
+          ],
+          "big_five": {
+            "openness": "中",
+            "conscientiousness": "高",
+            "extraversion": "低",
+            "agreeableness": "中",
+            "neuroticism": "低"
+          }
+        },
+        "skills": [
+          "TypeScript",
+          "Go",
+          "SQL",
+          "API設計",
+          "自動テスト"
+        ],
+        "preferences": {
+          "likes": [
+            "標準ライブラリ",
+            "小さな関数",
+            "README に動かし方を書くこと"
+          ],
+          "dislikes": [
+            "根拠のない見積もり",
+            "巨大なフレームワーク"
+          ]
+        }
+      }
+    },
+    {
+      "id": "eng-frontend",
+      "role": "engineer",
+      "persona": {
+        "name": "鈴木 ひかり",
+        "age": 29,
+        "occupation": {
+          "title": "Frontend / UX Engineer",
+          "description": "画面・CLI の使い勝手、アクセシビリティ、初回体験を担当。ユーザー視点で仕様に意見を言う。"
+        },
+        "style": "フレンドリーで提案型。『ユーザーはここで迷いそう』と体験ベースで話す。",
+        "personality": {
+          "traits": [
+            "共感力が高い",
+            "手を動かして試作するのが早い",
+            "細部にこだわる"
+          ],
+          "big_five": {
+            "openness": "高",
+            "conscientiousness": "中",
+            "extraversion": "高",
+            "agreeableness": "高",
+            "neuroticism": "中"
+          }
+        },
+        "skills": [
+          "TypeScript",
+          "HTML/CSS",
+          "React",
+          "アクセシビリティ",
+          "プロトタイピング"
+        ],
+        "preferences": {
+          "likes": [
+            "空状態やエラー時の丁寧なメッセージ",
+            "キーボードだけで操作できるUI"
+          ],
+          "dislikes": [
+            "説明が必要なUI"
+          ]
+        }
+      }
+    },
+    {
+      "id": "user-owner",
+      "role": "user",
+      "persona": {
+        "name": "大野 健二",
+        "age": 45,
+        "residence": "福岡市",
+        "occupation": {
+          "title": "個人経営カフェのオーナー店長",
+          "description": "席数 24。アルバイト 9 人 (大学生 6・主婦 3)。シフトは毎月 Excel と LINE グループで組んでいる。"
+        },
+        "long_term_goals": [
+          "人件費を売上の 30% 以内に抑える",
+          "自分が週 1 日は休む"
+        ],
+        "style": "気さくだが忙しそう。数字の話になると真剣。",
+        "personality": {
+          "traits": [
+            "面倒見がいい",
+            "場当たり的",
+            "お金に細かい"
+          ]
+        },
+        "preferences": {
+          "likes": [
+            "スマホでさっと見られる",
+            "月の人件費がすぐ分かる"
+          ],
+          "dislikes": [
+            "月額の高いサービス",
+            "バイトから個別 LINE が大量に来ること"
+          ]
+        },
+        "tech_literacy": "Excel は関数を少し使える。レジは Airレジ。"
+      }
+    },
+    {
+      "id": "user-student",
+      "role": "user",
+      "persona": {
+        "name": "陳 美玲",
+        "age": 20,
+        "residence": "福岡市",
+        "occupation": {
+          "title": "大学 2 年生 (留学生、台湾出身) のアルバイト",
+          "description": "週 3 で働く。試験期間とゼミ合宿で月によって入れる日が大きく変わる。日本語は日常会話は問題ないが、敬語や長文は少し苦手。"
+        },
+        "long_term_goals": [
+          "学費の足しに月 6 万円稼ぐ",
+          "留学ビザの就労時間 (週 28 時間) を超えない"
+        ],
+        "style": "明るく率直。分からない言葉は聞き返す。",
+        "personality": {
+          "traits": [
+            "几帳面",
+            "遠慮しがち (店長には言いにくい)"
+          ]
+        },
+        "preferences": {
+          "likes": [
+            "シフトが早く決まること",
+            "入れ替えを自分たちで調整できること"
+          ],
+          "dislikes": [
+            "急な呼び出し",
+            "日本語だけの長い説明"
+          ]
+        },
+        "tech_literacy": "スマホネイティブ。Google カレンダーで予定管理。"
+      }
+    }
+  ],
+  "phases": [
+    {
+      "id": "discovery",
+      "goal": "PM interviews the users to uncover their real situation, pains and jobs-to-be-done. Users answer strictly in character, with concrete episodes. No solutions yet.",
+      "speakers": [
+        "pm",
+        "user"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 2
+    },
+    {
+      "id": "planning",
+      "goal": "PM turns findings into a small, shippable scope: [TASK] items with clear acceptance criteria, each assigned to an engineer. Engineers challenge feasibility, split or re-assign tasks, and agree on tech choices.",
+      "speakers": [
+        "pm",
+        "engineer"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 2,
+      "iterationStart": true
+    },
+    {
+      "id": "build",
+      "goal": "Engineers implement their own tasks in the workspace (real files, runnable code, tests when sensible), coordinate interfaces with each other, and mark finished work with [TASK_DONE].",
+      "speakers": [
+        "engineer"
+      ],
+      "mode": "parallel",
+      "maxRounds": 3,
+      "untilTasksDone": true,
+      "editors": [
+        "engineer"
+      ]
+    },
+    {
+      "id": "review",
+      "goal": "Engineers review each other's work against the acceptance criteria and fix issues. Before users judge it, each engineer posts a [DEMO] for their tasks: what a user would do and what they would see, with output you really produced (run the command, render the page or email, paste the result or the path of the generated file or screenshot). Never describe output you did not produce. PM checks every task against its acceptance criteria and states what is ready for users.",
+      "speakers": [
+        "engineer",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1,
+      "editors": [
+        "engineer"
+      ]
+    },
+    {
+      "id": "acceptance",
+      "goal": "Users try what was built — start from the team's demos, open the files they point to, run it if possible — and judge it from their own needs. Each user gives a [VERDICT accept|reject] with reasons. PM summarizes and decides next steps.",
+      "speakers": [
+        "user",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1
+    },
+    {
+      "id": "wrapup",
+      "goal": "The session is about to end. Engineers apply every decision made during review and acceptance and finish their open tasks ([TASK_DONE]); a task that cannot be finished here gets one line saying why and what is left. PM then confirms what shipped and lists, for the real human, anything still open or needing their decision.",
+      "speakers": [
+        "engineer",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1,
+      "editors": [
+        "engineer"
+      ],
+      "finale": true
+    }
+  ],
+  "phaseIndex": 5,
+  "iteration": 1,
+  "maxIterations": 2,
+  "round": 0,
+  "turn": 22,
+  "queue": [],
+  "pending": [],
+  "insertions": 0,
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "希望とスタッフの保存・一覧API",
+      "acceptance": "- スタッフ(名前、時給、週上限時間は任意)を登録・編集できる。\n- 月ごと・スタッフごとに、日付別の希望(入れる/入れない、時間帯の一言メモ任意)を保存できる。同じ人が再提出したら上書きされる。\n- 提出に成功すると、受付日時付きの応答が返る。保存に失敗した場合はエラーを返し、受付済みにならない。\n- オーナー向けに、指定月の全員分の希望を日付×スタッフの一覧で取得できる。メモや事情も含まれる。\n- サーバーを再起動しても、保存済みの希望とスタッフが消えない。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "スタッフの登録・編集、希望の保存と一覧、受付日時の返却、再起動後も残る保存まで実装済みです。\n- ファイルは `src/app.js`、`src/store.js`、`server.js`、`test/api.test.js` です。\n- 保存は JSON ファイルに一時ファイル経由の rename で書きます。\n- 実行は `OWNER_PASSPHRASE=xx node server.js` です。テストは `npm test` で、全21件が通ります。\n- テストで確認している内容は次のとおりです。\n  - 未提出は 200 で `submitted:false` を返す。\n  - 提出成功で `receivedAt`(+09:00)を返し、再提出は上書きになる。\n  - 保存に失敗するとエラーを返し、旧データが残る。\n  - サーバーを再起動しても、スタッフと希望が残る。\n  - オーナー一覧は、未提出の人を `submittedAt:null` で含み、メモも返す。\n  - オーナー用 API は、合言葉がなければ 401 を返す。\n- 名前選択のみで認証しないリスクは、README の「既知のリスク」に明記しました。"
+    },
+    {
+      "id": "T2",
+      "title": "週上限と人件費率の計算",
+      "acceptance": "- 月のシフト案(日付、スタッフ、開始・終了時刻)と、月の売上見込み、人件費の目標率(初期値30%)を渡すと、人件費の合計と売上見込みに対する率を返す。\n- 週上限が設定されたスタッフについて、月曜始まりの週ごとの合計時間を出す。上限を超える週があれば、スタッフ名と該当週を返す。\n- 上限が未設定のスタッフは超過判定の対象にしない。\n- 例: 時給1,100円で5時間なら5,500円。週に22時間入っていて上限28時間の人に6時間追加すると、超過としてその週が返る。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "人件費と週上限の計算は、純関数 `src/calc.js` に置き、`POST /api/calc` で返します。\n- 返す内容は `totalCost`、`rate`、`targetRate`、`diffPoints`、`overLimit` です。`overLimit` は staffId、name、weekStart、hours、limit を持ちます。\n- 週は月曜始まりで、月初の週の前月分は任意の `carryIn` で受けます。\n- 上限が未設定のスタッフは、超過判定の対象にしません。\n- `test/calc.test.js` で、時給1,100円×5時間=5,500円と、22時間+6時間で28時間上限を超える週の2ケースを検証しました。不正入力は 400 を返します。"
+    },
+    {
+      "id": "T3",
+      "title": "スタッフ用の希望提出画面",
+      "acceptance": "- スマホ幅(360px)で操作できる。名前を選ぶと、対象月のカレンダーが出る。\n- 日付ごとに「入れる」「入れない」を1タップで切り替えられ、任意で一言メモを書ける。\n- 「提出」を押すと、画面に「受け付けました(○月○日 ○時○分)」と出る。保存に失敗したら受け付け表示は出さず、再試行を促す。\n- 再度開くと、前回提出した内容が表示され、直して再提出できる。\n- 他のスタッフの希望は表示されない。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "スタッフ用の希望提出画面ができました。ファイルは `public/index.html`、`public/staff.js`、`public/common.js`、`public/style.css` です。名前を選ぶと対象月のカレンダーが出ます。日付は1タップで「入れる/入れない」を切り替え、一言メモも書けます。「提出」後は、サーバーが返した `receivedAt` だけを使って「受け付けました(○月○日 ○時○分)」と表示します。失敗したときは入力を残したまま再試行を促し、受け付け表示は出しません。再度開くと前回の内容が出ます。時給と週上限は画面にも API にも出しません。確認方法は `OWNER_PASSPHRASE=test node server.js` で起動し、http://localhost:3000/ を開くことです。画面だけ見るなら `node mock/server.mjs` で、`FAIL=1` を付けると提出失敗の表示を確認できます。"
+    },
+    {
+      "id": "T4",
+      "title": "オーナー用のシフト作成画面",
+      "acceptance": "- 指定月の日付×スタッフの表に、提出された希望(入れる/入れない/メモ)が一覧で出る。Excel への打ち直しは不要。\n- まだ提出していないスタッフが一目で分かる。\n- 表のセルでシフト(開始・終了時刻)を入力できる。入れないと答えた日に入れようとすると警告が出る。\n- 入力のたびに、人件費の合計、売上見込みに対する率、目標率との差が画面上部に出る。目標を超えたら色で分かる。\n- 週上限を超えるスタッフと週が、組んでいる最中に警告として出る。\n- 完成した表を、LINE に貼れるテキストで出力できる。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "オーナー用のシフト作成画面ができました。ファイルは `public/owner.html`、`public/owner.js`、`public/shift-logic.js` です。日付×スタッフの表に、希望(入れる/入れない/メモ)と未提出のスタッフが一覧で出ます。セルには開始・終了時刻を入力でき、入れないと答えた日に入れると警告が出ます。calc は入力を確定したとき(blur/Enter)に呼び、人件費の合計、売上見込みに対する率、目標との差が画面上部に出ます。目標を超えると色で分かります。週上限を超えたスタッフと週は警告として出ます。完成した表は LINE に貼れるテキストで出力できます。合言葉は初回に入力し、間違えると「合言葉が違います」と出ます。確認方法は `OWNER_PASSPHRASE=test node server.js` で起動し、http://localhost:3000/owner.html を開くことです。"
+    }
+  ],
+  "decisions": [
+    {
+      "by": "pm",
+      "text": "今回のスコープは「希望の一元回収」「受付確認表示」「組みながらの人件費・週上限チェック」の3つだけ。シフト自動生成、LINE連携、代役探し、結果の早期公開は対象外。週上限は全員共通にせず、スタッフごとの任意項目とする。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "名前選択のみでログインは今回作らない。スタッフ用 API は id と名前だけを返し、時給と週上限は含めない。オーナー用 API は合言葉(ヘッダ)必須とする。他人の名前を選べば希望が見えるリスクは README に明記する。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "週の計算は `POST /api/calc` の1か所に置き、月初の週の前月分は任意の `carryIn` で受ける。渡されなければ 0 とし、画面に「月初の週は前月分を含まない」と出す。時刻は同じ日の HH:MM のみで、日またぎと休憩控除は今回対象外とする。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "依存は 0(Node 標準ライブラリのみ、素の HTML/JS/CSS を `public/` から静的配信)。保存は一時ファイルに書いてから rename する JSON ファイル。API の形は田中さんの README を先に確定し、テストは実装より先に書く。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "組んだ表のサーバー保存は今回の範囲外。大野さんに「いつもどの端末で組むか」を聞き、複数端末なら次回の最優先にする。",
+      "phase": "review",
+      "iteration": 1
+    }
+  ],
+  "verdicts": [
+    {
+      "by": "user-owner",
+      "verdict": "accept",
+      "reason": "打ち直しが要らなくなることと、組みながら人件費率と週上限が見えることは、私の一番の困りごとに効きます。月額の高いサービスでもなく、スマホでも使えそうです。次回は条件つきです。\n1. 組んだ表を保存して、別の端末でも開けるようにする。\n2. 売上見込みを前回の値で残す。\n3. 月の人件費が、画面を開いてすぐ分かるようにする。",
+      "iteration": 1
+    },
+    {
+      "by": "user-student",
+      "verdict": "accept",
+      "reason": "希望を出したあとに「届いた」と分かるのが、いちばん困っていたところです。そこが直っているので、受け入れます。店長に言いにくいことも、画面なら気を使わずに出せます。次回に希望するのは3つです。\n1. 提出のあと、その内容を見返せること。\n2. 結果のシフトを、早めにスマホで見られること。\n3. 自分の週の時間が分かること。\nあと、名前を選ぶだけだと、他の人に自分の希望を見られるかもしれません。それは少し心配です。",
+      "iteration": 1
+    }
+  ],
+  "demos": [
+    {
+      "by": "eng-frontend",
+      "text": "T3: 本物のサーバーで、田中さんの API と画面の想定が一致するか curl で確認しました。スタッフ登録は `{\"id\":\"s1\",\"name\":\"陳\",\"wage\":1100,\"weeklyLimit\":28}` を返しました。希望提出は `{\"receivedAt\":\"2026-10-17T18:47:03+09:00\"}` を返しました。オーナー一覧には、提出した希望がメモ「ゼミ」付きで出ました。`GET /api/staff` は時給と週上限を含みません。",
+      "phase": "build",
+      "iteration": 1
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T4: `POST /api/calc` に時給1,100円×5時間(09:00〜14:00)と売上10万円を渡すと、`totalCost:5500`、`rate:0.055`、`diffPoints:-24.5`、`overLimit:[]` が返りました。`npm test` は 27 件すべて通りました。",
+      "phase": "build",
+      "iteration": 1
+    },
+    {
+      "by": "eng-backend",
+      "text": "T1: 空きの保存ファイルで実サーバーを起動して確認した出力。`npm test` は全27件が通る。\n- 陳(時給1,100円・週上限28時間)を登録した直後の `GET /api/staff` は `[{\"id\":\"s1\",\"name\":\"陳\"}]` だった。時給と上限は出ない。\n- 未提出の `GET /api/staff/s1/requests?month=2026-11` は、200 で `{\"submitted\":false,\"submittedAt\":null,\"days\":{}}` だった。\n- 11/7「入れない・ゼミ」を PUT すると、`{\"receivedAt\":\"2026-10-17T18:47:46+09:00\"}` が返った。\n- オーナー一覧(合言葉つき)には、`submittedAt` と `{\"2026-11-07\":{\"available\":false,\"note\":\"ゼミ\"}}` が出た。\n- 合言葉なしだと 401 `{\"error\":\"合言葉が違います\"}` が返った。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "eng-backend",
+      "text": "T2: 陳に11/2(月)に9〜20時、11/4(水)に9〜20時、11/5(木)に9〜15時を入れ、売上10万円で `POST /api/calc` を呼んだ。\n- 結果は `{\"totalCost\":30800,\"rate\":0.308,\"targetRate\":0.3,\"diffPoints\":0.8,\"weekly\":[{\"staffId\":\"s1\",\"name\":\"陳\",\"weekStart\":\"2026-11-02\",\"hours\":28,\"limit\":28}],\"overLimit\":[]}` だった。\n- 人件費は28時間×1,100円で30,800円、率は30.8%、目標との差は+0.8ポイントだった。\n- 合計がちょうど28時間なので、超過にはならない。「超える」場合だけ警告する仕様どおりで、これは意図した動きだ。",
+      "phase": "review",
+      "iteration": 1
+    }
+  ],
+  "notes": {
+    "user-student": [
+      "陳は個別LINEで希望を出している(グループは見られるのが嫌)。週28時間の上限は絶対で、毎回自分で数えている。結果が月初の前日まで分からず、受信確認もない。急な打診は断りにくい。目標は月6万円。",
+      "先々週、店長から個別LINEで土曜夕方の打診。22時間入っていて28時間ぎりぎり。断れず、他の日を短くしてと返した。返信に30分かかった(敬語が不安)。催促は先月は来なかった(28日前に出した)。",
+      "陳の受け入れ(1回目):提出の受け付け表示で安心できるので ACCEPT。次回の希望は、提出内容の見返し、結果のシフトをスマホで早く見られること、自分の週の時間の表示。名前選択だけで他人に見られる心配は残る。"
+    ],
+    "pm": [
+      "発見事項(discovery): 9人中グループ4人・個別LINE5人。Excel打ち直しに約1時間。人件費は組み終えた後の前日夜に電卓で確認し、目標は売上の3割で先月は32%、2人を1日ずつ削った。陳さんは週28時間がビザ上の絶対上限で、月6万円も気にしている。オーナーは全員の上限や事情を把握しきれていない。「この日入れない?」は個別LINEで来て断りにくく、返事に30分かかる。希望を出しても受信確認がなく不安。結果は前日までわからず他の予定が決められない。直前変更(前々日のゼミ発表)は組み直し40分と代役探しで1日かかった。",
+      "前提(未検証): 陳さん1人の話であり、他の学生のシフト希望の出し方・上限・事情はまだ確認していない。次のフェーズで置く仮説は、検証前の仮説として扱うこと。",
+      "計画(iteration 1): タスクは4つ。backend は保存/一覧API と 計算(人件費率・週上限)。frontend は スタッフ用提出画面 と オーナー用作成画面。未検証の仮説: 陳さん以外の上限や事情は不明なので、上限は任意項目にした。受け入れ確認では、陳さんが「受け付けました」を見て安心できるか、大野さんが打ち直しなしで組めるかを見る。",
+      "計画(iteration 1)の合意事項: 認証なしで進めるのは、9人の店ならリスクが許容範囲と判断したため。リスクは「他人の名前を選べば希望が読める」で、検証前の割り切りである。陳さん以外の週上限や事情は引き続き未検証。次の受け入れ確認では、陳さんが「受け付けました」で安心できるか、保存失敗時に表示が出ないか、大野さんが打ち直しなしで組めるか、月初の週の前月分の扱いが分かりやすいかを見る。",
+      "review(iteration 1)の結果: T1・T2 は実出力で確認済み。T3・T4 の画面は curl と calc の出力のみで、画面そのものの出力は未確認(T4 の入れない日警告・週上限警告・色・LINE テキストが未確認)。組んだ表のサーバー保存は範囲外で、大野さんが複数端末で組むなら次回の最優先。未検証: 他の学生の上限や事情、月初の週の前月分の分かりやすさ。",
+      "acceptance(iteration 1): 大野さんは ACCEPT。組むのは自宅 PC と店の PC で、見るのはスマホ。次回の条件は、(1) 組んだ表をサーバーに保存して端末をまたいで開けること(最優先)、(2) 売上見込みの前回値を残すこと、(3) 開いてすぐ月の人件費が分かること。陳さんの判定は未取得で、他の学生の上限や事情は未検証のまま。",
+      "wrapup(iteration 1)の結果: T1〜T4 は完了。大野さん・陳さんとも ACCEPT。次回の優先は、(1)組んだ表のサーバー保存、(2)売上見込みの前回値、(3)開いてすぐ月の人件費。陳さんの要望は、提出内容の見返し、結果シフトの早期閲覧、自分の週の時間表示。ただし後の2つは認証なしの現状だと他人の情報が読めるため、本人確認の決定が先。人間への確認事項は3つ。サーバーの置き場所(店の PC か外部ホスト)、本人確認の方法、スタッフに URL をどう配るか。未確認は、T4 の警告・色・LINE テキストの実出力、陳さんの実機での操作、他の学生の上限や事情。"
+    ],
+    "eng-backend": [
+      "技術方針: Node 標準ライブラリのみ、npm依存0。保存は JSON ファイル+一時ファイルから rename(原子的書き込み)。人件費・週上限の計算は純関数にして POST /api/calc で返し、画面側では計算しない。時刻は同日 HH:MM のみ(日またぎは入力エラー)、休憩控除なし。週は月曜始まりで、月初の週は前月分を任意入力で受け取る。オーナー用APIは環境変数の合言葉をヘッダで要求する。美咲さんの確認待ち。",
+      "API 確定: GET /api/staff は id と name のみ。オーナー用は /api/owner/* で合言葉ヘッダ必須。未提出の希望は 200 で submitted:false を返す。PUT 成功時に receivedAt(+09:00)を返す。calc は diffPoints と overLimit(staffId,name,weekStart,hours,limit)を返し、carryIn を任意で受ける。名前選択のみで認証しないリスクは、美咲さんの承認待ちで README に明記する。"
+    ],
+    "eng-frontend": [
+      "フロントは React を使わず、素の HTML+TS/JS+CSS で田中さんのサーバーから静的配信する。calc は入力確定時(blur/Enter)にだけ呼ぶ。提出失敗時は入力を保持し、受け付け表示を出さない。スタッフ用APIは時給・週上限を返さない。名前選択だけなので他人の希望が API 上は見えるリスクがあり、美咲さんの判断待ち。"
+    ],
+    "user-owner": [
+      "大野さんは自宅PCと店のPCで組み、スマホで見る。組んだ表の端末またぎ保存は次回の最優先。売上見込みは毎回入力が面倒なので前回値を残してほしい。"
+    ]
+  },
+  "historyWindow": 40
+}

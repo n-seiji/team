@@ -11,16 +11,18 @@ export const DEFAULT_PHASES: PhaseDef[] = [
       "Users answer strictly in character, with concrete episodes. No solutions yet.",
     speakers: ["pm", "user"],
     mode: "round-robin",
-    maxRounds: 2,
+    maxRounds: 3,
   },
   {
     id: "planning",
     goal:
       "PM turns findings into a small, shippable scope: [TASK] items with clear acceptance criteria, " +
-      "each assigned to an engineer. Engineers challenge feasibility, split or re-assign tasks, and agree on tech choices.",
+      "each assigned to an engineer. Engineers challenge feasibility, split or re-assign tasks, and agree on tech choices. " +
+      "Decide early how each user will actually get to and start the product with their own device and skills " +
+      "(e.g. a URL on their phone vs. a terminal command) and make that part of the acceptance criteria.",
     speakers: ["pm", "engineer"],
     mode: "round-robin",
-    maxRounds: 2,
+    maxRounds: 3,
     iterationStart: true,
   },
   {
@@ -38,6 +40,13 @@ export const DEFAULT_PHASES: PhaseDef[] = [
     id: "review",
     goal:
       "Engineers review each other's work against the acceptance criteria and fix issues. " +
+      "Before users judge it, each engineer posts a [DEMO] for their tasks: what a user would do and what they would see, " +
+      "with output you really produced (run the command, render the page or email, paste the result or the path of the " +
+      "generated file or screenshot). Never describe output you did not produce. " +
+      "Keep one verification command for the product and declare it with [VERIFY]: it starts what users would use, " +
+      "walks the main user journeys the way a user would (a browser for a web UI, the real CLI for a CLI), prints what it " +
+      "saw, saves screenshots or generated files into the folder $TEAM_ARTIFACTS, stops everything it started, and exits " +
+      "non-zero when a journey fails. Before acceptance the runtime runs it and shows its real output to users. " +
       "PM checks every task against its acceptance criteria and states what is ready for users.",
     speakers: ["engineer", "pm"],
     mode: "round-robin",
@@ -47,13 +56,41 @@ export const DEFAULT_PHASES: PhaseDef[] = [
   {
     id: "acceptance",
     goal:
-      "Users try what was built (read the workspace, run it if possible) and judge it from their own needs. " +
-      "Each user gives a [VERDICT accept|reject] with reasons. PM summarizes and decides next steps.",
+      "Users try what was built — start from the trial run (real output the runtime produced with the team's " +
+      "verification command), then the team's demos, and open the files they point to — " +
+      "and judge it from their own needs. Each user gives a [VERDICT accept|reject] with reasons. " +
+      "PM summarizes and decides next steps: every condition a user attached to their verdict becomes a [TASK] or gets a " +
+      "one-line reason why not (follow-up tasks start another iteration while iterations remain). " +
+      "A condition only a real person can check (a real phone, a printed sheet, a timed first use) is handed over with " +
+      "[TASK_BLOCKED], not simulated. Treat any claim that someone ran or installed something as unverified unless a demo shows it.",
     speakers: ["user", "pm"],
     mode: "round-robin",
     maxRounds: 1,
+    trial: true,
+  },
+  {
+    id: "wrapup",
+    goal:
+      "The session is about to end. Engineers apply every decision made during review and acceptance and finish " +
+      "their open tasks ([TASK_DONE]); a task that cannot be finished here gets one line saying why and what is left. " +
+      "Follow-ups added after the build are not built here: users have not seen them, so they are handed over. " +
+      "PM then confirms what shipped and lists, for the real human, anything still open or needing their decision.",
+    speakers: ["engineer", "pm"],
+    mode: "round-robin",
+    maxRounds: 1,
+    editors: ["engineer"],
+    finale: true,
   },
 ];
+
+/**
+ * The real human supervises asynchronously, so the team never waits on them: facts are checked, not asked; only
+ * calls a person must make are asked, with a default to proceed on.
+ */
+const NEVER_BLOCK =
+  "Never wait on the real human. If a question can be settled by running or reading something, settle it yourself. " +
+  "Ask the human ([ASK_HUMAN]) only for a product or preference call, a permission, money or anything irreversible, " +
+  "state the default you go ahead with, and keep working. Work only a real person can finish goes to [TASK_BLOCKED].";
 
 interface RoleDef {
   guide: string;
@@ -70,8 +107,11 @@ const ROLES: Record<string, RoleDef> = {
     guide:
       "You are the Product Manager and the facilitator. You own the 'why' and the 'what': " +
       "understand users, define scope, write tasks with acceptance criteria, make decisions, keep the team focused. " +
-      "You do not write production code. You may end a phase early with [ADVANCE] when its goal is met.",
-    actions: ["TASK", "DECISION", "ADVANCE"],
+      "You do not write production code. You may end a phase early with [ADVANCE] when its goal is met. " +
+      "Keep the backlog true: close tasks you no longer want with [TASK_DROP] or replace them (replaces=T1) " +
+      "instead of leaving them open. " +
+      NEVER_BLOCK,
+    actions: ["TASK", "TASK_DROP", "TASK_BLOCKED", "DECISION", "ADVANCE", "ASK_HUMAN"],
     subagent: "team-pm",
     workspace: "This is what the engineers have built so far. If you can read files, check it against the acceptance criteria.",
   },
@@ -79,21 +119,29 @@ const ROLES: Record<string, RoleDef> = {
     guide:
       "You are a software engineer on the team. You own the 'how': design, implementation, tests and quality " +
       "of the tasks assigned to you. Speak up early about risks and trade-offs. When building, actually write the " +
-      "code in the workspace, keep it runnable, and report what you did concretely (files, commands).",
-    actions: ["TASK", "TASK_START", "TASK_DONE"],
+      "code in the workspace, keep it runnable, and report what you did concretely (files, commands). " +
+      "Other programs (including this team's own runtime) share the machine: when you start a server or any background " +
+      "process, stop it by its PID (`kill $PID`); never use pkill, killall or kill by name or pattern. " +
+      NEVER_BLOCK,
+    actions: ["TASK", "TASK_START", "TASK_DONE", "TASK_BLOCKED", "DEMO", "VERIFY", "ASK_HUMAN"],
     subagent: "team-engineer",
     workspace:
       "All product code lives here (relative to the repository root). When the phase allows editing and you have file tools, " +
-      "read and edit files here for real; keep the product runnable and document how to run it in its README.md.",
+      "read and edit files here for real; keep the product runnable and document how to run it in its README.md. " +
+      "Save screenshots and other evidence for demos in the session's artifacts folder (given below), not in /tmp.",
   },
   user: {
     guide:
       "You are a real end user (persona) being interviewed and later trying the product. You are NOT on the team: " +
       "you know nothing about the implementation, you speak only from your own life, habits and frustrations, " +
-      "and you judge the product honestly — politely, but you will not pretend to like something that does not help you.",
+      "and you judge the product honestly — politely, but you will not pretend to like something that does not help you. " +
+      "You cannot run, install or open anything outside what you are shown and the files you read, so never say you tried, " +
+      "installed or ran something; say what you read and what you could not check.",
     actions: ["VERDICT"],
     subagent: "team-persona",
-    workspace: "This is what the team has built so far. If you can read files, look at README.md and try it as a user would.",
+    workspace:
+      "This is what the team has built so far. If you can read files, start with the demos above and the files they point to, " +
+      "then README.md, and try it as a user would.",
   },
 };
 
@@ -120,6 +168,12 @@ export function subagentFor(role: Role): string {
 export function workspaceGuide(role: Role): string {
   return roleDef(role)?.workspace ?? "This is what the team has built so far.";
 }
+
+/** Extra workspace guidance when the workspace is an existing codebase (`init --workspace`). */
+export const EXTERNAL_WORKSPACE_GUIDE =
+  "This is an existing codebase with its own conventions. Before changing it, read its CLAUDE.md / AGENTS.md / " +
+  "CONTRIBUTING.md and README, follow its rules (structure, naming, tests, quality gate, commit conventions), " +
+  "and keep the change limited to the brief.";
 
 /** Whether `role` may edit the workspace during `phase`. */
 export function canEdit(phase: PhaseDef, role: Role): boolean {

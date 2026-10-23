@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>お母さんの薬</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 16px; font-family: sans-serif; background: #f6f7f9; color: #222; }
+  h1 { font-size: 1.1rem; margin: 0 0 8px; font-weight: normal; color: #555; }
+  #today { border-radius: 20px; padding: 32px 16px; text-align: center; font-size: 2.6rem; font-weight: bold; line-height: 1.4; background: #e8e8ec; color: #555; }
+  #today.yes { background: #dcefdc; color: #1b4d1f; }
+  #today small { display: block; font-size: 1.2rem; font-weight: normal; margin-top: 4px; }
+  h2 { font-size: 1.1rem; margin: 24px 0 8px; font-weight: normal; color: #555; }
+  #updated { margin: 16px 0 0; font-size: 1rem; color: #666; text-align: right; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li { display: flex; justify-content: space-between; background: #fff; border-radius: 12px; padding: 14px 16px; margin-bottom: 8px; font-size: 1.3rem; }
+  li .no { color: #777; }
+  li .yes { color: #1b4d1f; font-weight: bold; }
+</style>
+</head>
+<body>
+<h1>きょうの あさの くすり</h1>
+<div id="today" role="status" aria-live="polite">…</div>
+<h2>すこし まえ</h2>
+<ul id="days"></ul>
+<p id="updated"></p>
+<script>
+(function () {
+  var today = document.getElementById('today');
+  var days = document.getElementById('days');
+  var updated = document.getElementById('updated');
+  var W = ['日', '月', '火', '水', '木', '金', '土'];
+  function hm(at) { return String(at).replace(/^0/, ''); }
+  function label(date) {
+    var p = date.split('-');
+    var d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]));
+    return (+p[1]) + '/' + (+p[2]) + '（' + W[d.getUTCDay()] + '）';
+  }
+  function result(d) { return d.taken ? '飲んだ（' + hm(d.at) + '）' : 'まだ'; }
+  function now() { var d = new Date(); return d.getHours() + ':' + ('0' + d.getMinutes()).slice(-2); }
+  function render(s) {
+    today.className = s.today.taken ? 'yes' : '';
+    today.textContent = '';
+    today.appendChild(document.createTextNode(result(s.today)));
+    var small = document.createElement('small');
+    small.textContent = label(s.today.date);
+    today.appendChild(small);
+    updated.textContent = '更新 ' + now();
+    days.textContent = '';
+    s.days.slice().reverse().forEach(function (d) {
+      var li = document.createElement('li');
+      var a = document.createElement('span'); a.textContent = label(d.date);
+      var b = document.createElement('span'); b.className = d.taken ? 'yes' : 'no';
+      b.textContent = d.taken ? '飲んだ（' + hm(d.at) + '）' : '記録なし';
+      li.appendChild(a); li.appendChild(b); days.appendChild(li);
+    });
+  }
+  function fail() {
+    today.className = '';
+    today.textContent = 'いま見られません';
+    days.textContent = '';
+    updated.textContent = '';
+  }
+  fetch('status').then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(render).catch(fail);
+})();
+</script>
+</body>
+</html>

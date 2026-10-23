@@ -7,8 +7,11 @@ import { Store, loadConfig, loadPersona } from "./store.ts";
 import { World, isPrivate } from "./world.ts";
 import { DEFAULT_PHASES, subagentFor } from "./sop.ts";
 import { buildPrompt, listWorkspace, promptAsText } from "./prompt.ts";
-import { formatBacklog, formatEntry, displayName } from "./render.ts";
+import { formatBacklog, formatEntry, formatQuestions, displayName } from "./render.ts";
 import { createBackend } from "./backends/index.ts";
+import { findOverlaps, formatOverlap, otherSessionChanges, sameRepoChanges } from "./overlap.ts";
+import { runTrialIfDue } from "./verify.ts";
+import { renderHtml } from "./html.ts";
 import type { BackendConfig } from "./types.ts";
 
 const HELP = `team — PM・エンジニア・ペルソナ(ユーザー)が会話しながら開発するシミュレーター
@@ -16,12 +19,14 @@ const HELP = `team — PM・エンジニア・ペルソナ(ユーザー)が会�
 Usage: team <command> [options]
 
 Session
-  init [<brief>] --brief <text> | --brief-file <f>  [--name <n>] [--config <f>] [--force] [--json]
+  init [<brief>] --brief <text> | --brief-file <f>  [--name <n>] [--config <f>] [--workspace <dir>] [--force] [--json]
                        新しいセッションを作成して current にする (--json は next --json と同じ出力)
+                       --workspace: 既存のコードベース (git worktree など) をそのまま作業場所にする
   status [--json]      フェーズ・バックログ・次の発言者を表示
-  log [--tail N] [--md] [--no-thoughts]
-                       会話ログを表示 (--md は transcript.md のパス)
+  log [--tail N] [--md] [--html] [--no-thoughts]
+                       会話ログを表示 (--md / --html は transcript.md / transcript.html のパス。HTML はブラウザで読む用)
   sessions             セッション一覧 / use <name> で切り替え
+  overlaps [--json]    同じリポジトリを触る他のセッションと、同じファイル・同じ番号のファイルが重なっていないか確認
   say <text>           人間(あなた)としてチーム全員に発言を差し込む
 
 Host mode (Claude Code などの外部オーケストレーターが各エージェントを実行)
@@ -46,6 +51,7 @@ const OPTIONS = {
   brief: { type: "string" },
   "brief-file": { type: "string" },
   name: { type: "string" },
+  workspace: { type: "string" },
   as: { type: "string" },
   file: { type: "string" },
   backend: { type: "string" },
@@ -56,6 +62,7 @@ const OPTIONS = {
   json: { type: "boolean" },
   inline: { type: "boolean" },
   md: { type: "boolean" },
+  html: { type: "boolean" },
   "no-thoughts": { type: "boolean" },
   help: { type: "boolean", short: "h" },
 } as const;
@@ -77,13 +84,16 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
   /** Schedule the next speaker(s) and print their turn prompts (`next`, and `init --json`). */
   function next(w: World) {
     const ids = w.next();
+    // stderr, so `next --json` stays parseable
+    runTrialIfDue(w, root, (s) => process.stderr.write(s + "\n"));
     const es = store.transcript(w.state.name);
     const view = es.concat(w.emitted);
     const files = listWorkspace(w.state, root);
+    const others = otherSessionChanges(store, w.state);
     const turnsDir = path.join(store.sessionDir(w.state.name), "turns");
     if (ids.length) fs.mkdirSync(turnsDir, { recursive: true });
     const items = ids.map((id) => {
-      const p = buildPrompt(w.state, id, view, files);
+      const p = buildPrompt(w.state, id, view, files, { others });
       const text = promptAsText(p);
       // Prompts are also written to files so an orchestrator can hand a short
       // path to a subagent instead of copying the whole prompt through its context.
@@ -127,6 +137,10 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
       if (!brief) throw new Error("a product brief is required: --brief \"...\"");
       const name = flags.name ?? new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "");
       if (store.exists(name) && !flags.force) throw new Error(`session "${name}" already exists (use --force to overwrite)`);
+      // An existing codebase (e.g. a git worktree of another repository) is used in place.
+      const external = flags.workspace ? path.resolve(root, flags.workspace) : undefined;
+      if (external && !fs.statSync(external, { throwIfNoEntry: false })?.isDirectory())
+        throw new Error(`workspace not found: ${flags.workspace}`);
       if (flags.force) fs.rmSync(store.sessionDir(name), { recursive: true, force: true });
       const w = World.create({
         name,
@@ -135,7 +149,10 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
         phases: cfg.phases ?? DEFAULT_PHASES,
         language: cfg.language,
         // each session builds in its own folder so sessions (e.g. parallel cloud threads) never share files
-        workspace: path.posix.join(cfg.workspace ?? "workspace", name),
+        workspace: external
+          ? path.relative(root, external).split(path.sep).join("/") || "."
+          : path.posix.join(cfg.workspace ?? "workspace", name),
+        externalWorkspace: !!external,
         maxIterations: cfg.maxIterations,
         historyWindow: cfg.historyWindow,
       });
@@ -167,13 +184,35 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
 
     case "status": {
       const w = load();
-      if (flags.json) out(JSON.stringify({ ...w.state, next: w.next() }, null, 2));
-      else out(statusText(w));
+      const overlaps = findOverlaps(sameRepoChanges(store, w.state)).filter((o) => o.sessions.some((x) => x.session === w.state.name));
+      if (flags.json) out(JSON.stringify({ ...w.state, phase: w.phase.id, next: w.next(), overlaps }, null, 2));
+      else {
+        out(statusText(w));
+        if (overlaps.length) out(["overlaps with other sessions:", ...overlaps.map((o) => "  " + formatOverlap(o))].join("\n"));
+      }
+      return;
+    }
+
+    case "overlaps": {
+      const w = load();
+      const changes = sameRepoChanges(store, w.state);
+      const overlaps = findOverlaps(changes);
+      if (flags.json) out(JSON.stringify({ sessions: changes.map((c) => c.session), overlaps }, null, 2));
+      else if (!w.state.externalWorkspace) out("this session builds in its own folder; nothing to compare (see init --workspace).");
+      else if (!overlaps.length) out(`no overlaps among ${changes.map((c) => c.session).join(", ")}`);
+      else for (const o of overlaps) out(formatOverlap(o));
       return;
     }
 
     case "log": {
       const w = load();
+      if (flags.html) {
+        // Rendered on demand too, so sessions saved before the HTML view existed get one.
+        const file = path.join(store.sessionDir(w.state.name), "transcript.html");
+        fs.writeFileSync(file, renderHtml(w.state, store.transcript(w.state.name)));
+        out(file);
+        return;
+      }
       if (flags.md) {
         out(path.join(store.sessionDir(w.state.name), "transcript.md"));
         return;
@@ -229,11 +268,15 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
       const es = store.transcript(w.state.name); // kept in memory for the whole run
       while (w.state.status === "running" && turns < maxTurns) {
         const ids = w.next();
+        if (runTrialIfDue(w, root, out)) out(`[${w.phase.id}] ${formatEntry(w.state, w.emitted.at(-1)!)}`);
         const view = es.concat(w.emitted);
         const files = listWorkspace(w.state, root);
+        const others = otherSessionChanges(store, w.state);
         const ctx = { state: w.state, root };
         // Members scheduled in the same step act in parallel (like TinyWorld steps).
-        const replies = await Promise.all(ids.map((id) => backend.respond(buildPrompt(w.state, id, view, files), ctx)));
+        const replies = await Promise.all(
+          ids.map((id) => respondWithRetry(() => backend.respond(buildPrompt(w.state, id, view, files, { others }), ctx), id, out)),
+        );
         ids.forEach((id, i) => {
           const before = w.emitted.length;
           w.record(id, replies[i]);
@@ -253,6 +296,22 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
   }
 }
 
+/** One retry per turn; if that also fails, the member skips the turn so a single bad call does not stop the run. */
+async function respondWithRetry(call: () => Promise<string>, id: string, out: (s: string) => void): Promise<string> {
+  try {
+    return await call();
+  } catch (first) {
+    out(`warning: ${id}'s turn failed, retrying once: ${(first as Error).message.split("\n")[0]}`);
+    try {
+      return await call();
+    } catch (e) {
+      const reason = (e as Error).message.split("\n")[0].slice(0, 200);
+      out(`warning: ${id} skips this turn: ${reason}`);
+      return "[SAY to=all] (could not attend this turn)";
+    }
+  }
+}
+
 function statusText(w: World): string {
   const s = w.state;
   const next = w.next();
@@ -263,5 +322,7 @@ function statusText(w: World): string {
     "backlog:",
     formatBacklog(s.tasks, "  (none)"),
   ];
+  if (s.questions?.length) lines.push("questions for the human (the team proceeds on the stated defaults):", formatQuestions(s));
+  if (s.externalWorkspace) lines.splice(1, 0, `workspace: ${s.workspace} (existing codebase)`);
   return lines.join("\n");
 }

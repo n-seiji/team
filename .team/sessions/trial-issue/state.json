@@ -1,0 +1,429 @@
+{
+  "version": 1,
+  "name": "trial-issue",
+  "brief": "team シミュレーター (このリポジトリ) に、GitHub の issue から直接セッションを始める機能 `team init --issue owner/repo#N` を加える。gh CLI があれば issue のタイトルと本文を brief に取り込み、無ければ何をすればよいか分かるエラーを出す。既存のルール (CLAUDE.md、README、pnpm typecheck && pnpm test) を守る。",
+  "language": "ja",
+  "workspace": "workspace/trial-issue",
+  "externalWorkspace": true,
+  "createdAt": "2026-10-17T08:39:02.569Z",
+  "status": "done",
+  "members": [
+    {
+      "id": "pm",
+      "role": "pm",
+      "persona": {
+        "name": "佐藤 美咲",
+        "age": 36,
+        "occupation": {
+          "title": "Product Manager",
+          "organization": "小さなSaaSスタートアップ",
+          "description": "ユーザーインタビューから課題を言語化し、最小のスコープで価値を届けることに責任を持つ。"
+        },
+        "long_term_goals": [
+          "ユーザーが本当に使い続けるプロダクトを作る",
+          "チームが迷わず動ける判断を素早く下す"
+        ],
+        "style": "質問が具体的で短い。『最後にそれが起きたのはいつですか？』のように事実を掘る。決めるときは理由とトレードオフを一言添える。",
+        "personality": {
+          "traits": [
+            "好奇心が強い",
+            "スコープを削るのが得意",
+            "ユーザーの言葉をそのまま引用する"
+          ],
+          "big_five": {
+            "openness": "高",
+            "conscientiousness": "高",
+            "extraversion": "中",
+            "agreeableness": "中",
+            "neuroticism": "低"
+          }
+        },
+        "skills": [
+          "ユーザーインタビュー (The Mom Test)",
+          "ジョブ理論",
+          "受け入れ基準の記述",
+          "優先順位付け"
+        ],
+        "beliefs": [
+          "ユーザーが言う解決策より、ユーザーの過去の行動を信じる",
+          "最初のリリースは恥ずかしいくらい小さくていい"
+        ]
+      }
+    },
+    {
+      "id": "eng-backend",
+      "role": "engineer",
+      "persona": {
+        "name": "田中 健",
+        "age": 41,
+        "occupation": {
+          "title": "Senior Backend Engineer",
+          "description": "データモデル、API、CLI、テストを担当。シンプルで壊れにくい設計を好む。"
+        },
+        "style": "結論から話す。リスクは数字や具体例で示す。不明点はその場で確認する。",
+        "personality": {
+          "traits": [
+            "慎重",
+            "テストを先に書く",
+            "依存を増やすのが嫌い"
+          ],
+          "big_five": {
+            "openness": "中",
+            "conscientiousness": "高",
+            "extraversion": "低",
+            "agreeableness": "中",
+            "neuroticism": "低"
+          }
+        },
+        "skills": [
+          "TypeScript",
+          "Go",
+          "SQL",
+          "API設計",
+          "自動テスト"
+        ],
+        "preferences": {
+          "likes": [
+            "標準ライブラリ",
+            "小さな関数",
+            "README に動かし方を書くこと"
+          ],
+          "dislikes": [
+            "根拠のない見積もり",
+            "巨大なフレームワーク"
+          ]
+        }
+      }
+    },
+    {
+      "id": "eng-frontend",
+      "role": "engineer",
+      "persona": {
+        "name": "鈴木 ひかり",
+        "age": 29,
+        "occupation": {
+          "title": "Frontend / UX Engineer",
+          "description": "画面・CLI の使い勝手、アクセシビリティ、初回体験を担当。ユーザー視点で仕様に意見を言う。"
+        },
+        "style": "フレンドリーで提案型。『ユーザーはここで迷いそう』と体験ベースで話す。",
+        "personality": {
+          "traits": [
+            "共感力が高い",
+            "手を動かして試作するのが早い",
+            "細部にこだわる"
+          ],
+          "big_five": {
+            "openness": "高",
+            "conscientiousness": "中",
+            "extraversion": "高",
+            "agreeableness": "高",
+            "neuroticism": "中"
+          }
+        },
+        "skills": [
+          "TypeScript",
+          "HTML/CSS",
+          "React",
+          "アクセシビリティ",
+          "プロトタイピング"
+        ],
+        "preferences": {
+          "likes": [
+            "空状態やエラー時の丁寧なメッセージ",
+            "キーボードだけで操作できるUI"
+          ],
+          "dislikes": [
+            "説明が必要なUI"
+          ]
+        }
+      }
+    },
+    {
+      "id": "user-dev",
+      "role": "user",
+      "persona": {
+        "name": "木村 拓也",
+        "age": 31,
+        "residence": "大阪 (フルリモート)",
+        "occupation": {
+          "title": "5 人規模のスタートアップのテックリード",
+          "description": "GitHub の issue をこの team シミュレーターに回して、たたき台の PR を作らせることを試している。Claude Code はターミナルで毎日使う。"
+        },
+        "long_term_goals": [
+          "レビュー待ちの issue を減らす",
+          "チームの開発ルールを守ったたたき台が欲しい"
+        ],
+        "style": "技術的で端的。手順が 1 つ増えるのも嫌う。",
+        "personality": {
+          "traits": [
+            "せっかち",
+            "自動化好き",
+            "失敗時のメッセージに厳しい"
+          ]
+        },
+        "preferences": {
+          "likes": [
+            "1 コマンドで始まること",
+            "失敗したら何をすべきか書いてあるエラー"
+          ],
+          "dislikes": [
+            "手で issue 本文をコピペすること",
+            "黙って失敗すること"
+          ]
+        },
+        "tech_literacy": "高い。gh CLI を常用。ただし CI やクラウド環境では gh が無いこともある。"
+      }
+    }
+  ],
+  "phases": [
+    {
+      "id": "discovery",
+      "goal": "PM interviews the users to uncover their real situation, pains and jobs-to-be-done. Users answer strictly in character, with concrete episodes. No solutions yet.",
+      "speakers": [
+        "pm",
+        "user"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 2
+    },
+    {
+      "id": "planning",
+      "goal": "PM turns findings into a small, shippable scope: [TASK] items with clear acceptance criteria, each assigned to an engineer. Engineers challenge feasibility, split or re-assign tasks, and agree on tech choices.",
+      "speakers": [
+        "pm",
+        "engineer"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 2,
+      "iterationStart": true
+    },
+    {
+      "id": "build",
+      "goal": "Engineers implement their own tasks in the workspace (real files, runnable code, tests when sensible), coordinate interfaces with each other, and mark finished work with [TASK_DONE].",
+      "speakers": [
+        "engineer"
+      ],
+      "mode": "parallel",
+      "maxRounds": 3,
+      "untilTasksDone": true,
+      "editors": [
+        "engineer"
+      ]
+    },
+    {
+      "id": "review",
+      "goal": "Engineers review each other's work against the acceptance criteria and fix issues. Before users judge it, each engineer posts a [DEMO] for their tasks: what a user would do and what they would see, with output you really produced (run the command, render the page or email, paste the result or the path of the generated file or screenshot). Never describe output you did not produce. PM checks every task against its acceptance criteria and states what is ready for users.",
+      "speakers": [
+        "engineer",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1,
+      "editors": [
+        "engineer"
+      ]
+    },
+    {
+      "id": "acceptance",
+      "goal": "Users try what was built — start from the team's demos, open the files they point to, run it if possible — and judge it from their own needs. Each user gives a [VERDICT accept|reject] with reasons. PM summarizes and decides next steps.",
+      "speakers": [
+        "user",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1
+    },
+    {
+      "id": "wrapup",
+      "goal": "The session is about to end. Engineers apply every decision made during review and acceptance and finish their open tasks ([TASK_DONE]); a task that cannot be finished here gets one line saying why and what is left. PM then confirms what shipped and lists, for the real human, anything still open or needing their decision.",
+      "speakers": [
+        "engineer",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1,
+      "editors": [
+        "engineer"
+      ],
+      "finale": true
+    }
+  ],
+  "phaseIndex": 5,
+  "iteration": 1,
+  "maxIterations": 2,
+  "round": 0,
+  "turn": 33,
+  "queue": [],
+  "pending": [],
+  "insertions": 3,
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "`team init --issue owner/repo#N` で gh から issue を取得する",
+      "acceptance": "- `team init --issue owner/repo#N` を実行すると、`gh issue view N -R owner/repo --json title,body,comments,url` 相当でタイトル・本文・全コメントを取得し、セッション名と brief を作る。\n- `owner/repo#N` の形式が不正なら、正しい書式例を添えて非0で終了する。セッションは作らない。\n- gh の実行は差し替え可能にして、テストで gh を偽装できる（実ネットワーク不要）。\n- 既存の `team init <brief>` の挙動は変えない。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "完了済みで、wrapup での変更はありません。ゲートの通過は再確認しました。"
+    },
+    {
+      "id": "T2",
+      "title": "gh が無い・取得失敗のときは、空 brief のセッションを作らず即停止する",
+      "acceptance": "- gh が PATH に無い場合は、起動直後に1行目で原因が分かるエラーを出して非0終了する。`.team/sessions/` には何も作らない。\n- エラーには、gh のインストール方法（例: `https://cli.github.com`）と、`GH_TOKEN`（Actions なら `GITHUB_TOKEN` を渡す）の設定方法を必ず書く。\n- gh はあるが、認証失敗・404・ネットワーク失敗になった場合も同様に、原因と対処を書いて非0終了する。空 brief にはしない。\n- 上の2パターンを、gh を偽装したテストで検証する。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "完了済みで、wrapup での変更はありません。"
+    },
+    {
+      "id": "T3",
+      "title": "取り込んだ issue から brief を組み立てる",
+      "acceptance": "- brief の先頭に `Issue: owner/repo#N` と URL を必ず入れる。\n- タイトル、本文、コメントを取り込む。コメントは投稿者・日時つきで時系列に並べ、本文との境目が分かるようにする。コードブロックと箇条書きは元の Markdown のまま崩さない。\n- 末尾に「PR 説明に `Closes owner/repo#N` を入れること」と「`pnpm typecheck && pnpm test` を通すこと」を入れる。\n- テストで、コメント内の「API は v2 で」のような追記が brief に含まれることと、参照・Closes・規約の3行があることを確認する。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "`buildIssueBrief` を `src/issue-brief.ts` に実装した。先頭に `Issue: owner/repo#N` と URL を置き、タイトル、本文、コメント（`### @author — 日時 (UTC)`、時系列）を並べる。末尾に `Closes` と `pnpm typecheck && pnpm test` の 2 行を入れる。コメントの追記が brief に入ること、参照・Closes・規約の 3 行があることは `test/issue-brief.test.ts` で確認した。確認は `pnpm typecheck && pnpm test`（47 件中 47 件 pass）で行える。"
+    },
+    {
+      "id": "T4",
+      "title": "README と最終確認",
+      "acceptance": "- README の init の項に `--issue` の使い方、gh の要件、`GH_TOKEN` / `GITHUB_TOKEN` の説明、エラー例を追記する。\n- `pnpm typecheck && pnpm test` が通る。\n- 通した結果を、完了報告に書く。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "README の init の項に「Starting from a GitHub issue」を追記した。内容は次のとおり。\n- `--issue` の使い方と `--name` の優先。\n- gh の要件と、`GH_TOKEN` / `GITHUB_TOKEN`（Actions では `env: GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}`）。\n- 田中さんの T2 の実出力をそのまま貼ったエラー例 2 つ。\n- 200KB 上限と 16MB の扱い。\n\n`pnpm typecheck && pnpm test` は通った（47 件中 47 件 pass、fail 0）。"
+    },
+    {
+      "id": "T5",
+      "title": "T1 追記: 型の先行引き渡しとセッション名、巨大出力の扱い",
+      "acceptance": "- `src/issue.ts` に `Issue` 型（`ref={owner,repo,number}`、`title`、`body`、`url`、`comments[]={author,createdAt(ISO のまま),body}`）と `fetchIssue(ref, runGh)` を置き、置いた時点で鈴木さんに型とシグネチャを伝える。\n- `runGh` は `(args, env) => {status, stdout, stderr, notFound}` で差し替えられ、テストでは gh を偽装する。\n- issue の取得は `src/cli.ts` の `--force` の `rmSync` より前に行う。取得に失敗しても既存セッションは消えない。\n- セッション名の既定値は `issue-<repo>-<N>`。英数字とハイフン以外は `-` に置換。`--name` があればそちらを優先する。\n- gh の出力が 16MB を超えたら、黙って欠けさせずエラーにして非0終了する。テストで確認する。\n- 依存は追加しない。既存の `team init <brief>` の挙動は変えない。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "完了済みで、wrapup での変更はありません。"
+    },
+    {
+      "id": "T6",
+      "title": "T3 追記: 上限・警告・フェンス補完",
+      "acceptance": "- `buildIssueBrief(issue)` は副作用のない純関数で、順序は `Issue: owner/repo#N`、URL、省略警告（あれば）、`# タイトル`、本文、`## コメント (N件)`、`### @author — 日時 (UTC)` と本文（時系列）、末尾に規約2行。\n- brief が 200KB を超えたら、新しいコメントを優先して残し、Issue 行の直下に `⚠ コメント N 件中 M 件を省略しました（brief の上限 200KB）。全文: <url>` を出す。本文だけで超える場合はエラーにする。テストで確認する。\n- コメント本文のコードフェンスが奇数個なら末尾に閉じフェンスを補う。テストで確認する。\n- 先に仮の型でテストを書いてよい。田中さんの型が届いたら合わせる。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "`buildIssueBrief(issue)` を `src/issue-brief.ts` に実装し、`test/issue-brief.test.ts` に 8 ケースを追加した。`pnpm typecheck && pnpm test` は通った（33 件中 33 件 pass）。\n- 出力順は次のとおり。\n  - 先頭に `Issue: owner/repo#N` と URL。\n  - 省略があるときは、その直下に `⚠ コメント N 件中 M 件を省略しました（brief の上限 200KB）。全文: <url>`。\n  - `# タイトル` と本文。\n  - `## コメント (N件)` の下に `### @author — YYYY-MM-DD HH:MM (UTC)` と本文を時系列で並べる。\n  - 末尾に `Closes owner/repo#N` と `pnpm typecheck && pnpm test` の 2 行。\n- 本文とコメントの Markdown は元のまま入れる。コメントのコードフェンスが奇数個なら、末尾に閉じフェンスを補う。\n- 上限は 200×1024 の UTF-8 バイトで数え、警告行も予算に含める。超えたら新しいコメントから残し、古いものを省略する。残したコメントの数は `## コメント (N件)` に出る。\n- 本文だけで上限を超えたときは `Error` を投げ、全文の URL を添える。\n- 型は `src/issue.ts` の `Issue` と構造が同じ `BriefIssue` を自前で持っている。田中さんの型が届いたら `Issue` に差し替える。\n- 実行は `node --test test/issue-brief.test.ts`。"
+    }
+  ],
+  "decisions": [
+    {
+      "by": "pm",
+      "text": "スコープは最小にする。(1) `team init --issue owner/repo#N` で gh 経由のタイトル・本文・コメントを brief に取り込む (2) brief に issue 参照を必ず残し、PR に `Closes owner/repo#N` を入れる前提を示す (3) brief に CLAUDE.md の `pnpm typecheck && pnpm test` を守る旨を含める (4) gh が無い、または取得に失敗したら、空 brief のセッションを作らず即座に非0終了し、インストール方法と `GH_TOKEN` 設定を書いたエラーを出す。理由: 木村さんの実害は欠落・紐づけ漏れ・規約抜け・黙った失敗の4点で、それ以外（複数 issue、ラベル同期など）は後回しにしても困らないため。",
+      "phase": "discovery",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "田中さんの分担案を採用する。田中さんが先に `src/issue.ts` に `Issue` 型（`ref={owner,repo,number}`、`comments[].createdAt` は ISO 文字列のまま）と `fetchIssue(ref, runGh)` を置き、鈴木さんに通知する。理由: T3 のテストが T1 の型に依存するため。トレードオフは、型を決めるまで鈴木さんが仮の型で待つこと。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "セッション名の既定値は `issue-<repo>-<N>`（英数字とハイフン以外は `-` に置換）、`--name` 指定があればそちらを優先する。依存は追加せず `spawnSync` のみ。gh の出力が 16MB を超えたら黙って欠けさせず、エラーで止める。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "brief が 200KB を超える場合は、新しいコメントを優先して残し、古いものを省略する。省略したときは Issue 行の直下に `⚠ コメント N 件中 M 件を省略しました（brief の上限 200KB）。全文: <url>` を出す。本文だけで上限を超える場合は切らずにエラーで止める。理由: 黙って欠けるのが一番の実害で、末尾の警告は見落とされるため。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "README に載せるエラー例は T2 の実出力をそのまま貼る。T4 は T2 の文言が確定してから着手する。エラー文言は、1行目に原因、2行目以降にインストール方法と `GH_TOKEN` の設定方法の順にする。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "200KB の上限は UTF-8 のバイト数で数え、省略警告の行も予算に含める。gh の `author` が null（削除済みユーザー）の場合は、型側で `ghost` に正規化する。理由: 文字数で数えると日本語で上限を超えて通ってしまい、null 分岐を鈴木さん側に持たせると見出しの処理が複雑になるため。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "今回の `team init --issue` は、木村さんの ACCEPT をもって受け入れ完了とする。追加の実装タスクは作らない。次の確認事項は、実 gh と Actions での取得、および PR 作成まで通した `Closes` の確認で、結果は木村さんから受ける。コミットと push は、ユーザーの確認を取ってから行う。",
+      "phase": "acceptance",
+      "iteration": 1
+    }
+  ],
+  "verdicts": [
+    {
+      "by": "user-dev",
+      "verdict": "accept",
+      "reason": "受け入れます。ただし、実 gh でのネットワーク取得は誰も見ていません。\n\n良い点:\n- `init --issue owner/repo#N` の1コマンドで始まります。issue 本文のコピペが要らず、これが一番助かります。\n- gh が無いとき、1行目に原因が出ます。続けてインストール先、`gh auth login`、`GH_TOKEN`、Actions で `GITHUB_TOKEN` を渡す書き方まで書いてあります。何をすべきかが分かるので、私の基準に合っています。\n- 失敗してもセッションは作られません。`--force` でも既存セッションは消えません。黙って空 brief になることがありません。\n- コメントが投稿者・日時つきで時系列に入ります。「API は v2 で」のような追記が落ちません。\n- brief の先頭に `Issue: owner/repo#N` と URL が入ります。末尾に `Closes owner/repo#N` と `pnpm typecheck && pnpm test` の2行が入ります。\n- 200KB 超でも、古いコメントを省略して警告を Issue 行の直下に出します。黙って欠けないのは評価します。\n\n要望です。ブロッカーではありません。\n1. `Closes` は brief に書いてあるだけです。PR 説明に実際に入るかは、後段の動作を見ないと分かりません。次回は PR 作成まで通して確認させてください。\n2. 実 gh と Actions 環境(`GH_TOKEN` 経由)での確認をお願いします。私の CI で最初に試して、結果を返します。\n3. 本文が 200KB を超えた場合は、`--brief-file` に手で切り替える必要があり、手順が1つ増えます。ただ、これは稀なので許容します。",
+      "iteration": 1
+    }
+  ],
+  "demos": [
+    {
+      "by": "eng-backend",
+      "text": "T1: 偽の gh で `node src/main.ts init --issue acme/web#7` を実行しました。出力は次のとおりです。セッション `issue-web-7` ができ、exit=0 でした。\n```\ncreated session \"issue-web-7\" with 5 members → .team/sessions/issue-web-7/\nsession: issue-web-7  status: running  iteration: 1/2\n```\nstate.json の brief は次のとおりです。\n```\nIssue: acme/web#7\nhttps://github.com/acme/web/issues/7\n\n# API を v2 にする\n\n- 対応\n```ts\nconst a=1\n```\n\n## コメント (1件)\n\n### @alice — 2026-10-01 09:30 (UTC)\n\nAPI は v2 で\n\nPR の説明に `Closes acme/web#7` を入れること。\n`pnpm typecheck && pnpm test` を通すこと。\n```\n書式不正の `--issue bad` では、次のように出て exit=1 でした。\n```\nerror: --issue の書式が不正です: \"bad\"\n  正しい例: --issue owner/repo#123\n```",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "eng-backend",
+      "text": "T2: gh を PATH から外して `init --issue acme/web#1` を実行しました。exit=1 で、`.team/sessions` は作られませんでした。\n```\nerror: gh コマンドが見つかりません。issue acme/web#1 を取得できないため中止しました (セッションは作っていません)。\n  gh のインストール: https://cli.github.com\n  認証: `gh auth login`、または環境変数 GH_TOKEN にトークンを設定 (GitHub Actions では env: GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} を渡す)\n```",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "eng-backend",
+      "text": "T5: セッション名の既定値は上の出力のとおり `issue-web-7` です。`--force` 時に既存セッションが消えないことと、16MB 超過でエラーになることは、`test/issue.test.ts` で確認済みです。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T3: 偽の gh（PATH 先頭に置いた簡易スクリプト）で `node src/main.ts init --issue acme/web#7 --name demo-hikari-7` を実行しました。exit=0 で、セッションが作られました。state.json の brief は次のとおりです。コメントは 3 件あり、投稿順の逆（bob → alice → carol）で返したものを、時系列に並べ替えて出力しています。コードフェンスと箇条書きは崩れていません。carol のコメントはフェンスが閉じていなかったので、末尾に閉じフェンスが補われています。\n```\nIssue: acme/web#7\nhttps://github.com/acme/web/issues/7\n\n# API を v2 にする\n\n- 対応\n```ts\nconst a=1\n```\n\n## コメント (3件)\n\n### @alice — 2026-10-01 09:30 (UTC)\n\nAPI は v2 で\n\n### @bob — 2026-10-02 10:05 (UTC)\n\n- [ ] 移行手順\n- [ ] 告知\n\n```sh\npnpm test\n```\n\n### @carol — 2026-10-03 00:00 (UTC)\n\n途中で切れた例:\n```ts\nconst b=2\n```\n\nPR の説明に `Closes acme/web#7` を入れること。\n`pnpm typecheck && pnpm test` を通すこと。\n```",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T6: 200KB 超の issue（#8）を同じ手順で取り込みました。本文は短く、コメントは 10 件で、各約 90KB の日本語です。exit=0 で、brief は 180446 バイト（UTF-8）でした。古い 8 件が省略され、新しい 2 件（u8、u9）だけが残りました。Issue 行の直下に警告が出ています。下は先頭部分です。\n```\nIssue: acme/web#8\nhttps://github.com/acme/web/issues/8\n⚠ コメント 10 件中 8 件を省略しました（brief の上限 200KB）。全文: https://github.com/acme/web/issues/8\n\n# 大きい issue\n\n本文\n\n## コメント (2件)\n\n### @u8 — 2026-10-09 00:00 (UTC)\n\nコメント9 ああああ…\n```\n末尾は、規約 2 行（`Closes acme/web#8` と `pnpm typecheck && pnpm test`）で終わっています。\n\n本文だけで超える issue（#9、本文は日本語 8 万字で約 240KB）は、exit=1 で止まります。出力は次のとおりです。セッションは作られませんでした。\n```\nerror: issue acme/web#9 は本文だけで brief の上限 200KB を超えています。切り捨てずに中止しました。全文: https://github.com/acme/web/issues/9\n  brief を手で用意して `team init --brief-file` を使ってください。\n```\nデモ用に作った `demo-hikari-7` と `demo-hikari-8` は削除しました。`.team/current` は元に戻しました。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T4: README の「Starting from a GitHub issue」（`README.md` の 99〜124 行目）を読み直しました。次の内容が入っています。\n- `--issue` の使い方と、`--name` が優先されること。\n- gh の要件と、`gh auth login`、`GH_TOKEN`、Actions での `env: GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}`。\n- 田中さんの T2 の実出力をそのまま貼ったエラー例 2 つ。\n- 200KB 上限の挙動と 16MB の扱い。\n\nゲートは `pnpm typecheck && pnpm test` で 47 件中 47 件 pass です。",
+      "phase": "review",
+      "iteration": 1
+    }
+  ],
+  "notes": {
+    "pm": [
+      "木村さんの実績：先週火曜に issue を手でコピペして team に回した。コードブロック・箇条書きが崩れ、手で直した。issue の参照を brief に書き忘れ、PR と issue が紐づかなかった。長い issue ではコメント側の追記仕様を落とし、古い仕様のたたき台が上がった。CLAUDE.md の `pnpm typecheck && pnpm test` を通していない PR が来て差し戻しになった。過去に CI で gh が無いのに何も言われず、brief が空のまま10分走った。「エラーには何を入れれば動くかまで書いてほしい」。`gh issue view` は毎日使っている。",
+      "木村さんの追加事実：コメント欄の追記（「API は v2 で」）を見落とし、PR を開いて diff を見てから気づくまで15分迷った。PR 説明に issue の根拠が無く判別不能。`Closes #N` が無く issue が自動で閉じず、翌週チームメンバーが「未着手」と見て二重作業になりかけた。CI は GitHub Actions の ubuntu-latest で gh 未インストール、`GITHUB_TOKEN` は既にある前提。最初に見たかったのは起動直後の1行エラー（gh が無い／インストールするか `GH_TOKEN` を設定）で、空 brief のまま進まず止まってほしい。",
+      "planning は T1〜T6 で確定。実装順は、田中さんが `src/issue.ts` の型と `fetchIssue` を先に置き、鈴木さんに通知する。次に T1・T2・T5 をまとめて実装し、T2 の文言が確定してから T4 の README を書く。完了条件は `pnpm typecheck && pnpm test` が通ることと、既存の `team init <brief>` が変わらないこと。",
+      "review 時点で、T1・T2・T5 は DEMO と受け入れ基準の確認が済んだ。T3・T4・T6 は鈴木さんの DEMO 待ち。実 gh での確認は未実施で、偽装 gh とテストのみ。コミットと push は未実施で、ユーザーの確認が必要。",
+      "review 完了。T1〜T6 は受け入れ基準を満たし、`pnpm typecheck && pnpm test` は 47 件中 47 件 pass。未確認は実 gh での取得で、偽装 gh とテストのみ。コミットと push は未実施で、ユーザーの確認が必要。",
+      "受け入れ完了 (iteration 1): 木村さんは ACCEPT。要望は、(1) PR 説明に `Closes` が実際に入るかを PR 作成まで通して確認、(2) 実 gh と Actions (`GH_TOKEN`) での確認を木村さんの CI で実施して結果を返す、(3) 本文が 200KB 超のときの `--brief-file` 手動切り替えは許容。いずれもブロッカーではなく次回に回す。未実施: 実 gh での取得確認、コミットと push（ユーザーの確認が必要）。",
+      "wrapup 完了 (iteration 1): T1〜T6 すべて done、47 件 pass。人間に渡した未決事項は、(1) 変更の commit/push（未コミット、main 直 push 運用なのでユーザー確認待ち）、(2) 実 gh と Actions での取得確認（木村さんの CI）、(3) PR 作成まで通した `Closes` の確認、(4) 本文 200KB 超は `--brief-file` 手動切り替えのまま。",
+      "wrapup 最終確認 (iteration 1): 追加の実装は無く、人間に渡した未決事項も変わっていない。コミットと push は、ユーザーの確認が取れるまで行わない。"
+    ],
+    "user-dev": [
+      "木村さんの最重要の不満は、黙って失敗することです。次に、手でコピペすると issue のコメント側の追記が落ちることと、PR に `Closes #N` が付かず issue と紐づかないことです。環境は CI (GitHub Actions) で、gh が無いことがあります。"
+    ],
+    "eng-frontend": [
+      "上限方針: brief は 200KB まで。超えたら古いコメントから省略し、Issue 行の直下に省略件数と URL を出す。本文だけで超える場合はエラー。`buildIssueBrief(issue)` は純関数で、`src/issue.ts` の `Issue` 型（田中さん担当）に依存する。コメントのコードフェンスが奇数個なら閉じフェンスを補う。",
+      "200KB は UTF-8 のバイト数で数え、省略警告の行も予算に含める。author が null のときは型側で `ghost` に正規化してもらい、見出しは `### @ghost — 日時 (UTC)` とする。"
+    ],
+    "eng-backend": [
+      "`main(argv, out, deps)` の第3引数 `deps.runGh` で gh を差し替えられる。16MB 超過は `GhResult.overflow` で渡す。実 gh は ENOBUFS で判定する。`--issue` と brief の同時指定はエラーにした。`src/issue-brief.ts` は私の仮スタブで、本物は鈴木さんが置く。",
+      "`team init --issue` の実装は未コミットで、本物の gh での取得は未確認。木村さんの CI で実 gh（`GH_TOKEN` / `GITHUB_TOKEN`）を試し、結果を受ける予定。PR 説明に `Closes` が入るところまで通す確認は、次の課題。コミットと push は、ユーザーの確認を取ってから行う。"
+    ]
+  },
+  "historyWindow": 40
+}

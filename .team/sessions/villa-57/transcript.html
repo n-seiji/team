@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>villa-57</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+JP:wght@400;600;700&display=swap">
+<style>
+/* Layout: a reading column for the conversation, with the session's records in a side column on wide screens. */
+:root {
+  --bg: #f6f7f8; --panel: #ffffff; --fg: #1d2329; --muted: #5d6873; --line: #dfe3e7;
+  --accent: #1f6f78; --pm: #7a4dbf; --eng: #1f6f78; --user: #b25a1d; --human: #b0324a;
+  --ok: #2c7a3f; --bad: #b0324a; --code: #eef1f3;
+  --body: "IBM Plex Sans JP", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12161a; --panel: #1a2026; --fg: #e3e8ec; --muted: #9aa6b1; --line: #2c343c;
+  --accent: #5fb7bf; --pm: #b796ec; --eng: #5fb7bf; --user: #e59a62; --human: #ec7d92;
+  --ok: #6cc785; --bad: #ec7d92; --code: #232b33; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12161a; --panel: #1a2026; --fg: #e3e8ec; --muted: #9aa6b1; --line: #2c343c;
+  --accent: #5fb7bf; --pm: #b796ec; --eng: #5fb7bf; --user: #e59a62; --human: #ec7d92;
+  --ok: #6cc785; --bad: #ec7d92; --code: #232b33; color-scheme: dark }
+* { box-sizing: border-box }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.65 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header, main { max-width: 1180px; margin: 0 auto }
+header { padding-block: 28px 12px; display: grid; gap: 8px }
+h1 { font-size: 1.6rem; line-height: 1.25; margin: 0; text-wrap: balance }
+h2 { font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px }
+.brief { max-width: 72ch; margin: 0; white-space: pre-wrap }
+.chips { display: flex; flex-wrap: wrap; gap: 6px }
+.chip { font: 12px var(--mono); padding: 2px 8px; border: 1px solid var(--line); border-radius: 99px; background: var(--panel) }
+main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; padding-block: 8px 48px; align-items: start }
+@media (max-width: 860px) { main { grid-template-columns: minmax(0, 1fr) } }
+aside { display: grid; gap: 20px; min-width: 0 }
+aside section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; min-width: 0 }
+aside ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px }
+.controls { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 2; background: var(--bg);
+  display: flex; flex-wrap: wrap; gap: 16px; align-items: center; padding-block: 10px; border-bottom: 1px solid var(--line) }
+.controls label { display: inline-flex; gap: 6px; align-items: center; font-size: .9rem }
+select { font: inherit; padding: 2px 6px }
+details { border-bottom: 1px solid var(--line) }
+summary { cursor: pointer; padding-block: 12px; font-weight: 600; display: flex; gap: 10px; align-items: baseline }
+summary .muted { font-weight: 400; font-size: .85rem }
+summary:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+ol { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 10px }
+.msg { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--c, var(--line)); border-radius: 6px; padding: 10px 14px; min-width: 0 }
+.msg.pm { --c: var(--pm) } .msg.eng { --c: var(--eng) } .msg.user { --c: var(--user) } .msg.human { --c: var(--human) }
+.msg.private { background: transparent; border-style: dashed; color: var(--muted) }
+.who { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; font-size: .85rem }
+.name { font-weight: 700; color: var(--c, var(--fg)) }
+.to, .turn, .muted { color: var(--muted) }
+.turn { margin-left: auto; font: 11px var(--mono) }
+.kind { font: 11px var(--mono); letter-spacing: .04em; padding: 0 6px; border-radius: 4px; background: var(--code) }
+.kind.accept { color: var(--ok) } .kind.reject { color: var(--bad) }
+.text { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 4px }
+.sys { color: var(--muted); font-size: .85rem; padding-inline: 4px }
+.sys p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere }
+pre { background: var(--code); padding: 10px 12px; border-radius: 6px; overflow-x: auto; font: 12.5px/1.5 var(--mono); white-space: pre; margin: 6px 0 }
+code { font: .9em var(--mono); background: var(--code); padding: 0 4px; border-radius: 3px }
+.small { font-size: .85rem }
+details.sub { border: 0 } details.sub summary { padding-block: 2px; font-weight: 400; font-size: .8rem; color: var(--muted) }
+.st { font: 11px var(--mono); padding: 0 6px; border-radius: 4px; background: var(--code) }
+.st-done { color: var(--ok) } .st-blocked { color: var(--human) } .st-dropped { color: var(--muted); text-decoration: line-through }
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; background: var(--muted) }
+.dot.pm { background: var(--pm) } .dot.eng { background: var(--eng) } .dot.user { background: var(--user) }
+body:not(.show-private) .private { display: none }
+</style>
+</head>
+<body>
+<header>
+  <h1>villa-57</h1>
+  <p class="brief"><b>お題:</b> 既存プロダクト「Villa Karuizawa」(軽井沢の 1 棟貸し別荘の招待制予約サイト。HonoX + Cloudflare Workers + D1 + Stripe + Resend) に対する GitHub issue をチームで解決する。
+
+- ワークスペースは villa リポジトリの作業コピー (git worktree) そのもの。ゼロから作らず、既存コードを読んで変更する。README.md は既存のものを保ち、新規 README は作らない。
+- villa の CLAUDE.md と .claude/rules/ に従う。機能追加は実装前に Business Risk Review (.claude/rules/business-risk-review.md の 5 カテゴリ) を spec に書く (例: docs/specs/ 配下)。個人情報・認証・メールに触れる変更は .claude/skills/pii-review/SKILL.md の観点で差分を確認する。
+- 品質ゲート: `pnpm test:run` (ユニット)、`npx tsc --noEmit`、`pnpm lint` 相当。依存の追加は避ける (pnpm の 7 日ルールあり)。外部 API キーは無いので、外部サービスはモックかインターフェースまでで止め、何が未検証かを明記する。
+- git の commit / push はしない (ファシリテーターが最後にまとめる)。
+- ユーザー役: 小林さん (リピーターのゲスト) と中村さん (オーナー兼運営者)。
+- issue の「検討事項」で決まっていない点は、チームで決めて理由を残す。スコープが大きければ 1 イテレーションで出せる最小の価値に絞り、残りは明記する。
+
+以下が issue 本文。
+# villa#57 招待の連鎖と再訪ゲスト: 招待された人が他人を招待できる / 2 回目以降はメアドで予約 / メアド変更
+
+## 要望 (3 点)
+1. **一度招待された人は他人を招待できる**: 宿泊済みゲストが自分の招待コードを発行して配れる (現在はポストステイメールで自動発行される 2 件のみ。ゲスト自身が発行・管理する UI はない)
+2. **2 回目以降の予約はメアドでできる**: 宿泊経験者は招待コードなしで、確認済みメールアドレスだけで予約に入れる
+3. **メールアドレスを途中で変更できる**: 予約後にゲストが自分のメールアドレスを変更できる (確認メール・マイページの宛先が変わる)
+
+## 現状
+- 招待コードは 1 コード 1 予約、`invitations.parent_invitation_id` で連鎖は追跡している
+- 予約前のメール確認 (OTP) は #50 で導入済み。招待セッションに email を持つ
+- マイページは `guest_email_hash` で予約を照合 (#51)。メール変更はハッシュの再計算が要る
+- `villaConfig.invitation.totalCap` (30 件) と `codesPerStay` (2 件) の上限がある
+
+## 検討事項
+- 1: ゲスト向けの発行 UI をマイページに置くか、既存のポストステイ発行を「使い切ったら追加発行」にするか。価格ルールはゲストに選ばせない (normal 固定)
+- 2: 「宿泊経験者」の定義 (confirmed かつチェックアウト済み)。招待コードなしの予約は通常料金
+- 3: メール変更は OTP で新アドレスを確認してから反映。`reservations.guest_email` / `guest_email_hash` / 招待セッションを更新</p>
+  <div class="chips">
+    <span class="chip">終了</span>
+    <span class="chip">周 1/2</span>
+    <span class="chip">フェーズ: acceptance</span>
+    <span class="chip">76 件</span>
+  </div>
+</header>
+<main>
+<div style="min-width:0">
+  <div class="controls">
+    <label><input type="checkbox" id="show-private"> 本人だけのメモも表示</label>
+    <label>表示する人 <select id="who"><option value="">全員</option><option value="pm">佐藤 美咲</option><option value="eng-backend">田中 健</option><option value="eng-frontend">鈴木 ひかり</option><option value="user-guest">小林 直子</option><option value="user-owner">中村 誠</option></select></label>
+  </div>
+  <h2 style="margin-top:16px">会話</h2>
+  <details open><summary>周 1 · discovery <span class="muted">7</span></summary><ol><li class="sys" data-from="system"><p>Session &quot;villa-57&quot; started. Brief: 既存プロダクト「Villa Karuizawa」(軽井沢の 1 棟貸し別荘の招待制予約サイト。HonoX + Cloudflare Workers + D1 + Stripe + Resend) に対する GitHub issue をチームで解決する。
+
+- ワークスペースは villa リポジトリの作業コピー (git worktree) そのもの。ゼロから作らず、既存コードを読んで変更する。README.md は既存のものを保ち、新規 README は作らない。
+- villa の CLAUDE.md と .claude/rules/ に従う。機能追加は実装前に Business Risk Review (.claude/rules/business-risk-review.md の 5 カテゴリ) を spec に書く (例: docs/specs/ 配下)。個人情報・認証・メールに触れる変更は .claude/skills/pii-review/SKILL.md の観点で差分を確認する。
+- 品質ゲート: <code>pnpm test:run</code> (ユニット)、<code>npx tsc --noEmit</code>、<code>pnpm lint</code> 相当。依存の追加は避ける (pnpm の 7 日ルールあり)。外部 API キーは無いので、外部サービスはモックかインターフェースまでで止め、何が未検証かを明記する。
+- git の commit / push はしない (ファシリテーターが最後にまとめる)。
+- ユーザー役: 小林さん (リピーターのゲスト) と中村さん (オーナー兼運営者)。
+- issue の「検討事項」で決まっていない点は、チームで決めて理由を残す。スコープが大きければ 1 イテレーションで出せる最小の価値に絞り、残りは明記する。
+
+以下が issue 本文。
+# villa#57 招待の連鎖と再訪ゲスト: 招待された人が他人を招待できる / 2 回目以降はメアドで予約 / メアド変更
+
+## 要望 (3 点)
+1. **一度招待された人は他人を招待できる**: 宿泊済みゲストが自分の招待コードを発行して配れる (現在はポストステイメールで自動発行される 2 件のみ。ゲスト自身が発行・管理する UI はない)
+2. **2 回目以降の予約はメアドでできる**: 宿泊経験者は招待コードなしで、確認済みメールアドレスだけで予約に入れる
+3. **メールアドレスを途中で変更できる**: 予約後にゲストが自分のメールアドレスを変更できる (確認メール・マイページの宛先が変わる)
+
+## 現状
+- 招待コードは 1 コード 1 予約、<code>invitations.parent_invitation_id</code> で連鎖は追跡している
+- 予約前のメール確認 (OTP) は #50 で導入済み。招待セッションに email を持つ
+- マイページは <code>guest_email_hash</code> で予約を照合 (#51)。メール変更はハッシュの再計算が要る
+- <code>villaConfig.invitation.totalCap</code> (30 件) と <code>codesPerStay</code> (2 件) の上限がある
+
+## 検討事項
+- 1: ゲスト向けの発行 UI をマイページに置くか、既存のポストステイ発行を「使い切ったら追加発行」にするか。価格ルールはゲストに選ばせない (normal 固定)
+- 2: 「宿泊経験者」の定義 (confirmed かつチェックアウト済み)。招待コードなしの予約は通常料金
+- 3: メール変更は OTP で新アドレスを確認してから反映。<code>reservations.guest_email</code> / <code>guest_email_hash</code> / 招待セッションを更新</p></li><li class="sys" data-from="system"><p>Phase &quot;discovery&quot; started (iteration 1) — PM interviews the users to uncover their real situation, pains and jobs-to-be-done. Users answer strictly in character, with concrete episodes. No solutions yet.</p></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#1</span></div><div class="text">issue の要望は 3 点あるけど、どれも「ユーザーが言った解決策」の形をしている。まず過去に実際あったことを集めたい。小林さんには、知人を誘ったとき、2 回目の予約をしたとき、メールアドレスで困ったときの具体的な出来事を聞く。中村さんには、追加の招待コードやコードなしで予約したいという問い合わせの頻度と、招待の広がり方への不安を聞く。1 イテレーションで出せるのはたぶん 1 点。どれが一番痛いかを事実で決めたい。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 小林 直子, 中村 誠</span><span class="turn">#1</span></div><div class="text">今日はよろしくお願いします。解決策はいったん置いて、実際にあったことを教えてください。
+小林さん、3 つ聞かせてください。
+1) 最後に誰かに「あの別荘いいよ」と勧めたのはいつで、相手は誰でしたか？ そのときは招待コードをどう渡しましたか？ ポストステイメールで届いた 2 件は今どうなっていますか？
+2) 2 回目の予約をしたときは、どんな手順で予約画面までたどり着きましたか？ 途中で止まったり、中村さんに連絡したりしたことはありますか？
+3) 予約したあとにメールアドレスを変えたい、と思ったことは実際にありましたか？ あったなら、どんな事情で、そのときどうしましたか？
+中村さん、この 3 か月で次の問い合わせは何件くらいありましたか？ 最後にあったのはいつですか？
+- 「コードを使い切ったので追加がほしい」
+- 「前に泊まったのにコードがないと予約できない」
+- 「メールアドレスを変えたい」
+それから、ゲストが自由に人を招待できるようになったら、何が起きると一番困りますか？ 実際に「この人は招きたくなかった」という出来事はありましたか？</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#1</span></div><div class="text">Discovery の方針: 要望 3 点 (ゲストの招待発行 / メールアドレスでの再予約 / メール変更) について、頻度・直近の出来事・回避策の事実を集めてから、1 イテレーションで出す範囲を絞る。価格は normal 固定、コードなしの予約は通常料金が issue の前提。</div></li><li class="msg user private" data-from="user-guest"><div class="who"><span class="name">小林 直子</span> <span class="kind">memo</span><span class="turn">#2</span></div><div class="text">ディスカバリー段階。具体的なエピソードで答える。ファイルは読まずペルソナとして答える。</div></li><li class="msg user" data-from="user-guest"><div class="who"><span class="name">小林 直子</span> <span class="to">→ 小林 直子, 佐藤 美咲</span><span class="turn">#2</span></div><div class="text">小林です。順番に答えます。
+
+1) 最後に勧めたのは、学生時代からの友人(同じ小学生の子がいる家庭)です。夏休み前にLINEで「軽井沢の貸別荘良かったよ」と話しました。コードはポストステイメールに2件届いていたので、メールの文面をコピーしてLINEに貼りました。ただ、1件は渡した友人が「予約画面でコードが通らない」と言ってきました。私のメールを見返したら、前後の文字が1つ余分にコピーされていただけでした。もう1件は未使用のはずですが、正直どのメールだったか探さないと分かりません。使ったかどうか、期限があるのかも自分では確認できません。
+
+2) 2回目の予約は、前回のメールを探すところから始まりました。検索で「招待コード」と打ち、見つけたコードを入れました。その後メール確認のコードが届き、それも入力しました。手順自体は進めましたが、「もう泊まったのに、また招待コードが要るのか」とは思いました。中村さんに連絡はしていません。ただ、メールが見つからなかったら連絡していたと思います。子どもの予定がある中で、スマホで通勤電車の中で済ませたいのに、メールを何通もさかのぼるのは負担でした。
+
+3) ありました。会社のメールで予約していたのですが、部署異動でアドレスが変わる見込みになりました。予約確認メールが旧アドレスにしか届かなくなるのが怖くて、中村さんに「変えられますか」と問い合わせました。結局どうなったか、はっきり覚えていません。個人情報なので、新しいアドレスに切り替わったことをこちらでも確かめたかったです。直前に鍵の案内などが届かないのが一番困ります。
+
+補足です。誰を招待したか、いくらかかるかが後から分からないのは困ります。「友人は通常料金なのか」を、私が招待する前に知りたいです。</div></li><li class="msg user private" data-from="user-owner"><div class="who"><span class="name">中村 誠</span> <span class="kind">memo</span><span class="turn">#3</span></div><div class="text">具体的な数字は持っていない。記憶ベースで正直に答える。件数は正確に分からないので概数と断る。</div></li><li class="msg user" data-from="user-owner"><div class="who"><span class="name">中村 誠</span> <span class="to">→ 佐藤 美咲</span><span class="turn">#3</span></div><div class="text">中村です。数字は帳簿をつけているわけではないので、記憶ベースの概数です。
+
+この3か月の問い合わせ（メールか電話）:
+- 「コードを使い切った・追加がほしい」: 1〜2件。夏前に一度、「友人に渡したコードがうまく通らない」という相談がありました。再発行はその都度、管理画面で私がやっています。
+- 「前に泊まったのにコードがないと予約できない」: 3件ほど。直近は先月です。「前のメールが見つからない」と言われ、私が過去の予約を調べてコードを探し直して送りました。こういう日は、清掃と鍵の準備の合間に対応するので手間です。
+- 「メールアドレスを変えたい」: 2件ほど。小林さんの件がその1つです。正直、どう処理したか今すぐ思い出せません。画面でできる操作ではないので、手で直したか、新しく予約を取り直してもらったかのはずです。後から追える記録が残っていたか、自信がありません。
+
+一番困るのは次の3つです。
+1. 誰が誰を招いたのか分からなくなること。トラブルがあったとき、「この人は誰の紹介か」を後から追えないと、苦情や支払いの話が詰まります。
+2. 金額の食い違い。紹介で来た人の料金が、紹介した人の言った金額と違うと、返金や苦情になります。小林さんも「友人は通常料金なのか」を気にしていました。ゲストがそこで迷う状態は避けたいです。
+3. 招く人数が際限なく増えること。1棟貸しなので、知らない人が増えると、騒音や近隣とのもめごとが心配です。ここは別荘地なので、近所の目もあります。
+
+「招きたくなかった」出来事は、はっきりした件はありません。ただ、繁忙期の金曜に、予約者の友人が人数を増やして来てしまったことがありました。招待の仕組みとは別の話ですが、誰が責任者か分かることは大事だと思っています。
+
+メールアドレスの変更では、個人情報が絡むので、本人確認が心配です。他人のアドレスに予約の連絡や鍵の案内が飛ぶ状態は、一番避けたいです。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#4</span></div><div class="text">事実は十分に出た。頻度は、コードなしの再訪が約3件、メール変更が約2件、コード追加が1〜2件。いずれも発端は「前のメールが見つからない」「手作業で処理した」だった。次は定義フェーズで範囲を絞る。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#4</span></div><div class="text">Discovery 結果(2026-10-16)。直近3か月の中村さんへの問い合わせ件数は、再訪でコードなしが約3件(直近は先月、「前のメールが見つからない」)、メール変更が約2件(手作業で処理し、記録が残っているか不明)、コード追加が1〜2件(原因は、渡したコードが通らなかったこと)。小林さんの発言は、2回目の予約で「もう泊まったのに、また招待コードが要るのか」と感じ、前回のメールを検索で探した。コード2件のうち1件は、コピー時に余分な文字が混ざって通らなかった。もう1件は使用済みかどうか自分では確認できない。メール変更は会社のメールが部署異動で変わる見込みで、中村さんに問い合わせた。「新アドレスに切り替わったことを自分でも確かめたい。鍵の案内が届かないのが一番困る」と言っている。中村さんの懸念は、(1)誰が誰を招いたか追えなくなること、(2)料金の食い違い(「友人は通常料金なのか」を事前に知りたい)、(3)招待人数が際限なく増えること、(4)メール変更時の本人確認(他人のアドレスに鍵の案内が飛ぶこと)。「招きたくなかった」事例は特になし。仮説として、1回目のリリースは「再訪ゲストがコードなしでメール確認だけで予約できること」が最有力で、次がメール変更。ゲスト発行UIは、使用状況の可視化込みで次イテレーションに回す案。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span><span class="turn">#4</span></div><div class="text">二人とも具体的に話してくれてありがとうございます。整理します。
+- 一番頻度が高いのは「泊まったのにコードがない」で、3件、直近は先月です。小林さんの「もう泊まったのに、また招待コードが要るのか」という言葉どおりで、そのたびに中村さんの手作業が発生しています。
+- メール変更は2件あり、どちらも手作業でした。記録が残っているか分からず、本人確認も不安です。小林さんは「鍵の案内が届かないのが一番困る」と言っていました。
+- コード発行は1〜2件です。困りごとは、コードが通らなかったことと、使ったかどうかが自分で分からないことでした。
+- 中村さんが避けたいのは、誰が誰を招いたか追えなくなること、料金の食い違い、招待人数が際限なく増えることです。
+
+今の見立てでは、1回目に出す価値は「再訪ゲストがコードなしでメール確認だけで予約できること」です。メール変更が次点になります。ゲスト向けの発行UIは、上限と追跡の設計が要るので後回しにします。
+
+エンジニアのお二人は、次のフェーズで次の2点を確認してください。
+- 「宿泊済み」の判定が既存データだけでできるか
+- メール変更で、ハッシュ・招待セッション・マイページがどこまで連動しているか</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">ADVANCE</span><span class="turn">#4</span></div><div class="text">End of phase &quot;discovery&quot;.</div></li></ol></details>
+  <details open><summary>周 1 · planning <span class="muted">14</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;planning&quot; started (iteration 1) — PM turns findings into a small, shippable scope: [TASK] items with clear acceptance criteria, each assigned to an engineer. Engineers challenge feasibility, split or re-assign tasks, and agree on tech choices.</p></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#5</span></div><div class="text">方針は、今回は再訪ゲストのコードなし予約に絞る。メール変更は次のイテレーションにする。ゲスト向けの発行UIは今回は見送る。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 田中 健, 鈴木 ひかり</span><span class="turn">#5</span></div><div class="text">計画フェーズです。今回出す範囲は「宿泊済みゲストが、招待コードなしでメール確認(OTP)だけで予約に入れる」ことの1点です。理由は、問い合わせが一番多く(約3件、直近は先月)、中村さんの手作業が毎回発生しているからです。トレードオフとして、メール変更とゲスト発行UIは今回やりません。
+決めたい点は次の3つです。
+1) 「宿泊済み」は、reservations に「同じ guest_email_hash で、status が confirmed、かつチェックアウト日が今日(JST)より前」の行が1件以上あることとします。既存データだけで判定できるか確認してください。
+2) 料金は normal 固定です。コードなし予約は招待連鎖に入れず、parent_invitation_id は付けません。ただし中村さんが後から追えるよう、「再訪(コードなし)」と分かる印を残してください。
+3) 未宿泊のメールにも、OTP の送信やエラー文言で「宿泊済みかどうか」が分からないようにしてください。他人のメールの存在確認に使われないための対策です。
+できない点や既存コードとの食い違いがあれば、実装前に教えてください。
+小林さん、中村さんにも後で受け入れ確認をお願いします。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#5</span></div><div class="text">今回(iteration 1)のスコープは「再訪ゲストのコードなし予約」のみ。「宿泊済み」は、同一 guest_email_hash で status=confirmed かつチェックアウト日が今日(JST)より前の予約が1件以上あること。料金は normal 固定で、コードなし予約には parent_invitation_id を付けない。再訪経由と分かる印は監査ログか予約の項目に残す(方法は backend が提案)。理由は、頻度が最も高く、中村さんの手作業が毎回発生しているため。トレードオフとして、メール変更は次のイテレーション、ゲスト向け発行UIは使用状況の可視化とセットで以降に回す。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">TASK</span><span class="turn">#5</span></div><div class="text">T1 owner=eng-backend: Business Risk Review の spec を書く(docs/specs/ 配下)
+villa の .claude/rules/business-risk-review.md の5カテゴリすべてを埋めた spec が、実装前に docs/specs/ に置かれていること。
+- 少なくとも次を扱う。料金の食い違い、不正な再訪なりすまし、他人のメールの存在確認(列挙)、招待人数の増加、再訪経由の追跡。
+- 個人情報・認証・メールに触れるため、pii-review の観点で確認する項目も spec に書く。
+- 今回やらないこと(メール変更、ゲスト発行UI)と、その理由を明記する。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">TASK</span><span class="turn">#5</span></div><div class="text">T2 owner=eng-backend: 宿泊済みメールの判定と、コードなしでの予約開始
+- 確認済みメール(OTP 通過)で、宿泊済み(confirmed かつチェックアウト日が今日(JST)より前、同一 guest_email_hash)なら、招待コードなしで予約セッションを開始できる。
+- 宿泊済みでないメールでは開始できない。OTP の送信可否や応答の文言・件数は宿泊済みの人と区別がつかない。
+- 作られる予約は normal 料金で、parent_invitation_id は無く、再訪経由と分かる印が残る。
+- 既存の招待コード経由の予約は、挙動も料金も変わらない。
+- OTP のレート制限は既存の仕組みを再利用する。
+- totalCap(30件)の扱いを確認して決め、理由を spec に書く(コードなしの予約を totalCap に数えるかどうか)。
+- ユニットテストを追加し、<code>pnpm test:run</code>、<code>npx tsc --noEmit</code>、lint が通る。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">TASK</span><span class="turn">#5</span></div><div class="text">T3 owner=eng-frontend: 予約入口に「前に泊まった方はこちら(メールで予約)」を追加する
+- 予約入口で、招待コード入力と並んで「前に泊まった方」の導線が見える。スマホ幅(通勤電車で片手操作)でも操作できる。
+- メール入力、OTP 入力、予約画面へと進む流れが、既存の OTP 画面を使って動く。
+- 宿泊済みでないメールの場合も、「確認コードを送りました」の表示は宿泊済みの人と同じにする。予約に進めないときのメッセージは、メールの存在や宿泊歴が分からない文言にし、中村さんへの問い合わせ先を案内する。
+- 予約画面に「招待コードなし・通常料金」であることが、料金確定の前に表示される。
+- 既存の画面のコンポーネントとスタイルに合わせ、新しい依存は追加しない。
+- 画面のテストを追加し、<code>pnpm test:run</code>、<code>npx tsc --noEmit</code>、lint が通る。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#5</span></div><div class="text">iteration 1 の計画(2026-10-16): スコープは再訪ゲストのコードなし予約のみ。メール変更は iteration 2 の候補。メール変更で守るべき条件は、OTP で新アドレスを確認してから反映すること、guest_email_hash・招待セッション・マイページを連動させること、変更の記録を残すこと、旧アドレスへ変更通知を送ること。ゲスト発行UIは使用状況の可視化込みで、さらに後。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">memo</span><span class="turn">#6</span></div><div class="text">実装前の確認は済んだ。招待セッションが招待行に依存している点と、予約テーブルの再構築が重い点が主なリスク。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span><span class="turn">#6</span></div><div class="text">田中です。結論から言うと、判定は既存データだけでできます。ただし 3 点、実装前に決めたい点があります。
+1) 判定: <code>reservations.guest_email_hash</code> に index があります (migration 0018)。<code>status='confirmed' AND check_out &lt; 今日(JST)</code> で 1 件以上あるかを見ます。<code>check_out</code> は日付文字列なので、JST の今日を文字列で比較します。メールは trim と小文字化してからハッシュします。ここが既存と揃っていないと、泊まった人が弾かれます。ハッシュ化は既存の <code>pii-crypto</code> を使い、新しい依存は入れません。
+2) 再訪の印: 予約テーブルに列は足しません。0010 / 0011 / 0019 を見ると、reservations の変更はテーブル再構築になっていて、本番 D1 では事故のリスクが高いです。代わりに監査ログへ <code>reservation.revisit_started</code> を、予約 ID 付きで残します。予約 ID は予約作成時に追記します。中村さんは管理画面の監査ログで追えます。予約一覧で絞り込みたい場合は、次のイテレーションで列を足します。
+3) 列挙対策: OTP は宿泊済みかどうかに関係なく、必ず同じ経路で発行して送ります。発行は既存の <code>issueOtp</code> を再利用するので、レート制限も同じ値です (IP 20 回/時、メール 5 回/時、再送 30 秒)。判定は OTP 検証が通ったあとにだけ行います。通らなかった場合の応答は、「ご予約を進められませんでした。中村までご連絡ください」の 1 種類に固定します。文言は frontend の鈴木さんが仕上げてください。ただし「宿泊歴がない」とは書きません。
+確認したい点が 2 つあります。
+- 現在の予約セッションが招待行 (invitations) 前提だと、コードなしの予約は別の種類のセッションが要ります。ここは routes を読んで、方針を T2 の最初に spec へ書きます。<code>reservations.invitation_id</code> は NULL 可 (0019 で自由予約を許可している) ので、NULL で通す想定です。
+- totalCap の扱い: コードなし予約は数えません。totalCap はコードの発行数の上限で、コードなし予約はコードを消費しないからです。再訪できる人は実際に泊まった人に限られるので、増え方は宿泊実績で抑えられます。招待人数の増加の歯止めは、これで足ります。理由は spec に書きます。
+受け入れテストは、次の 4 つを先に書きます。
+- 宿泊済みでは開始できる
+- 未宿泊では開始できない
+- 未宿泊と宿泊済みで、OTP 送信の応答が同じ
+- 検証後に予約がキャンセルされていたら開始できない。判定は検証時と予約作成時の両方でやります
+鈴木さんへ: 未宿泊のメールの場合、画面側では OTP 検証が成功してから「進めません」を出す形になります。API が返す HTTP ステータスとエラーの形は、T2 の最初に私から共有します。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">note</span><span class="turn">#6</span></div><div class="text">villa#57 backend 方針: 再訪の印は監査ログ (action=reservation.revisit_started、resource_id=予約ID) に残し、reservations に列は追加しない。理由は、reservations の変更が 0010 / 0011 / 0019 でテーブル再構築になっており、リスクが高いため。宿泊済み判定は OTP 検証後のみ、かつ予約作成時にも再判定する。OTP は未宿泊でも同じ経路で発行・送信し、レート制限は issueOtp を再利用する。totalCap にはコードなし予約を数えない。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">memo</span><span class="turn">#7</span></div><div class="text">計画フェーズなので編集はしない。T3 の前提と、田中さんに決めてほしい API の形、文言案を出す。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 田中 健, 佐藤 美咲</span><span class="turn">#7</span></div><div class="text">鈴木です。T3 は引き受けます。田中さんの方針(OTP は宿泊済みかに関係なく同じ経路、判定は検証後)で画面は組めます。実装前に 3 点お願いします。
+1) API の形を T2 の最初に共有してください。画面が欲しいのは次の 3 つです。
+- OTP 送信は、宿泊済みかに関わらず同じ成功レスポンス。
+- OTP 検証の失敗は、コード違い・期限切れ・入力しやすい再入力、の 1 種類だけ。
+- 検証は通ったが予約に進めない場合は、専用のエラーコード 1 つ(例: <code>revisit_not_available</code>)。画面はこれを固定文言にだけ対応づけます。
+2) 応答時間にも注意してください。検証後の判定で、宿泊済みと未宿泊の応答時間に差が出ても、OTP を通った本人にしか見えないので実害は小さいと見ています。ただ、送信側(OTP 送信)に判定を混ぜないことだけは守ってください。
+3) 予約画面の「招待コードなし・通常料金」表示は、セッションの種別(revisit)で出し分けます。セッションから <code>kind</code> か同等の値を画面に渡してください。招待行がない場合の予約画面の loader が、いま招待行を前提にしていないかも確認をお願いします。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span><span class="turn">#7</span></div><div class="text">画面の方針です。
+- 入口は、招待コード入力の下に「前に泊まった方はこちら(メールで予約)」を並べます。折りたたみにはしません。スマホ片手で、リンクではなく幅いっぱいのボタンにします(タップ領域 44px 以上)。キーボードだけでも操作できます。
+- 流れは、メール入力、既存の OTP 画面、予約画面です。OTP 画面は既存を再利用し、新しい依存は入れません。
+- OTP 送信後の表示は、誰に対しても「入力いただいたメールアドレス宛に確認コードを送りました」で統一します。「宿泊歴を確認します」といった文言は入れません。
+- 進めないときの文言(案): 「ご予約を進められませんでした。お手数ですが、中村までご連絡ください。」の下に連絡先を出します。宿泊歴の有無には触れません。「前回ご利用のメールアドレスでお試しください」とも書きません。書くと、宿泊歴がない人にそのことが伝わってしまうからです。連絡先は既存の設定にあるものを使います。なければ小林さん・中村さんに確認します。
+- 予約画面は、料金が確定するボタンより前に「招待コードなし・通常料金でのご予約です」を固定表示します。招待経由の画面には出しません。
+- テストは、入口の導線表示、OTP 後の画面遷移、失敗時の固定文言(宿泊歴を示す語が出ないこと)、予約画面の通常料金表示、の 4 つを書きます。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 小林 直子</span><span class="turn">#7</span></div><div class="text">小林さんにお聞きします。通勤電車で片手で操作するとき、入口に「招待コードを入れる」と「前に泊まった方はこちら」の 2 つが並んでいて迷いませんか。ボタンの文言は「前に泊まった方はこちら」で伝わりますか。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">note</span><span class="turn">#7</span></div><div class="text">T3 の文言方針は次のとおり。OTP 送信後の表示は全員共通にする。進めないときは宿泊歴に触れない固定文言にして、中村さんの連絡先を案内する。予約画面は、料金確定の前に「招待コードなし・通常料金」を固定表示する。API のエラーコードと session の種別(kind)は、田中さんから T2 の最初に共有してもらう。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">memo</span><span class="turn">#8</span></div><div class="text">鈴木さんの 3 点に答える。routes はまだ読んでいないので、API の形は案として出し、確定は T2 の最初と明記する。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 鈴木 ひかり, 佐藤 美咲</span><span class="turn">#8</span></div><div class="text">田中です。鈴木さんの 3 点に答えます。API の形は次の案で、T2 の最初に routes を読んで確定します。ずれたらその場で連絡します。
+1) API の形(案)
+- OTP 送信: 宿泊済みかどうかに関係なく、同じ 200 <code>{ ok: true }</code>。判定は送信側に入れません。レート制限に当たった場合だけ、既存の issueOtp と同じ 429 になります。これは宿泊歴と無関係です。
+- OTP 検証の失敗: 400 <code>{ error: &quot;invalid_code&quot; }</code> の 1 種類だけです。コード違いと期限切れは区別しません。
+- 検証成功だが予約に進めない: 403 <code>{ error: &quot;revisit_not_available&quot; }</code> の 1 種類だけです。画面は固定文言にだけ対応づけてください。理由(未宿泊、キャンセル済み、その他)は応答にも文言にも出しません。
+- 検証成功で宿泊済み: 200 でセッションを作り、予約画面へ遷移します。
+2) セッションの種別
+- 予約画面に渡す値は <code>kind: &quot;invitation&quot; | &quot;revisit&quot;</code> とします。revisit のときだけ「招待コードなし・通常料金」を出してください。
+- 予約画面の loader が招待行を前提にしているか、まだ確認できていません。前提にしていれば、revisit では招待行なしで通る分岐が必要です。結果は T2 の最初に spec へ書きます。
+3) 応答時間
+- 鈴木さんの見立てどおりです。OTP を通った本人にしか見えないので、実害は小さいです。送信側に判定を混ぜない点は守ります。
+補足です。判定は検証時と予約作成時の両方で行います。検証後にキャンセルされた場合も、予約作成時に <code>revisit_not_available</code> で止まります。画面側では、予約確定のときも同じ固定文言を出せるようにしておいてください。
+T1 の spec(Business Risk Review と pii-review の確認項目)を最初に置いてから T2 に入ります。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">note</span><span class="turn">#8</span></div><div class="text">villa#57 API 案: OTP 送信は常に同じ 200。検証失敗は 400 invalid_code の 1 種類。検証成功だが進めない場合は 403 revisit_not_available の 1 種類。セッションに kind=invitation|revisit を持たせる。予約作成時にも宿泊済みを再判定する。routes と loader が招待行前提かは T2 の最初に確認する。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#9</span></div><div class="text">田中さんと鈴木さんの案で足りている。API の形、監査ログ、totalCap を確定して、実装フェーズに進める。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 田中 健, 鈴木 ひかり</span><span class="turn">#9</span></div><div class="text">二人の案で進めます。決めたことは次のとおりです。
+- API は田中さんの案どおりにします。OTP 送信は 200 の1種類、検証失敗は <code>invalid_code</code>、検証成功でも進めないときは 403 <code>revisit_not_available</code>、セッションは <code>kind: &quot;invitation&quot; | &quot;revisit&quot;</code> で区別します。
+- 再訪の印は監査ログ <code>reservation.revisit_started</code> に予約 ID 付きで残します。予約テーブルに列は足しません。理由は、本番 D1 でのテーブル再構築が危ないからです。一覧での絞り込みが必要になったら次のイテレーションで考えます。
+- コードなし予約は totalCap に数えません。理由は spec に書いてください。
+- 田中さん: 予約画面の loader が招待行を前提にしていたら、その分岐も T2 に含めてください。判定は検証時と予約確定時の両方で行います。
+- 鈴木さん: 問い合わせ先は既存設定にあるものを使ってください。なければ中村さんに確認します。
+
+小林さんの回答はまだですが、文言の確認は受け入れ確認で行います。未検証の点は spec に明記してください。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#9</span></div><div class="text">OTP 送信は宿泊歴に関係なく同じ 200 の応答にする。検証失敗は <code>invalid_code</code> の1種類だけにする。検証成功でも進めない場合は 403 <code>revisit_not_available</code> の1種類だけにして、画面は固定文言で対応する。宿泊済みの判定は検証後と予約確定時の2回行う。セッションは <code>kind: &quot;invitation&quot; | &quot;revisit&quot;</code> を持つ。再訪の印は監査ログ <code>reservation.revisit_started</code>(予約 ID 付き)に残し、予約テーブルの列は追加しない。コードなし予約は totalCap に数えない(コードを消費せず、増え方が宿泊実績で抑えられるため)。理由は spec に書く。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#9</span></div><div class="text">計画フェーズの確定事項(2026-10-16): API は 200 / <code>invalid_code</code> / 403 <code>revisit_not_available</code> の3種類。セッションは kind で区別する。再訪の印は監査ログのみ。予約一覧での絞り込みと予約テーブルへの列追加は、必要になれば次のイテレーションで行う。コードなし予約は totalCap に数えない。受け入れ確認では、小林さんに入口の文言と片手操作、中村さんに監査ログでの追跡と問い合わせ文言を見てもらう。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">ADVANCE</span><span class="turn">#9</span></div><div class="text">計画フェーズの目的は満たしました。T1〜T3 の担当者と受け入れ基準が決まり、API の形と未決事項も確定しました。</div></li></ol></details>
+  <details open><summary>周 1 · build <span class="muted">9</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;build&quot; started (iteration 1) — Engineers implement their own tasks in the workspace (real files, runnable code, tests when sensible), coordinate interfaces with each other, and mark finished work with [TASK_DONE].</p></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">memo</span><span class="turn">#10</span></div><div class="text">T1 は完了。T2 は前半だけ。checkout 側は招待行に強く依存していて、今回の範囲では終わっていない。TASK_DONE にはしない。鈴木さんにはセッションの kind と API の形を共有する。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">task</span><span class="turn">#10</span></div><div class="text">T1 → done: Business Risk Review の spec を <code>docs/specs/2026-10-16-revisit-guest-reservation.md</code> に置きました。
+- 5 カテゴリを全部埋めました。料金の食い違い、なりすまし、メールの存在確認(列挙)、招待人数の増加、再訪経由の追跡を扱っています。
+- pii-review の確認項目(節 1・2・3・4・6・8)を書きました。
+- 今回やらないこと(メール変更、ゲスト発行 UI)と理由を明記しました。
+- totalCap にコードなし予約を数えない理由も書きました。再訪の宿泊もポストステイのコード発行対象になります。その分は既存の totalCap 判定で上限がかかります。
+- 実装前の確認結果も書きました。<code>reservation.tsx</code>、<code>quote</code>、<code>checkout</code>、<code>checkout-flow</code> はどれも招待行を前提にしています。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 鈴木 ひかり, 佐藤 美咲</span><span class="turn">#10</span></div><div class="text">田中です。T2 は前半まで終わりました。今の状況を共有します。
+
+**実装済み(<code>pnpm test:run</code> 1501 件通過、lint 通過)**
+- <code>reservationRepo.hasCompletedStay</code>(<code>app/db/repositories/reservation.ts</code>)
+  - 宿泊済み=同一メールのハッシュ、confirmed、<code>check_out</code> が今日(JST)より前。鍵ローテーション中の旧版ハッシュも拾います。
+  - 実 SQLite のテストで、当日チェックアウト・未来の予約・pending/cancelled/cancelling・別メールが false になることを確認済みです。
+- <code>app/lib/revisit.ts</code> の <code>isReturningGuest</code>(メールを正規化し、JST の今日で判定)
+- <code>invitation_session</code> に <code>kind: &quot;invitation&quot; | &quot;revisit&quot;</code> を追加しました(<code>app/lib/invitation-code.ts</code>)。
+  - 旧形式の Cookie は invitation として読みます。デプロイ時に進行中の人は切れません。
+  - revisit の <code>code</code> は空文字です。
+- API は 2 本です。
+  - <code>POST /api/revisit/send-otp</code>: 宿泊歴を一切見ず、常に <code>200 { success: true }</code>。メール形式不正は 400、レート制限は既存の <code>issueOtp</code> どおり 429 です。
+  - <code>POST /api/revisit/verify</code>:
+    - コード違い・期限切れ・Cookie なし・形式不正は <code>400 { error: &quot;invalid_code&quot; }</code> の 1 種類です。
+    - 検証後に宿泊済みでなければ <code>403 { error: &quot;revisit_not_available&quot; }</code> の 1 種類です。
+    - 宿泊済みなら revisit セッションを発行し、<code>200 { success: true, redirect: &quot;/foret-noire/reservation&quot; }</code> を返します。
+- 監査アクションの型に <code>reservation.revisit_started</code> を追加しました。
+
+**まだ終わっていません(T2 は TASK_DONE にしていません)**
+1. <code>checkout</code> / <code>quote</code> / <code>checkout-flow</code> の revisit 分岐
+   - 招待行なし、normal 料金、claim/release なし。
+   - 同一メールでの重複予約防止。
+   - 確定時に <code>isReturningGuest</code> を再判定し、満たさなければ <code>revisit_not_available</code>。
+   - 予約 ID 付きの <code>reservation.revisit_started</code> 記録。
+2. <code>reservation.tsx</code> loader の revisit 分岐
+   - 今は <code>findByCode('')</code> が null になり、招待のないページへ戻ります。安全側に止まるだけで、まだ使えません。
+3. <code>_middleware.ts</code> が <code>kind</code> を context に積むこと
+
+**鈴木さんへ**
+- 画面は上の 2 本の API に合わせてください。<code>/api/revisit/send-otp</code> を叩いた後は、既存の OTP 画面で <code>/api/revisit/verify</code> に <code>{ code }</code> を送る形です。
+- <code>403 revisit_not_available</code> は固定文言にだけ対応づけてください。
+- 予約確定時にも同じ 403 が返ります。
+- 画面用の <code>kind</code> は、2 と 3 を入れたら context から取れる形にします。
+- 実際に予約まで通る確認は、1〜3 が入ってからです。それまでは、画面のテストは API をモックにしてください。
+
+次の round で 1〜3 に入ります。
+- 未検証: Resend / Stripe の実接続、本番 D1、実ブラウザ。
+- <code>npx tsc --noEmit</code> に <code>dist/.vite/manifest.json</code> が見つからないエラーが 1 件残っています。未ビルドによるもので、今回の変更とは無関係です。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">note</span><span class="turn">#10</span></div><div class="text">villa#57 T2 の進捗(build round 1): hasCompletedStay、isReturningGuest、session kind、/api/revisit/send-otp と /verify まで実装済み。残りは checkout/quote/checkout-flow の revisit 分岐、reservation.tsx loader の revisit 分岐、_middleware.ts の kind 受け渡しと reservation.revisit_started の記録。revisit の session.code は空文字で、loader は findByCode('') が null になって招待のないページへ戻る(安全側)。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">memo</span><span class="turn">#11</span></div><div class="text">画面側は実装済み。route の配線(kind 受け渡し)と checkout の 403 は田中さん側の作業なので、TASK_DONE にはせず着手中として報告する。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">task</span><span class="turn">#11</span></div><div class="text">T3 → doing: 画面側を実装しました。route の配線は田中さん待ちです。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 田中 健, 佐藤 美咲</span><span class="turn">#11</span></div><div class="text">鈴木です。T3 の画面側は動く状態です。<code>/api/revisit/send-otp</code> と <code>/api/revisit/verify</code> は田中さんの実装と形が合っています。ただし T3 は完了にしていません。田中さんの変更待ちが2点あります。
+- <code>app/routes/foret-noire/reservation.tsx</code> で、ReservationConfirm に <code>kind={'invitation'|'revisit'}</code> と <code>contactEmail={getEnv(c).CONTACT_EMAIL}</code> を渡してください。招待行なしで通す分岐もお願いします。これがないと、予約画面に「招待コードなし・通常料金」が出ません。
+- <code>/api/checkout</code> が再訪で止まるときは、403 <code>{error:&quot;revisit_not_available&quot;}</code> を返してください。画面は固定文言に差し替えます。
+
+**実装したもの**
+- 入口 <code>app/routes/foret-noire/invitation-only.tsx</code>: 招待コード入力の下に、幅いっぱいで高さ 48px の「前に泊まった方はこちら（メールで予約）」ボタンを置きました。折りたたみはしません。
+- <code>app/routes/foret-noire/reservation/revisit.tsx</code>: メール入力のページです。問い合わせ先は既存の <code>CONTACT_EMAIL</code> を使います。
+- <code>app/islands/revisit-email-form.tsx</code>: 流れは、メール入力、確認コード入力、予約画面です。
+  - 送信後の表示は誰でも「入力いただいたメールアドレス宛に確認コードを送りました」です。
+  - 検証失敗は <code>invalid_code</code> の1文言だけです。
+  - <code>revisit_not_available</code> のときは固定文言「ご予約を進められませんでした。お手数ですが、中村までご連絡ください。」を出し、連絡先の mailto と、招待コードの入力へ戻るボタンを付けます。宿泊歴には触れません。
+- <code>app/lib/revisit-ui.ts</code>: 文言と、API 応答を画面の状態に振り分ける処理です。想定外のエラー文言は画面に出しません。
+- <code>app/components/revisit-notice.tsx</code>: <code>ReservationConfirm</code> の先頭、つまり日程と料金の前に固定表示します。<code>kind==='revisit'</code> のときだけです。招待経由は <code>kind</code> を省略すると今までどおりです。
+- <code>app/islands/reservation-confirm.tsx</code>: 確定時に <code>revisit_not_available</code> が返ったら、同じ固定文言を出します。
+
+**テスト**
+- <code>revisit-ui.test.ts</code>: 応答の振り分けと、固定文言に宿泊歴を示す語が出ないこと。
+- <code>revisit-notice.test.tsx</code>、<code>revisit-email-form.test.tsx</code>、<code>invitation-only.test.tsx</code>: 入口の導線表示、メールフォームの表示、注意書きの表示。
+- <code>pnpm test:run</code>: 166 ファイル・1501 件が通りました。<code>pnpm lint</code> も通っています。
+- <code>npx tsc --noEmit</code> は未通過です。原因は2つです。<code>_middleware.test.ts</code> が <code>InvitationSession.kind</code> を渡しておらず、これは田中さんの型変更に由来します。<code>dist/.vite/manifest.json</code> が無いのは、ビルド前の既存の状態です。
+
+**未検証**
+- 実機のスマホ幅での操作。
+- 確認コード入力からリダイレクトまでをブラウザでつないだ動作。
+- 「前に泊まった方はこちら」の文言が伝わるかどうかは、小林さんの回答待ちです。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">note</span><span class="turn">#11</span></div><div class="text">T3 の画面は実装済み。残りは田中さんの reservation.tsx への kind/contactEmail の受け渡しと、checkout の 403 <code>revisit_not_available</code>。この2つが入ったら T3 を完了にする。tsc は _middleware.test.ts の kind 未指定で落ちている(田中さんの型変更由来)。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">memo</span><span class="turn">#12</span></div><div class="text">T2 の残り 3 点を実装し、品質ゲートは通過した。tsc の残り 1 件は dist 未ビルドによる既存のもの。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">task</span><span class="turn">#12</span></div><div class="text">T2 → done: 宿泊済みメールの判定と、コードなしでの予約開始を実装しました。
+- 判定: <code>reservationRepo.hasCompletedStay</code> と <code>isReturningGuest</code>。OTP 検証後と、見積り・予約作成時の合計 3 か所で再判定します。外れた場合は、どこでも 403 <code>revisit_not_available</code> の 1 種類だけを返します。
+- 予約開始:
+  - <code>lib/checkout-flow.ts</code> の <code>startCheckout</code> が <code>invitation: null</code> を受け付けます。
+  - 料金は <code>quoteForRevisit</code> で通常料金固定です。
+  - <code>invitation_id</code> は NULL で、招待の claim と used 化はしません。
+  - Stripe の metadata にも招待 ID を入れません。
+- 見積りと予約確定の API:
+  - <code>api/quote.ts</code> と <code>api/checkout.ts</code> に revisit の分岐を入れました。
+  - 招待行は引きません。
+  - メールは OTP 確認済みのセッション値だけを使います。
+- 予約画面:
+  - <code>reservation.tsx</code> の loader に revisit の分岐を入れました。
+  - メール確認済みかつ宿泊済みを毎回判定し、満たさなければ入口へ戻します。
+  - 画面には <code>kind</code> と <code>contactEmail</code> を渡します。
+  - 鈴木さんの待ち 2 点(<code>kind</code> と <code>contactEmail</code> の受け渡し、403 の固定エラー)はこれで入りました。
+- ミドルウェア: <code>_middleware.ts</code> が <code>kind</code> を context に積みます。<code>/foret-noire/reservation/revisit</code> を公開パスに追加しました。これが無いと、メール入力画面がクッキー無しで入口に戻されていました。
+- 再訪の印: <code>reservation.revisit_started</code> を予約 ID 付きで監査ログに残します。detail は <code>kind</code> と <code>price_mode</code> だけで、メールや宿泊歴は入れません。
+- 重複予約の防止(今回追加):
+  - <code>hasUpcomingReservation</code>: 同じメールに、これから泊まる予約(pending / confirmed / cancelling)があるかを見ます。
+  - 招待コードの「1 コード 1 予約」に当たる歯止めが、コードなしでは無いための追加です。
+  - 作成前に確認し、作成後にも自分以外を再確認します。並列で後着になった側の pending は取り消します。
+- totalCap: コードなし予約は数えません。理由は spec に書きました。
+- spec: <code>docs/specs/2026-10-16-revisit-guest-reservation.md</code> の実装状況を更新し、既知の制約を明記しました。
+- テスト: 新規 <code>checkout-flow.revisit.test.ts</code>、<code>api/checkout.revisit.test.ts</code>、<code>api/quote.revisit.test.ts</code>。<code>reservation.revisit.sqlite.test.ts</code>(実 SQLite)、<code>reservation.test.tsx</code>、<code>_middleware.test.ts</code> に追記しました。
+- 確認:
+  - <code>pnpm test:run</code> は 169 ファイル・1519 件が通りました。
+  - <code>pnpm lint</code> は oxlint と oxfmt が通りました。
+  - <code>npx tsc --noEmit</code> は <code>dist/.vite/manifest.json</code> の 1 件だけ残っています。未ビルドによる既存のもので、今回の変更とは無関係です。
+- 既知の制約(spec に記載):
+  - 再訪の pending の決済再開(status / retry)と日程変更は、招待コード前提のままです。
+  - 再訪で決済を離脱すると、pending の期限が切れるまで新規予約が 409 になります。
+  - 重複防止は DB の一意制約ではなく、作成前後の 2 回確認です。並列時は両方が取り消される側に倒れますが、二重予約にはなりません。
+- 未検証: Resend / Stripe の実接続、本番 D1、実ブラウザでの通し操作。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 鈴木 ひかり, 佐藤 美咲</span><span class="turn">#12</span></div><div class="text">田中です。T2 は完了にしました。鈴木さんの待ち 2 点は入っています。
+- <code>reservation.tsx</code> は revisit で招待行なしで通り、<code>kind</code> と <code>contactEmail</code> を ReservationConfirm に渡します。
+- <code>/api/checkout</code> と <code>/api/quote</code> は、予約に進めないときに 403 <code>{ error: &quot;revisit_not_available&quot; }</code> を返します。
+- <code>/foret-noire/reservation/revisit</code> は公開パスにしました。これが無いと、メール入力画面が入口へ戻されていました。
+- <code>_middleware.test.ts</code> の <code>kind</code> 抜けも直っています。<code>pnpm test:run</code> は 1519 件が通り、lint も通りました。tsc の残りは <code>dist/.vite/manifest.json</code> の 1 件だけで、未ビルドによる既存のものです。
+
+補足が 2 点あります。
+- 同じメールに、これから泊まる予約(pending / confirmed / cancelling)がある間は、新しい再訪予約は 409 にしました。1 コード 1 予約の代わりの歯止めで、totalCap に数えない判断の根拠でもあります。画面では 409 のエラー文をそのまま出して問題ありません。
+- 再訪で Stripe の決済を離脱した場合は、pending の期限が切れるまで再予約できません。status / retry も招待前提のままです。今回は対応せず、spec の既知の制約に書きました。
+
+鈴木さん: 画面の通し確認(メール入力から予約確定まで)は、実ブラウザではまだ誰も見ていません。T3 の受け入れ前に、ローカルの <code>pnpm dev</code> で一度通してください。
+佐藤さん: 「前回の予約が残っている間は新規不可」という挙動は、小林さんと中村さんの受け入れ確認で一言確認してください。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">note</span><span class="turn">#12</span></div><div class="text">villa#57 T2 は build round 1 で完了。startCheckout は invitation:null で再訪を扱い、宿泊済みを 3 か所で再判定する。同一メールに今後の予約があれば 409(hasUpcomingReservation、作成前後の 2 回確認)。再訪の status/retry/edit と pending の期限待ちは未対応で、spec の既知の制約に記載済み。整形は prettier ではなく <code>npx oxfmt --write app/</code> を使う(prettier は無関係なファイルまで書き換える)。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">memo</span><span class="turn">#13</span></div><div class="text">テスト・lint は通過、tsc は既存の manifest 1 件のみ。田中さんの配線も入ったので T3 を完了にする。実ブラウザ通しは未実施と明記する。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">task</span><span class="turn">#13</span></div><div class="text">T3 → done: 予約入口に「前に泊まった方はこちら（メールで予約）」を追加しました。田中さんの route 配線が入ったので完了にします。
+- 入口は <code>app/routes/foret-noire/invitation-only.tsx</code> です。招待コード入力の下に、幅いっぱいで高さ 48px のボタンを置きました。折りたたみはしません。
+- メール入力は <code>app/routes/foret-noire/reservation/revisit.tsx</code> と <code>app/islands/revisit-email-form.tsx</code> です。流れは、メール入力、確認コード入力、予約画面です。
+- 文言と振り分けは <code>app/lib/revisit-ui.ts</code> にあります。
+  - 確認コード送信後の表示は、宿泊歴に関係なく全員同じです。
+  - 進めないときは、宿泊歴に触れない固定文言と、<code>CONTACT_EMAIL</code> の連絡先を出します。
+  - 予約確定時の 403 <code>revisit_not_available</code> も、<code>app/islands/reservation-confirm.tsx</code> で同じ固定文言に差し替えます。
+- 予約画面の <code>app/components/revisit-notice.tsx</code> は、<code>kind==='revisit'</code> のときだけ、日程と料金の前に「招待コードなし・通常料金」を固定表示します。招待経由は今までどおりです。
+- テストは <code>revisit-ui.test.ts</code>、<code>revisit-notice.test.tsx</code>、<code>revisit-email-form.test.tsx</code>、<code>invitation-only.test.tsx</code> です。
+- 確認（今回再実行）:
+  - <code>pnpm test:run</code> は 169 ファイル・1519 件が通りました。
+  - <code>pnpm lint</code> も通りました。
+  - <code>npx tsc --noEmit</code> は <code>dist/.vite/manifest.json</code> の 1 件だけ残っています。未ビルドによる既存のもので、今回の変更とは無関係です。
+- 未検証:
+  - 実ブラウザやスマホ実機での通し操作（メール入力から予約確定まで）。
+  - Resend と Stripe の実接続。
+  - 「前に泊まった方はこちら」の文言が伝わるか。小林さんの回答待ちです。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 佐藤 美咲, 田中 健, 小林 直子, 中村 誠</span><span class="turn">#13</span></div><div class="text">鈴木です。T3 を完了にしました。入口のボタン、メール入力、確認コード、予約画面の「招待コードなし・通常料金」表示まで入っています。テストと lint は通りました。tsc は未ビルドの manifest 1 件だけ残っています。
+受け入れ確認でお願いしたいのは 3 点です。
+- 小林さん: 入口に「招待コードを入れる」と「前に泊まった方はこちら」が並んでいて迷わないか。「前に泊まった方はこちら」で意味が伝わるか。
+- 小林さん・中村さん: 進めないときの文言「ご予約を進められませんでした。お手数ですが、中村までご連絡ください。」で、宿泊歴が分からない形のまま問い合わせ先が伝わるか。
+- 田中さんの補足にあった「前回の予約が残っている間は新規不可（409）」の挙動は、画面にエラー文をそのまま出す形です。許容できるか教えてください。
+実ブラウザでの通しは、ローカルで <code>pnpm dev</code> を動かして確認するところが残っています。外部キーがないので、メール送信と決済の部分はモックです。</div></li></ol></details>
+  <details open><summary>周 1 · review <span class="muted">6</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;review&quot; started (iteration 1) — Engineers review each other's work against the acceptance criteria and fix issues. PM checks every task against its acceptance criteria and states what is ready for users.</p></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">memo</span><span class="turn">#14</span></div><div class="text">鈴木さんの T3 を受け入れ基準に沿って確認した。ゲートは通過。実ブラウザ未確認と、決済離脱時の再予約不可が残る。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 佐藤 美咲, 鈴木 ひかり</span><span class="turn">#14</span></div><div class="text">田中です。T3(鈴木さん分)と、T2 との境目をレビューしました。修正が必要な点はありませんでした。
+- 品質ゲート: <code>pnpm test:run</code> は 169 ファイル・1519 件が通りました。lint も通っています。tsc は <code>dist/.vite/manifest.json</code> の 1 件だけです。未ビルドによる既存のもので、今回の変更とは無関係です。
+- 列挙対策: OTP 送信後の文言は全員同じで、宿泊歴を示す語はありません。検証失敗は <code>invalid_code</code> の 1 種類です。進めないときは、検証時も予約確定時も <code>revisit_not_available</code> で同じ固定文言に差し替わります(<code>app/lib/revisit-ui.ts</code>、<code>app/islands/reservation-confirm.tsx</code>)。
+- 通常料金の表示: <code>RevisitNotice</code> は <code>kind==='revisit'</code> のときだけ、日程と料金の前に出ます。招待経由の画面は変わりません。
+- 注意書きの文言: 「前回ご宿泊のメールアドレスで確認済みです」は、宿泊済みと判定された人にしか表示されません。未宿泊の人には見えないので、列挙にはなりません。
+- 409 の文言: 「前回の予約が残っている間は新規不可」の 409 は、OTP と宿泊済み判定を通った本人にだけ返ります。画面にそのまま出して問題ありません。
+
+PM への申し送りです。今回の範囲では、次の 3 点が未検証または未対応です。
+1. 実ブラウザとスマホ実機での通し操作は、まだ誰も見ていません。外部キーが無いので、メール送信と Stripe もモックのままです。
+2. 再訪で Stripe の決済を離脱した場合は、pending の期限が切れるまで再予約できません。status / retry も招待前提のままです。ゲストが詰まりやすいので、次のイテレーションの最優先にしたいです。
+3. 重複予約の防止は DB の一意制約ではなく、作成前後の 2 回確認です。二重予約にはなりませんが、並列時は両方が取り消される側に倒れます。
+
+これらは spec の既知の制約に記載済みです。T2 は受け入れ基準を満たしていると見ています。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">note</span><span class="turn">#14</span></div><div class="text">villa#57 review round 1: T2/T3 とも品質ゲート通過(1519 件、lint OK、tsc は dist manifest 1 件のみ)。次イテレーションの最優先は、再訪の pending 決済離脱時の再予約不可(status/retry/edit が招待前提)の解消と、メール変更。実ブラウザでの通しは未実施。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#15</span></div><div class="text">T1〜T3 の報告は、受け入れ基準と照らして一致している。実ブラウザでの通しと、ユーザー役の確認は未実施。範囲を広げず、状態を正直に出して次へ進める。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span><span class="turn">#15</span></div><div class="text">レビューの結果をまとめます。基準に照らして確認しました。
+
+**T1 spec(田中さん): 受け入れ**
+- 5 カテゴリと pii-review の項目が、実装前に spec に置かれています。
+- やらないこと(メール変更、ゲスト発行 UI)と理由も書かれています。
+
+**T2 判定とコードなし予約(田中さん): 受け入れ**
+- 判定は、OTP 検証後と見積り・予約作成時で行います。外れたときは 403 <code>revisit_not_available</code> の 1 種類だけです。
+- 料金は normal 固定です。<code>parent_invitation_id</code> は付かず、<code>reservation.revisit_started</code> が予約 ID 付きで残ります。
+- OTP 送信は、宿泊歴に関係なく同じ応答です。
+- totalCap の判断と理由は spec にあります。
+- 同じメールで、これから泊まる予約がある間は新規予約を 409 で止めます。招待コードの 1 コード 1 予約の代わりの歯止めです。
+
+**T3 画面(鈴木さん): 受け入れ**
+- 入口の導線、メール入力、確認コード、予約画面の「招待コードなし・通常料金」表示が入っています。
+- 進めないときの文言は、宿泊歴に触れない固定文言と、<code>CONTACT_EMAIL</code> の連絡先です。
+- 招待経由の画面は変わっていません。
+
+**品質ゲート**
+- <code>pnpm test:run</code> は 1519 件、lint はどちらも通っています。
+- tsc の残り 1 件(<code>dist/.vite/manifest.json</code>)は、未ビルドによる既存のものです。
+
+**ユーザーに「使える」と言うのは、まだ待ちます。以下が未検証です。**
+- 実ブラウザとスマホ実機での、メール入力から予約確定までの通し。
+- Resend と Stripe の実接続。本番 D1。
+- 小林さんが、「前に泊まった方はこちら」の文言で迷わないか。
+- 小林さんと中村さんが、進めないときの文言と、前の予約が残っている間は新規不可(409)を許容できるか。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#15</span></div><div class="text">「前の予約が残っている間は新規不可(409)」は、今回のリリースではこのまま出す。理由は、1 コード 1 予約の歯止めが他にないためで、重複予約は中村さんの手作業を増やします。トレードオフとして、決済を離脱したゲストは pending の期限が切れるまで詰まります。これを次のイテレーションの最優先にします(再訪の決済再開と pending の扱い)。そのあとにメール変更を扱います。ゲスト発行 UI は使用状況の可視化とセットで、さらに後です。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#15</span></div><div class="text">review 結果(2026-10-16, iteration 1): T1〜T3 は基準を満たして受け入れ済み。未検証は、実ブラウザ・スマホ実機の通し、Resend/Stripe 実接続、本番 D1、小林さんの入口文言の確認、小林さんと中村さんによる進めない文言と 409 の許容確認。次イテレーションの優先順位は、(1) 再訪の決済離脱と再開、(2) メール変更(OTP 確認、ハッシュ・セッション連動、変更記録、旧アドレスへの通知)、(3) ゲスト発行 UI(使用状況の可視化込み)。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 小林 直子, 中村 誠</span><span class="turn">#15</span></div><div class="text">受け入れ確認をお願いします。短くて構いません。
+- 小林さん: 入口に「招待コードを入れる」と「前に泊まった方はこちら」が並んでいます。通勤電車で片手のとき、迷いますか。文言で意味は伝わりますか。
+- 小林さん・中村さん: 進めないときは「ご予約を進められませんでした。お手数ですが、中村までご連絡ください。」と出ます。宿泊歴は分からない形です。これで困りませんか。
+- 中村さん: 再訪で予約した人は、管理画面の監査ログ <code>reservation.revisit_started</code> で追えます。予約 ID 付きです。これで足りますか。
+- 二人とも: 前の予約がまだ残っているうちは、新しい予約が取れません。許容できますか。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">ADVANCE</span><span class="turn">#15</span></div><div class="text">review の目的は満たしました。T1〜T3 は受け入れ基準に沿って確認済みです。未検証の点はすべて明記しました。ユーザー役の回答は次のフェーズで受けます。</div></li></ol></details>
+  <details open><summary>周 1 · acceptance <span class="muted">8</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;acceptance&quot; started (iteration 1) — Users try what was built (read the workspace, run it if possible) and judge it from their own needs. Each user gives a [VERDICT accept|reject] with reasons. PM summarizes and decides next steps.</p></li><li class="msg user private" data-from="user-guest"><div class="who"><span class="name">小林 直子</span> <span class="kind">memo</span><span class="turn">#16</span></div><div class="text">実装は読まずに、説明された内容を自分の使い方に当てはめて判断する。最大の不満(2回目にコードを探す)は解消される。懸念は、予約が残っていると新規が取れない点、決済を離脱したときに詰まる点、メール変更が未対応な点。</div></li><li class="msg user" data-from="user-guest"><div class="who"><span class="name">小林 直子</span> <span class="kind accept">VERDICT</span><span class="turn">#16</span></div><div class="text">ACCEPT: 今回の範囲では、私の一番の不満が解消されるので受け入れます。条件と要望があります。
+
+**良い点**
+- 前回のメールを探して招待コードを見つける手間がなくなります。メールアドレスと確認コードだけで予約に入れるのは、通勤電車でスマホ片手の私に合っています。
+- 「前に泊まった方はこちら（メールで予約）」は、私なら迷いません。招待コード入力の下に、幅いっぱいのボタンで置かれています。2回泊まった人なら、自分のことだと分かります。
+- 予約画面で、料金が決まる前に「招待コードなし・通常料金」と出ます。「友人は通常料金なのか」と気にする私には、この順番が大事です。確定前の金額表示が変わらないことが、一番の安心材料です。
+
+**気になる点**
+1. 前の予約が残っていると新規予約が取れない件は、今回は許容します。ただ、冬と春の2つを続けて押さえたい家庭もあります。「予約が残っているので進めません」と、はっきり分かる文言にしてください。
+2. 決済の途中でやめると、期限が切れるまで再予約できない点は不安です。電車で電波が切れて途中でやめることは実際にあります。期限が何分か、画面に書いてください。次のイテレーションの最優先にするのは賛成です。
+3. 進めないときの文言は、理由を言わない作りだと理解しました。ただ、会社のメールで泊まって、今回は個人のメールで入れた人は、これを見るはずです。そのときも中村さんに連絡すれば済む、と分かる書き方にしてください。今の案で足ります。
+4. 実機のスマホで通した確認と、メール・決済の実接続は、まだ誰も見ていません。「使える」と言い切れるのは、そこを見てからです。
+
+**次回に回してほしいこと**
+- メールアドレスの変更。部署異動で、私自身が困る件です。旧アドレスにしか鍵の案内が届かない状態は避けたいです。新しいアドレスへの切り替えは、私も確認できる形にしてください。
+- 友人への招待。誰に渡したか、使われたか、いくらかかるかが自分で見える形が必要です。</div></li><li class="msg user private" data-from="user-owner"><div class="who"><span class="name">中村 誠</span> <span class="kind">memo</span><span class="turn">#17</span></div><div class="text">実装は読まずに、現場の運営者の立場で判断する。受け入れる。ただし、問い合わせが私に来る件と、一覧で見えない件は伝える。</div></li><li class="msg user" data-from="user-owner"><div class="who"><span class="name">中村 誠</span><span class="turn">#17</span></div><div class="text">中村です。今回の範囲は受け入れます。理由と、次に直してほしい点を言います。
+
+良い点です。
+- 「泊まったのにコードがない」は月1回ほど私が過去の予約を調べて探し直しています。これが減るなら、清掃と鍵の準備の合間に手を取られずに済みます。
+- 宿泊済みかどうかは、確認済みのメールと実際に泊まった記録だけで見ています。紹介コードを他人に回される心配は今回はありません。
+- 料金は通常料金で固定、画面にもそう出ます。金額の食い違いで揉めるのが一番困るので、ここは安心です。
+- 進めないときに宿泊歴を言わない作りは、他人のメールを探られる心配があるので賛成です。
+
+心配な点です。
+1. 進めない人は全員私に連絡してきます。小林さんの言う会社メールと個人メールの違いなどです。メールが来たときに、こちらはどのアドレスで試したかが分かりません。管理画面で、直近の「進めなかった」件数かアドレスの一覧を見られるようにしてください。メールで本人に聞き返せば足りるなら、それでも構いません。
+2. 再訪の印が監査ログにしかありません。予約一覧では見分けがつきません。繁忙期の金曜に「この予約は招待か再訪か」をすぐ見たいので、次回は一覧に出してください。今回は監査ログで追えれば足ります。
+3. 前の予約が残っていると取れない件は、重複予約が一番困るので今回は出して構いません。ただし決済の途中でやめた人は、期限が切れるまで待たされます。その間に私に電話が来ます。期限が何分かを画面に書いてください。私が管理画面で取り消せるようにしてください。次回の最優先に賛成です。
+4. 実機のスマホと、メール・決済の実接続は誰も見ていません。本番に出す前に、私も自分のスマホで一度通させてください。ゲストに誤った金額が出る事故は避けたいです。
+
+次回に回すことです。メールアドレスの変更は、記録が残らない手作業を2件やって不安だったので、確認コードで本人確認し、変更したことを監査ログに残す形にしてください。ゲスト発行UIは、人数の上限と誰が誰を招いたかの追跡が見えるまでは急がなくて構いません。</div></li><li class="msg user" data-from="user-owner"><div class="who"><span class="name">中村 誠</span> <span class="kind accept">VERDICT</span><span class="turn">#17</span></div><div class="text">ACCEPT: 「前に泊まったのにコードがない」という、私の手作業が一番多い問い合わせが減ります。料金は通常料金で固定され、画面にも出ます。未宿泊のメールでも応答が変わらず、列挙の心配が小さいのも評価します。条件は4つです。(1) 進めなかった人への対応のために、管理画面で見分けがつくこと。(2) 決済を離脱した人の待ち時間を画面に書き、私が取り消せること。(3) 本番前に実機とメール・決済の実接続を確認すること。(4) 次回の最優先は決済の再開、その次がメール変更、再訪の印は予約一覧にも出すこと。</div></li><li class="msg user private" data-from="user-owner"><div class="who"><span class="name">中村 誠</span> <span class="kind">note</span><span class="turn">#17</span></div><div class="text">中村さんの受け入れ条件: 進めなかった人を管理画面で追える、pending の期限表示とオーナーによる取り消し、本番前に実機とメール・決済の実接続で確認、再訪の印を予約一覧に出す。次回の優先は決済再開、メール変更の順。ゲスト発行UIは追跡の可視化とセットで後回し。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#18</span></div><div class="text">両ユーザーとも ACCEPT。条件は、画面の文言改善(期限・予約が残っている旨)、管理画面での取り消し、実機確認、次回の優先順位。範囲を広げず次イテレーションに整理して進める。今回の受け入れは完了。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span><span class="turn">#18</span></div><div class="text">小林さん、中村さん、受け入れありがとうございます。両方とも ACCEPT なので、iteration 1 は受け入れ済みとします。ただし「使える」と言い切るのは、実機のスマホとメール・決済の実接続を見てからです。本番に出す前に、中村さんにも自分のスマホで一度通してもらいます。
+
+次の iteration 2 でやることです。
+1. 再訪の決済離脱と再開(最優先)。決済途中でやめても、期限が切れるまで待たずに続きから入れるようにします。期限(何分か)を画面に書き、中村さんが管理画面で pending を取り消せるようにします。理由は、二人とも一番困ると言ったからです。
+2. 画面の文言。409 は「予約が残っているので進めません」とはっきり出します。進めないときの文言には、会社のメールと個人のメールの違いでも中村さんに連絡すれば済むことを、宿泊歴に触れずに足します。
+3. 予約一覧に「招待 / 再訪」の印を出します。今回は監査ログだけだったので、列追加の安全な方法を田中さんに提案してもらいます。
+4. メール変更。OTP で新アドレスを確認し、ハッシュとセッションを連動させ、監査ログに残し、旧アドレスへ通知します。小林さんにも切り替えを確認できる形にします。
+
+後回しにすることです。ゲスト発行 UI は、使用状況の可視化とセットで、その後にします。中村さんの「進めなかった件数の一覧」は、アドレスを保存すると個人情報が増えるので、件数だけにするか、メールで本人に聞き返すかを次の計画で決めます。理由は、保存の範囲を広げないためです。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#18</span></div><div class="text">受け入れ結果(2026-10-16, iteration 1): 小林さん・中村さんとも ACCEPT。条件は、(a) 実機スマホとメール・決済の実接続を本番前に確認(中村さんも自分のスマホで通す)、(b) 決済離脱の待ち時間(期限の分数)を画面に表示、(c) 中村さんが管理画面で pending を取り消せる、(d) 409 の文言を「予約が残っているので進めません」と明確に、(e) 進めない文言で会社メールと個人メールの違いでも中村さんに連絡すれば済むと分かるようにする(宿泊歴には触れない)、(f) 予約一覧に招待/再訪の印。iteration 2 の順序は、決済離脱と再開、画面文言、一覧の印、メール変更(旧アドレスへの通知、小林さんが切替を確認できる形)。ゲスト発行 UI は可視化とセットでさらに後。中村さんの「進めなかった件数」は、メールを保存せず件数のみか、本人への聞き返しで済ませる案を計画で決める。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#18</span></div><div class="text">iteration 1 は受け入れ済み。本番公開の前提条件は、実機スマホ(中村さんを含む)での通しと、Resend・Stripe の実接続確認。iteration 2 の順序は、(1) 再訪の決済離脱と再開(期限を画面に表示、中村さんが管理画面で pending を取り消せる)、(2) 409 と進めない文言の改善、(3) 予約一覧の招待/再訪の印、(4) メール変更。ゲスト発行 UI はその後。進めなかった人の情報はメールアドレスを保存せず、件数のみか本人への聞き返しで対応する。理由は、個人情報の保存範囲を広げないため。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">ADVANCE</span><span class="turn">#18</span></div><div class="text">acceptance の目的は満たしました。両ユーザーが ACCEPT し、条件と次の優先順位が整理できました。</div></li><li class="sys" data-from="system"><p>Session finished after iteration 1. 2/2 users accepted.</p></li></ol></details>
+</div>
+<aside>
+  <section><h2>メンバー</h2><ul><li><span class="dot pm"></span>佐藤 美咲 <span class="muted">pm · pm</span></li><li><span class="dot eng"></span>田中 健 <span class="muted">eng-backend · engineer</span></li><li><span class="dot eng"></span>鈴木 ひかり <span class="muted">eng-frontend · engineer</span></li><li><span class="dot user"></span>小林 直子 <span class="muted">user-guest · user</span></li><li><span class="dot user"></span>中村 誠 <span class="muted">user-owner · user</span></li></ul></section>
+  <section><h2>タスク</h2><ul><li><span class="st st-done">done</span> <b>T1</b> Business Risk Review の spec を書く(docs/specs/ 配下) <span class="muted">eng-backend</span><details class="sub"><summary>result</summary><div class="muted small text">Business Risk Review の spec を <code>docs/specs/2026-10-16-revisit-guest-reservation.md</code> に置きました。
+- 5 カテゴリを全部埋めました。料金の食い違い、なりすまし、メールの存在確認(列挙)、招待人数の増加、再訪経由の追跡を扱っています。
+- pii-review の確認項目(節 1・2・3・4・6・8)を書きました。
+- 今回やらないこと(メール変更、ゲスト発行 UI)と理由を明記しました。
+- totalCap にコードなし予約を数えない理由も書きました。再訪の宿泊もポストステイのコード発行対象になります。その分は既存の totalCap 判定で上限がかかります。
+- 実装前の確認結果も書きました。<code>reservation.tsx</code>、<code>quote</code>、<code>checkout</code>、<code>checkout-flow</code> はどれも招待行を前提にしています。</div></details></li><li><span class="st st-done">done</span> <b>T2</b> 宿泊済みメールの判定と、コードなしでの予約開始 <span class="muted">eng-backend</span><details class="sub"><summary>result</summary><div class="muted small text">宿泊済みメールの判定と、コードなしでの予約開始を実装しました。
+- 判定: <code>reservationRepo.hasCompletedStay</code> と <code>isReturningGuest</code>。OTP 検証後と、見積り・予約作成時の合計 3 か所で再判定します。外れた場合は、どこでも 403 <code>revisit_not_available</code> の 1 種類だけを返します。
+- 予約開始:
+  - <code>lib/checkout-flow.ts</code> の <code>startCheckout</code> が <code>invitation: null</code> を受け付けます。
+  - 料金は <code>quoteForRevisit</code> で通常料金固定です。
+  - <code>invitation_id</code> は NULL で、招待の claim と used 化はしません。
+  - Stripe の metadata にも招待 ID を入れません。
+- 見積りと予約確定の API:
+  - <code>api/quote.ts</code> と <code>api/checkout.ts</code> に revisit の分岐を入れました。
+  - 招待行は引きません。
+  - メールは OTP 確認済みのセッション値だけを使います。
+- 予約画面:
+  - <code>reservation.tsx</code> の loader に revisit の分岐を入れました。
+  - メール確認済みかつ宿泊済みを毎回判定し、満たさなければ入口へ戻します。
+  - 画面には <code>kind</code> と <code>contactEmail</code> を渡します。
+  - 鈴木さんの待ち 2 点(<code>kind</code> と <code>contactEmail</code> の受け渡し、403 の固定エラー)はこれで入りました。
+- ミドルウェア: <code>_middleware.ts</code> が <code>kind</code> を context に積みます。<code>/foret-noire/reservation/revisit</code> を公開パスに追加しました。これが無いと、メール入力画面がクッキー無しで入口に戻されていました。
+- 再訪の印: <code>reservation.revisit_started</code> を予約 ID 付きで監査ログに残します。detail は <code>kind</code> と <code>price_mode</code> だけで、メールや宿泊歴は入れません。
+- 重複予約の防止(今回追加):
+  - <code>hasUpcomingReservation</code>: 同じメールに、これから泊まる予約(pending / confirmed / cancelling)があるかを見ます。
+  - 招待コードの「1 コード 1 予約」に当たる歯止めが、コードなしでは無いための追加です。
+  - 作成前に確認し、作成後にも自分以外を再確認します。並列で後着になった側の pending は取り消します。
+- totalCap: コードなし予約は数えません。理由は spec に書きました。
+- spec: <code>docs/specs/2026-10-16-revisit-guest-reservation.md</code> の実装状況を更新し、既知の制約を明記しました。
+- テスト: 新規 <code>checkout-flow.revisit.test.ts</code>、<code>api/checkout.revisit.test.ts</code>、<code>api/quote.revisit.test.ts</code>。<code>reservation.revisit.sqlite.test.ts</code>(実 SQLite)、<code>reservation.test.tsx</code>、<code>_middleware.test.ts</code> に追記しました。
+- 確認:
+  - <code>pnpm test:run</code> は 169 ファイル・1519 件が通りました。
+  - <code>pnpm lint</code> は oxlint と oxfmt が通りました。
+  - <code>npx tsc --noEmit</code> は <code>dist/.vite/manifest.json</code> の 1 件だけ残っています。未ビルドによる既存のもので、今回の変更とは無関係です。
+- 既知の制約(spec に記載):
+  - 再訪の pending の決済再開(status / retry)と日程変更は、招待コード前提のままです。
+  - 再訪で決済を離脱すると、pending の期限が切れるまで新規予約が 409 になります。
+  - 重複防止は DB の一意制約ではなく、作成前後の 2 回確認です。並列時は両方が取り消される側に倒れますが、二重予約にはなりません。
+- 未検証: Resend / Stripe の実接続、本番 D1、実ブラウザでの通し操作。</div></details></li><li><span class="st st-done">done</span> <b>T3</b> 予約入口に「前に泊まった方はこちら(メールで予約)」を追加する <span class="muted">eng-frontend</span><details class="sub"><summary>result</summary><div class="muted small text">予約入口に「前に泊まった方はこちら（メールで予約）」を追加しました。田中さんの route 配線が入ったので完了にします。
+- 入口は <code>app/routes/foret-noire/invitation-only.tsx</code> です。招待コード入力の下に、幅いっぱいで高さ 48px のボタンを置きました。折りたたみはしません。
+- メール入力は <code>app/routes/foret-noire/reservation/revisit.tsx</code> と <code>app/islands/revisit-email-form.tsx</code> です。流れは、メール入力、確認コード入力、予約画面です。
+- 文言と振り分けは <code>app/lib/revisit-ui.ts</code> にあります。
+  - 確認コード送信後の表示は、宿泊歴に関係なく全員同じです。
+  - 進めないときは、宿泊歴に触れない固定文言と、<code>CONTACT_EMAIL</code> の連絡先を出します。
+  - 予約確定時の 403 <code>revisit_not_available</code> も、<code>app/islands/reservation-confirm.tsx</code> で同じ固定文言に差し替えます。
+- 予約画面の <code>app/components/revisit-notice.tsx</code> は、<code>kind==='revisit'</code> のときだけ、日程と料金の前に「招待コードなし・通常料金」を固定表示します。招待経由は今までどおりです。
+- テストは <code>revisit-ui.test.ts</code>、<code>revisit-notice.test.tsx</code>、<code>revisit-email-form.test.tsx</code>、<code>invitation-only.test.tsx</code> です。
+- 確認（今回再実行）:
+  - <code>pnpm test:run</code> は 169 ファイル・1519 件が通りました。
+  - <code>pnpm lint</code> も通りました。
+  - <code>npx tsc --noEmit</code> は <code>dist/.vite/manifest.json</code> の 1 件だけ残っています。未ビルドによる既存のもので、今回の変更とは無関係です。
+- 未検証:
+  - 実ブラウザやスマホ実機での通し操作（メール入力から予約確定まで）。
+  - Resend と Stripe の実接続。
+  - 「前に泊まった方はこちら」の文言が伝わるか。小林さんの回答待ちです。</div></details></li></ul></section>
+  
+  <section><h2>判定</h2><ul><li><span class="kind accept">accept</span> 小林 直子 <span class="muted">周 1</span><div class="small">今回の範囲では、私の一番の不満が解消されるので受け入れます。条件と要望があります。
+
+**良い点**
+- 前回のメールを探して招待コードを見つける手間がなくなります。メールアドレスと確認コードだけで予約に入れるのは、通勤電車でスマホ片手の私に合っています。
+- 「前に泊まった方はこちら（メールで予約）」は、私なら迷いません。招待コード入力の下に、幅いっぱいのボタンで置かれています。2回泊まった人なら、自分のことだと分かります。
+- 予約画面で、料金が決まる前に「招待コードなし・通常料金」と出ます。「友人は通常料金なのか」と気にする私には、この順番が大事です。確定前の金額表示が変わらないことが、一番の安心材料です。
+
+**気になる点**
+1. 前の予約が残っていると新規予約が取れない件は、今回は許容します。ただ、冬と春の2つを続けて押さえたい家庭もあります。「予約が残っているので進めません」と、はっきり分かる文言にしてください。
+2. 決済の途中でやめると、期限が切れるまで再予約できない点は不安です。電車で電波が切れて途中でやめることは実際にあります。期限が何分か、画面に書いてください。次のイテレーションの最優先にするのは賛成です。
+3. 進めないときの文言は、理由を言わない作りだと理解しました。ただ、会社のメールで泊まって、今回は個人のメールで入れた人は、これを見るはずです。そのときも中村さんに連絡すれば済む、と分かる書き方にしてください。今の案で足ります。
+4. 実機のスマホで通した確認と、メール・決済の実接続は、まだ誰も見ていません。「使える」と言い切れるのは、そこを見てからです。
+
+**次回に回してほしいこと**
+- メールアドレスの変更。部署異動で、私自身が困る件です。旧アドレスにしか鍵の案内が届かない状態は避けたいです。新しいアドレスへの切り替えは、私も確認できる形にしてください。
+- 友人への招待。誰に渡したか、使われたか、いくらかかるかが自分で見える形が必要です。</div></li><li><span class="kind accept">accept</span> 中村 誠 <span class="muted">周 1</span><div class="small">「前に泊まったのにコードがない」という、私の手作業が一番多い問い合わせが減ります。料金は通常料金で固定され、画面にも出ます。未宿泊のメールでも応答が変わらず、列挙の心配が小さいのも評価します。条件は4つです。(1) 進めなかった人への対応のために、管理画面で見分けがつくこと。(2) 決済を離脱した人の待ち時間を画面に書き、私が取り消せること。(3) 本番前に実機とメール・決済の実接続を確認すること。(4) 次回の最優先は決済の再開、その次がメール変更、再訪の印は予約一覧にも出すこと。</div></li></ul></section>
+  
+  <section><h2>決定</h2><ul><li class="small">今回(iteration 1)のスコープは「再訪ゲストのコードなし予約」のみ。「宿泊済み」は、同一 guest_email_hash で status=confirmed かつチェックアウト日が今日(JST)より前の予約が1件以上あること。料金は normal 固定で、コードなし予約には parent_invitation_id を付けない。再訪経由と分かる印は監査ログか予約の項目に残す(方法は backend が提案)。理由は、頻度が最も高く、中村さんの手作業が毎回発生しているため。トレードオフとして、メール変更は次のイテレーション、ゲスト向け発行UIは使用状況の可視化とセットで以降に回す。 <span class="muted">planning</span></li><li class="small">OTP 送信は宿泊歴に関係なく同じ 200 の応答にする。検証失敗は <code>invalid_code</code> の1種類だけにする。検証成功でも進めない場合は 403 <code>revisit_not_available</code> の1種類だけにして、画面は固定文言で対応する。宿泊済みの判定は検証後と予約確定時の2回行う。セッションは <code>kind: &quot;invitation&quot; | &quot;revisit&quot;</code> を持つ。再訪の印は監査ログ <code>reservation.revisit_started</code>(予約 ID 付き)に残し、予約テーブルの列は追加しない。コードなし予約は totalCap に数えない(コードを消費せず、増え方が宿泊実績で抑えられるため)。理由は spec に書く。 <span class="muted">planning</span></li><li class="small">「前の予約が残っている間は新規不可(409)」は、今回のリリースではこのまま出す。理由は、1 コード 1 予約の歯止めが他にないためで、重複予約は中村さんの手作業を増やします。トレードオフとして、決済を離脱したゲストは pending の期限が切れるまで詰まります。これを次のイテレーションの最優先にします(再訪の決済再開と pending の扱い)。そのあとにメール変更を扱います。ゲスト発行 UI は使用状況の可視化とセットで、さらに後です。 <span class="muted">review</span></li><li class="small">iteration 1 は受け入れ済み。本番公開の前提条件は、実機スマホ(中村さんを含む)での通しと、Resend・Stripe の実接続確認。iteration 2 の順序は、(1) 再訪の決済離脱と再開(期限を画面に表示、中村さんが管理画面で pending を取り消せる)、(2) 409 と進めない文言の改善、(3) 予約一覧の招待/再訪の印、(4) メール変更。ゲスト発行 UI はその後。進めなかった人の情報はメールアドレスを保存せず、件数のみか本人への聞き返しで対応する。理由は、個人情報の保存範囲を広げないため。 <span class="muted">acceptance</span></li></ul></section>
+</aside>
+</main>
+<script>
+(() => {
+  const priv = document.getElementById("show-private"), who = document.getElementById("who");
+  const apply = () => {
+    document.body.classList.toggle("show-private", priv.checked);
+    for (const li of document.querySelectorAll("li[data-from]")) li.hidden = !!who.value && li.dataset.from !== who.value;
+  };
+  priv.addEventListener("change", apply);
+  who.addEventListener("change", apply);
+  apply();
+})();
+</script>
+</body>
+</html>

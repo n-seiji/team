@@ -30,8 +30,21 @@ export class MockBackend implements Backend {
           ? mine.map((t) => `[TASK_DONE ${t.id}] ${t.title} を実装し、テストを追加しました。`).join("\n")
           : "[SAY to=all] 自分のタスクは完了済みです。";
       }
-      case "engineer:review":
-        return "[SAY to=all] 相互レビュー完了。受け入れ基準を満たしています。";
+      case "engineer:review": {
+        const mine = s.tasks.filter((t) => t.owner === me.id);
+        const demos = mine.map((t) => `[DEMO ${t.id}] README の手順で実行すると「完了」と表示されます。`);
+        const verify =
+          me.id === engineers[0]?.id
+            ? [
+                "[VERIFY] node -e \"require('fs').writeFileSync(require('path').join(process.env.TEAM_ARTIFACTS, 'result.txt'), 'ok'); console.log('journey: ok')\"",
+              ]
+            : [];
+        return ["[SAY to=all] 相互レビュー完了。受け入れ基準を満たしています。", ...demos, ...verify].join("\n");
+      }
+      case "engineer:wrapup":
+        return "[SAY to=all] 受け入れで決まったことを反映しました。";
+      case "pm:wrapup":
+        return "[SAY to=all] 出荷したもの: 全タスク。残りはありません。";
       case "pm:review":
         return "[SAY to=all] 全タスクが受け入れ基準を満たしているので、ユーザーに見てもらいます。";
       case "user:acceptance":

@@ -1,0 +1,690 @@
+{
+  "admin": {
+    "names": [
+      "石田 正雄"
+    ],
+    "passphrase": "kaichou"
+  },
+  "groups": [
+    {
+      "id": "g1",
+      "name": "1班",
+      "leaders": [
+        "青木 誠"
+      ],
+      "passphrase": "hanchou-1",
+      "houses": [
+        {
+          "id": "g1-01",
+          "name": "山田家(太郎)",
+          "mode": "paper"
+        },
+        {
+          "id": "g1-02",
+          "name": "佐々木家(花子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g1-03",
+          "name": "高橋家(一郎)",
+          "mode": "digital"
+        },
+        {
+          "id": "g1-04",
+          "name": "渡辺家(和子)",
+          "mode": "paper"
+        },
+        {
+          "id": "g1-05",
+          "name": "伊藤家(健二)",
+          "mode": "digital"
+        },
+        {
+          "id": "g1-06",
+          "name": "中村家(幸子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g1-07",
+          "name": "小林家(進)",
+          "mode": "paper"
+        },
+        {
+          "id": "g1-08",
+          "name": "加藤家(久美子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g1-09",
+          "name": "吉田家(太郎)",
+          "mode": "digital"
+        },
+        {
+          "id": "g1-10",
+          "name": "山口家(花子)",
+          "mode": "paper"
+        },
+        {
+          "id": "g1-11",
+          "name": "松本家(一郎)",
+          "mode": "digital"
+        },
+        {
+          "id": "g1-12",
+          "name": "井上家(和子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g1-13",
+          "name": "木村家(健二)",
+          "mode": "paper"
+        },
+        {
+          "id": "g1-14",
+          "name": "林家(幸子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g1-15",
+          "name": "清水家(進)",
+          "mode": "digital"
+        }
+      ]
+    },
+    {
+      "id": "g2",
+      "name": "2班",
+      "leaders": [
+        "大野 恵"
+      ],
+      "passphrase": "hanchou-2",
+      "houses": [
+        {
+          "id": "g2-01",
+          "name": "伊藤家(花子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g2-02",
+          "name": "中村家(一郎)",
+          "mode": "digital"
+        },
+        {
+          "id": "g2-03",
+          "name": "小林家(和子)",
+          "mode": "paper"
+        },
+        {
+          "id": "g2-04",
+          "name": "加藤家(健二)",
+          "mode": "digital"
+        },
+        {
+          "id": "g2-05",
+          "name": "吉田家(幸子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g2-06",
+          "name": "山口家(進)",
+          "mode": "paper"
+        },
+        {
+          "id": "g2-07",
+          "name": "松本家(久美子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g2-08",
+          "name": "井上家(太郎)",
+          "mode": "digital"
+        },
+        {
+          "id": "g2-09",
+          "name": "木村家(花子)",
+          "mode": "paper"
+        },
+        {
+          "id": "g2-10",
+          "name": "林家(一郎)",
+          "mode": "digital"
+        },
+        {
+          "id": "g2-11",
+          "name": "清水家(和子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g2-12",
+          "name": "山田家(健二)",
+          "mode": "paper"
+        },
+        {
+          "id": "g2-13",
+          "name": "佐々木家(幸子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g2-14",
+          "name": "高橋家(進)",
+          "mode": "digital"
+        },
+        {
+          "id": "g2-15",
+          "name": "渡辺家(久美子)",
+          "mode": "paper"
+        }
+      ]
+    },
+    {
+      "id": "g3",
+      "name": "3班",
+      "leaders": [
+        "森田 剛"
+      ],
+      "passphrase": "hanchou-3",
+      "houses": [
+        {
+          "id": "g3-01",
+          "name": "吉田家(一郎)",
+          "mode": "digital"
+        },
+        {
+          "id": "g3-02",
+          "name": "山口家(和子)",
+          "mode": "paper"
+        },
+        {
+          "id": "g3-03",
+          "name": "松本家(健二)",
+          "mode": "digital"
+        },
+        {
+          "id": "g3-04",
+          "name": "井上家(幸子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g3-05",
+          "name": "木村家(進)",
+          "mode": "paper"
+        },
+        {
+          "id": "g3-06",
+          "name": "林家(久美子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g3-07",
+          "name": "清水家(太郎)",
+          "mode": "digital"
+        },
+        {
+          "id": "g3-08",
+          "name": "山田家(花子)",
+          "mode": "paper"
+        },
+        {
+          "id": "g3-09",
+          "name": "佐々木家(一郎)",
+          "mode": "digital"
+        },
+        {
+          "id": "g3-10",
+          "name": "高橋家(和子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g3-11",
+          "name": "渡辺家(健二)",
+          "mode": "paper"
+        },
+        {
+          "id": "g3-12",
+          "name": "伊藤家(幸子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g3-13",
+          "name": "中村家(進)",
+          "mode": "digital"
+        },
+        {
+          "id": "g3-14",
+          "name": "小林家(久美子)",
+          "mode": "paper"
+        },
+        {
+          "id": "g3-15",
+          "name": "加藤家(太郎)",
+          "mode": "digital"
+        }
+      ]
+    },
+    {
+      "id": "g4",
+      "name": "4班",
+      "leaders": [
+        "坂本 優"
+      ],
+      "passphrase": "hanchou-4",
+      "houses": [
+        {
+          "id": "g4-01",
+          "name": "木村家(和子)",
+          "mode": "paper"
+        },
+        {
+          "id": "g4-02",
+          "name": "林家(健二)",
+          "mode": "digital"
+        },
+        {
+          "id": "g4-03",
+          "name": "清水家(幸子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g4-04",
+          "name": "山田家(進)",
+          "mode": "paper"
+        },
+        {
+          "id": "g4-05",
+          "name": "佐々木家(久美子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g4-06",
+          "name": "高橋家(太郎)",
+          "mode": "digital"
+        },
+        {
+          "id": "g4-07",
+          "name": "渡辺家(花子)",
+          "mode": "paper"
+        },
+        {
+          "id": "g4-08",
+          "name": "伊藤家(一郎)",
+          "mode": "digital"
+        },
+        {
+          "id": "g4-09",
+          "name": "中村家(和子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g4-10",
+          "name": "小林家(健二)",
+          "mode": "paper"
+        },
+        {
+          "id": "g4-11",
+          "name": "加藤家(幸子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g4-12",
+          "name": "吉田家(進)",
+          "mode": "digital"
+        },
+        {
+          "id": "g4-13",
+          "name": "山口家(久美子)",
+          "mode": "paper"
+        },
+        {
+          "id": "g4-14",
+          "name": "松本家(太郎)",
+          "mode": "digital"
+        },
+        {
+          "id": "g4-15",
+          "name": "井上家(花子)",
+          "mode": "digital"
+        }
+      ]
+    },
+    {
+      "id": "g5",
+      "name": "5班",
+      "leaders": [
+        "福田 明"
+      ],
+      "passphrase": "hanchou-5",
+      "houses": [
+        {
+          "id": "g5-01",
+          "name": "佐々木家(健二)",
+          "mode": "digital"
+        },
+        {
+          "id": "g5-02",
+          "name": "高橋家(幸子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g5-03",
+          "name": "渡辺家(進)",
+          "mode": "paper"
+        },
+        {
+          "id": "g5-04",
+          "name": "伊藤家(久美子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g5-05",
+          "name": "中村家(太郎)",
+          "mode": "digital"
+        },
+        {
+          "id": "g5-06",
+          "name": "小林家(花子)",
+          "mode": "paper"
+        },
+        {
+          "id": "g5-07",
+          "name": "加藤家(一郎)",
+          "mode": "digital"
+        },
+        {
+          "id": "g5-08",
+          "name": "吉田家(和子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g5-09",
+          "name": "山口家(健二)",
+          "mode": "paper"
+        },
+        {
+          "id": "g5-10",
+          "name": "松本家(幸子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g5-11",
+          "name": "井上家(進)",
+          "mode": "digital"
+        },
+        {
+          "id": "g5-12",
+          "name": "木村家(久美子)",
+          "mode": "paper"
+        },
+        {
+          "id": "g5-13",
+          "name": "林家(太郎)",
+          "mode": "digital"
+        },
+        {
+          "id": "g5-14",
+          "name": "清水家(花子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g5-15",
+          "name": "山田家(一郎)",
+          "mode": "paper"
+        }
+      ]
+    },
+    {
+      "id": "g6",
+      "name": "6班",
+      "leaders": [
+        "藤井 実"
+      ],
+      "passphrase": "hanchou-6",
+      "houses": [
+        {
+          "id": "g6-01",
+          "name": "中村家(幸子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g6-02",
+          "name": "小林家(進)",
+          "mode": "paper"
+        },
+        {
+          "id": "g6-03",
+          "name": "加藤家(久美子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g6-04",
+          "name": "吉田家(太郎)",
+          "mode": "digital"
+        },
+        {
+          "id": "g6-05",
+          "name": "山口家(花子)",
+          "mode": "paper"
+        },
+        {
+          "id": "g6-06",
+          "name": "松本家(一郎)",
+          "mode": "digital"
+        },
+        {
+          "id": "g6-07",
+          "name": "井上家(和子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g6-08",
+          "name": "木村家(健二)",
+          "mode": "paper"
+        },
+        {
+          "id": "g6-09",
+          "name": "林家(幸子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g6-10",
+          "name": "清水家(進)",
+          "mode": "digital"
+        },
+        {
+          "id": "g6-11",
+          "name": "山田家(久美子)",
+          "mode": "paper"
+        },
+        {
+          "id": "g6-12",
+          "name": "佐々木家(太郎)",
+          "mode": "digital"
+        },
+        {
+          "id": "g6-13",
+          "name": "高橋家(花子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g6-14",
+          "name": "渡辺家(一郎)",
+          "mode": "paper"
+        },
+        {
+          "id": "g6-15",
+          "name": "伊藤家(和子)",
+          "mode": "digital"
+        }
+      ]
+    },
+    {
+      "id": "g7",
+      "name": "7班",
+      "leaders": [
+        "岡田 緑"
+      ],
+      "passphrase": "hanchou-7",
+      "houses": [
+        {
+          "id": "g7-01",
+          "name": "山口家(進)",
+          "mode": "paper"
+        },
+        {
+          "id": "g7-02",
+          "name": "松本家(久美子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g7-03",
+          "name": "井上家(太郎)",
+          "mode": "digital"
+        },
+        {
+          "id": "g7-04",
+          "name": "木村家(花子)",
+          "mode": "paper"
+        },
+        {
+          "id": "g7-05",
+          "name": "林家(一郎)",
+          "mode": "digital"
+        },
+        {
+          "id": "g7-06",
+          "name": "清水家(和子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g7-07",
+          "name": "山田家(健二)",
+          "mode": "paper"
+        },
+        {
+          "id": "g7-08",
+          "name": "佐々木家(幸子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g7-09",
+          "name": "高橋家(進)",
+          "mode": "digital"
+        },
+        {
+          "id": "g7-10",
+          "name": "渡辺家(久美子)",
+          "mode": "paper"
+        },
+        {
+          "id": "g7-11",
+          "name": "伊藤家(太郎)",
+          "mode": "digital"
+        },
+        {
+          "id": "g7-12",
+          "name": "中村家(花子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g7-13",
+          "name": "小林家(一郎)",
+          "mode": "paper"
+        },
+        {
+          "id": "g7-14",
+          "name": "加藤家(和子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g7-15",
+          "name": "吉田家(健二)",
+          "mode": "digital"
+        }
+      ]
+    },
+    {
+      "id": "g8",
+      "name": "8班",
+      "leaders": [
+        "村上 勉"
+      ],
+      "passphrase": "hanchou-8",
+      "houses": [
+        {
+          "id": "g8-01",
+          "name": "林家(久美子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g8-02",
+          "name": "清水家(太郎)",
+          "mode": "digital"
+        },
+        {
+          "id": "g8-03",
+          "name": "山田家(花子)",
+          "mode": "paper"
+        },
+        {
+          "id": "g8-04",
+          "name": "佐々木家(一郎)",
+          "mode": "digital"
+        },
+        {
+          "id": "g8-05",
+          "name": "高橋家(和子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g8-06",
+          "name": "渡辺家(健二)",
+          "mode": "paper"
+        },
+        {
+          "id": "g8-07",
+          "name": "伊藤家(幸子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g8-08",
+          "name": "中村家(進)",
+          "mode": "digital"
+        },
+        {
+          "id": "g8-09",
+          "name": "小林家(久美子)",
+          "mode": "paper"
+        },
+        {
+          "id": "g8-10",
+          "name": "加藤家(太郎)",
+          "mode": "digital"
+        },
+        {
+          "id": "g8-11",
+          "name": "吉田家(花子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g8-12",
+          "name": "山口家(一郎)",
+          "mode": "paper"
+        },
+        {
+          "id": "g8-13",
+          "name": "松本家(和子)",
+          "mode": "digital"
+        },
+        {
+          "id": "g8-14",
+          "name": "井上家(健二)",
+          "mode": "digital"
+        },
+        {
+          "id": "g8-15",
+          "name": "木村家(幸子)",
+          "mode": "paper"
+        }
+      ]
+    }
+  ]
+}

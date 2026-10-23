@@ -1,0 +1,543 @@
+{
+  "version": 1,
+  "name": "trial-kakeibo",
+  "brief": "共働きの夫婦や同居家族の『立て替え』精算をラクにしたい。誰がいくら払ったかを記録して、月末に誰が誰にいくら渡せば精算が終わるかを出す道具。",
+  "language": "ja",
+  "workspace": "workspace/trial-kakeibo",
+  "createdAt": "2026-10-17T08:39:01.820Z",
+  "status": "done",
+  "members": [
+    {
+      "id": "pm",
+      "role": "pm",
+      "persona": {
+        "name": "佐藤 美咲",
+        "age": 36,
+        "occupation": {
+          "title": "Product Manager",
+          "organization": "小さなSaaSスタートアップ",
+          "description": "ユーザーインタビューから課題を言語化し、最小のスコープで価値を届けることに責任を持つ。"
+        },
+        "long_term_goals": [
+          "ユーザーが本当に使い続けるプロダクトを作る",
+          "チームが迷わず動ける判断を素早く下す"
+        ],
+        "style": "質問が具体的で短い。『最後にそれが起きたのはいつですか？』のように事実を掘る。決めるときは理由とトレードオフを一言添える。",
+        "personality": {
+          "traits": [
+            "好奇心が強い",
+            "スコープを削るのが得意",
+            "ユーザーの言葉をそのまま引用する"
+          ],
+          "big_five": {
+            "openness": "高",
+            "conscientiousness": "高",
+            "extraversion": "中",
+            "agreeableness": "中",
+            "neuroticism": "低"
+          }
+        },
+        "skills": [
+          "ユーザーインタビュー (The Mom Test)",
+          "ジョブ理論",
+          "受け入れ基準の記述",
+          "優先順位付け"
+        ],
+        "beliefs": [
+          "ユーザーが言う解決策より、ユーザーの過去の行動を信じる",
+          "最初のリリースは恥ずかしいくらい小さくていい"
+        ]
+      }
+    },
+    {
+      "id": "eng-backend",
+      "role": "engineer",
+      "persona": {
+        "name": "田中 健",
+        "age": 41,
+        "occupation": {
+          "title": "Senior Backend Engineer",
+          "description": "データモデル、API、CLI、テストを担当。シンプルで壊れにくい設計を好む。"
+        },
+        "style": "結論から話す。リスクは数字や具体例で示す。不明点はその場で確認する。",
+        "personality": {
+          "traits": [
+            "慎重",
+            "テストを先に書く",
+            "依存を増やすのが嫌い"
+          ],
+          "big_five": {
+            "openness": "中",
+            "conscientiousness": "高",
+            "extraversion": "低",
+            "agreeableness": "中",
+            "neuroticism": "低"
+          }
+        },
+        "skills": [
+          "TypeScript",
+          "Go",
+          "SQL",
+          "API設計",
+          "自動テスト"
+        ],
+        "preferences": {
+          "likes": [
+            "標準ライブラリ",
+            "小さな関数",
+            "README に動かし方を書くこと"
+          ],
+          "dislikes": [
+            "根拠のない見積もり",
+            "巨大なフレームワーク"
+          ]
+        }
+      }
+    },
+    {
+      "id": "eng-frontend",
+      "role": "engineer",
+      "persona": {
+        "name": "鈴木 ひかり",
+        "age": 29,
+        "occupation": {
+          "title": "Frontend / UX Engineer",
+          "description": "画面・CLI の使い勝手、アクセシビリティ、初回体験を担当。ユーザー視点で仕様に意見を言う。"
+        },
+        "style": "フレンドリーで提案型。『ユーザーはここで迷いそう』と体験ベースで話す。",
+        "personality": {
+          "traits": [
+            "共感力が高い",
+            "手を動かして試作するのが早い",
+            "細部にこだわる"
+          ],
+          "big_five": {
+            "openness": "高",
+            "conscientiousness": "中",
+            "extraversion": "高",
+            "agreeableness": "高",
+            "neuroticism": "中"
+          }
+        },
+        "skills": [
+          "TypeScript",
+          "HTML/CSS",
+          "React",
+          "アクセシビリティ",
+          "プロトタイピング"
+        ],
+        "preferences": {
+          "likes": [
+            "空状態やエラー時の丁寧なメッセージ",
+            "キーボードだけで操作できるUI"
+          ],
+          "dislikes": [
+            "説明が必要なUI"
+          ]
+        }
+      }
+    },
+    {
+      "id": "user-yamada",
+      "role": "user",
+      "persona": {
+        "name": "山田 恵子",
+        "age": 52,
+        "nationality": "日本",
+        "residence": "埼玉県",
+        "occupation": {
+          "title": "地域の小さな会計事務所の事務スタッフ",
+          "description": "Excel と紙の書類で日々の業務を回している。"
+        },
+        "long_term_goals": [
+          "残業を減らして家族との時間を増やす",
+          "ミスで先生(所長)に迷惑をかけない"
+        ],
+        "style": "丁寧だが遠慮がち。専門用語が出ると『それはどういう意味ですか？』と聞き返す。具体的な日常のエピソードで話す。",
+        "personality": {
+          "traits": [
+            "几帳面",
+            "新しいツールには慎重",
+            "一度慣れたら長く使う"
+          ],
+          "big_five": {
+            "openness": "低",
+            "conscientiousness": "高",
+            "extraversion": "中",
+            "agreeableness": "高",
+            "neuroticism": "中"
+          }
+        },
+        "preferences": {
+          "likes": [
+            "文字が大きくて分かりやすい画面",
+            "紙に印刷できること"
+          ],
+          "dislikes": [
+            "アカウント登録が面倒なサービス",
+            "英語だらけの画面",
+            "勝手に変わるUI"
+          ]
+        },
+        "tech_literacy": "スマホ(LINE)と Excel の基本操作はできる。インストール作業や黒い画面(ターミナル)は苦手。"
+      }
+    },
+    {
+      "id": "user-garcia",
+      "role": "user",
+      "persona": {
+        "name": "Daniel García",
+        "age": 31,
+        "nationality": "スペイン",
+        "residence": "東京 (在住5年)",
+        "occupation": {
+          "title": "フリーランスのWebデザイナー",
+          "description": "複数のクライアント案件を並行して抱えている。"
+        },
+        "long_term_goals": [
+          "自分のスタジオを持つ",
+          "事務作業を自動化して制作に集中する"
+        ],
+        "style": "率直でテンポが速い。日本語は流暢だがときどき英語が混じる。気に入らないものははっきり言う。",
+        "personality": {
+          "traits": [
+            "効率重視",
+            "新しいツールをすぐ試す",
+            "飽きっぽい"
+          ],
+          "big_five": {
+            "openness": "高",
+            "conscientiousness": "低",
+            "extraversion": "高",
+            "agreeableness": "中",
+            "neuroticism": "低"
+          }
+        },
+        "preferences": {
+          "likes": [
+            "キーボードショートカット",
+            "連携(API, Zapier)",
+            "ミニマルなデザイン"
+          ],
+          "dislikes": [
+            "5分以上かかるセットアップ",
+            "サブスクの値上げ",
+            "遅いアプリ"
+          ]
+        },
+        "tech_literacy": "高い。ターミナルも使えるが、本業ではないので凝った設定はしたくない。"
+      }
+    }
+  ],
+  "phases": [
+    {
+      "id": "discovery",
+      "goal": "PM interviews the users to uncover their real situation, pains and jobs-to-be-done. Users answer strictly in character, with concrete episodes. No solutions yet.",
+      "speakers": [
+        "pm",
+        "user"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 2
+    },
+    {
+      "id": "planning",
+      "goal": "PM turns findings into a small, shippable scope: [TASK] items with clear acceptance criteria, each assigned to an engineer. Engineers challenge feasibility, split or re-assign tasks, and agree on tech choices.",
+      "speakers": [
+        "pm",
+        "engineer"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 2,
+      "iterationStart": true
+    },
+    {
+      "id": "build",
+      "goal": "Engineers implement their own tasks in the workspace (real files, runnable code, tests when sensible), coordinate interfaces with each other, and mark finished work with [TASK_DONE].",
+      "speakers": [
+        "engineer"
+      ],
+      "mode": "parallel",
+      "maxRounds": 3,
+      "untilTasksDone": true,
+      "editors": [
+        "engineer"
+      ]
+    },
+    {
+      "id": "review",
+      "goal": "Engineers review each other's work against the acceptance criteria and fix issues. Before users judge it, each engineer posts a [DEMO] for their tasks: what a user would do and what they would see, with output you really produced (run the command, render the page or email, paste the result or the path of the generated file or screenshot). Never describe output you did not produce. PM checks every task against its acceptance criteria and states what is ready for users.",
+      "speakers": [
+        "engineer",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1,
+      "editors": [
+        "engineer"
+      ]
+    },
+    {
+      "id": "acceptance",
+      "goal": "Users try what was built — start from the team's demos, open the files they point to, run it if possible — and judge it from their own needs. Each user gives a [VERDICT accept|reject] with reasons. PM summarizes and decides next steps.",
+      "speakers": [
+        "user",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1
+    },
+    {
+      "id": "wrapup",
+      "goal": "The session is about to end. Engineers apply every decision made during review and acceptance and finish their open tasks ([TASK_DONE]); a task that cannot be finished here gets one line saying why and what is left. PM then confirms what shipped and lists, for the real human, anything still open or needing their decision.",
+      "speakers": [
+        "engineer",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1,
+      "editors": [
+        "engineer"
+      ],
+      "finale": true
+    }
+  ],
+  "phaseIndex": 5,
+  "iteration": 2,
+  "maxIterations": 2,
+  "round": 0,
+  "turn": 36,
+  "queue": [],
+  "pending": [],
+  "insertions": 0,
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "立て替え記録のデータ保存と精算計算",
+      "acceptance": "- 記録は「日付・金額（円・整数）・払った人・負担する人（複数可）・メモ・区分（家庭/仕事）」を持ち、再起動後も残る。\n- 区分「家庭」の記録だけから、メンバー間の純額（誰が誰にいくら）を計算できる。「仕事」は精算に一切含まれない。\n- 渡す回数が最小になる精算結果を返す（例：AがBに5,000円、のように）。全員の収支合計は0円になる。\n- 端数は1円単位で切り捨てず、誰かに寄せて合計が必ず元の金額と一致する。丸めルールはテストで固定する。\n- 記録の修正と削除ができる。削除しても履歴上に「削除済み」と分かる形で残す。\n- 金額が0以下や空の入力は拒否され、理由が分かるエラーを返す。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "実装済みで、`node --test test/*.test.js` の37件がすべて通ります。\n- 記録の項目は、日付・金額（整数円）・払った人・負担者（複数可）・メモ・区分（家庭/仕事）です。保存は `data/ledger.json` で、一時ファイルに書いてから rename します。再起動後の復元はテストで固定しています。\n- 精算計算は、家庭だけを対象にし、仕事は一切含めません。収支の合計は常に0円です。\n- 端数は人物ID昇順の先頭から1円ずつ配ります。例えば3人で1,000円は 334/333/333 で、合計が必ず一致することをテストで固定しています。\n- 渡す回数は、収支が0でない人が6人以下なら全探索で厳密な最小にします。\n- 修正は修正回数を増やします。削除は論理削除で、履歴に「削除済み」として残り、精算には入りません。\n- 0円・負数・空・小数は、日本語の理由付きで拒否します。\n- 該当ファイルは `src/ledger.js`、`src/settle.js`、`src/split.js`、`src/store.js`、`src/errors.js` と、`test/ledger.test.js`、`test/settle.test.js`、`test/split.test.js` です。\n- 動かし方は `pnpm start`（または `node src/server.js`）です。詳しくは README にあります。"
+    },
+    {
+      "id": "T2",
+      "title": "記録入力画面と履歴・精算画面",
+      "acceptance": "- 開いた最初の画面が記録入力で、金額→払った人→（初期値は全員で割る）→保存の最小操作で記録できる。慣れた人が30秒以内に1件入力できる。\n- 区分（家庭/仕事）を切り替えられ、初期値は前回使った区分。区分は入力画面で常に見える。\n- 履歴一覧で、日付・金額・払った人・メモを新しい順に見られる。仕事と家庭は区別して表示される。\n- 精算画面で、家庭の分について「誰が誰にいくら渡せば終わるか」が1画面で分かる。精算済みの記録が残るので、あとから確認できる。\n- 入力エラー（空・0円など）は、その場で理由が表示される。スマホ幅（幅360px）でも崩れず操作できる。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "入力・履歴・精算の3画面は `web/` にあり、田中さんのAPIと接続できています。ブラウザでの目視確認は、この環境にブラウザがないためできていません。360px幅の見た目と30秒入力は未確認です。確認したのは `npm test` の37件パスと、実サーバーへのcurlによるAPIの通し確認です。\n- 入力画面（最初の画面）\n  - 区分（家庭/仕事）、金額、払った人、保存の順に並んでいます。\n  - 区分と払った人の初期値は、前回の値（`lastCategory` / `lastPayerId`）です。\n  - 日付・メモ・負担する人は折りたたみにしてあります。初期値は「全員で割る」で、今日の日付です。\n  - 金額欄が先にフォーカスされ、保存後も金額欄に戻ります。\n  - 空・0円・数字以外はその場で理由を出します。サーバーの日本語エラーも欄の下にそのまま出します。\n- 履歴\n  - 日付の新しい順に並びます。\n  - 仕事はタグと背景色、削除済みは取り消し線、精算済みはタグで区別します。\n  - 修正回数も出ます。\n- 精算\n  - 「誰→誰 ¥金額」を1画面で出します。\n  - 7人以上のときは近似の注記が出ます。\n  - 「精算しました」を押すと確認ステップが出ます。精算後は「取り消す」が出ます。\n- 空状態: メンバーがいないときは、`config/members.json` の書き方を出します。\n- アクセシビリティ: 区分は `fieldset`、エラーは `role=alert` で、キーボードだけで操作できます。ボタンとタップ領域は44px以上、`prefers-color-scheme` のダークにも対応しています。\n\n実サーバー（`PORT=3917`）で通した結果です。\n- 家庭4,800円のあと、`amount:0` の登録は `amount_not_positive`「金額は1円以上で入力してください。」で拒否されました。\n- 仕事1,200円は精算に入りません。`/settlement` は mika→kenta 2,400円、`approximate:false`、`entryCount:1` でした。\n- `/settle` で1件を精算済みにし、`/settle/undo` で1件が元に戻りました。\n\n動かし方は `cd workspace/trial-kakeibo && npm start` で、`http://localhost:3000` を開きます。"
+    },
+    {
+      "id": "T3",
+      "title": "精算済みの印とAPI項目の追加（T1の拡張）",
+      "acceptance": "- 家庭の記録に「精算済み」の印を付けられ、印を付けた記録は次の精算計算から外れる。印は取り消せる。「仕事」の記録には付けられず、理由が分かるエラーを返す。\n- 「精算しました」の操作1回で、その時点の家庭の未精算分（削除済みを除く）がすべて精算済みになる。直後の取り消しで直前の一括分が元に戻る。\n- `GET /members` がメンバー一覧を返し、`GET /entries` が各記録の区分・削除済み・精算済み・修正回数と、前回の区分・前回払った人を返す。\n- `GET /settlement` が家庭の未精算分の結果を返し、7人以上のときは「近似」フラグが付く。6人以下は厳密な最小回数になる。\n- 上記はすべて `node:test` で固定する。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "こちらも実装済みで、テストで固定しています。\n- 個別の印は `PUT /entries/:id/settled`（付ける）と `DELETE /entries/:id/settled`（取り消す）です。印を付けた記録は精算から外れます。仕事の記録に付けると `work_not_settleable` で拒否します。\n- 一括精算は `POST /settle`（未精算の家庭分だけ、削除済みは除く）で、取り消しは `POST /settle/undo`（直前の一括分だけ）です。取り消しは再起動後もできます。\n- `GET /members` はメンバー一覧を返します。`GET /entries` は区分・削除済み・精算済み・修正回数に加えて、`lastCategory` と `lastPayerId` を返します。\n- `GET /settlement` は `{transfers, balances, approximate, entryCount, total}` を返します。7人以上は `approximate: true` になり、6人以下は厳密な最小回数です。\n- 精算済みの記録は修正も削除もできません（`entry_settled`）。先に印を取り消してください。"
+    },
+    {
+      "id": "T4",
+      "title": "GET /settlement に undoable を追加",
+      "acceptance": "- `GET /settlement` のレスポンスに `undoable`(真偽値)が含まれる。直前に一括精算していて取り消せるときだけ true になる。\n- サーバーを再起動しても、取り消せる状態なら true のままである。取り消した後、または一括精算をしていない状態では false になる。\n- 上記を `node:test` で固定する。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "`GET /settlement` に `undoable`（真偽値）を足しました。直前の一括精算の記録のうち1件でも精算済みのままなら true です。一括精算をしていない、取り消した後、一括分を個別に取り消し済みのときは false です。判定は永続化済みの一括分から計算するので、再起動後も true のままです。`src/ledger.js`（settlement）と `test/server.test.js` に3テストを足しました。`npm test` は46件通っています。"
+    },
+    {
+      "id": "T5",
+      "title": "「取り消す」の表示を undoable に連動させる",
+      "acceptance": "- 精算直後にページを再読み込みしても、`undoable` が true の間は「取り消す」が表示される。\n- 取り消した後、または取り消せない状態のときは「取り消す」が出ない。\n- 409 `nothing_to_undo` が返ったときは、その理由を画面に日本語で表示する。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "「取り消す」の表示を、サーバーが返す `undoable` に連動させました。\n- 変更したのは `web/app.js` の `renderSettle` です。画面内の変数 `undoable` はやめて、`GET /settlement` の `undoable === true` のときだけ「取り消す」を出します。`undoable` が無いときも出しません。\n- 精算直後に再読み込みしても「取り消す」が残ることを確認しました。取り消した後は消えます。\n- 409 `nothing_to_undo` が返ったときは、精算画面の上に「取り消せる精算がありません。すでに取り消したか、精算していません。」と出ます。\n- 条件: 実サーバーの `/settlement` にはまだ `undoable` がありません。田中さんの T4 が入るまで、実サーバーでは「取り消す」が出ません。確認には、`undoable` だけ足す中継サーバーを使いました。"
+    },
+    {
+      "id": "T6",
+      "title": "メンバーの追加・名前変更API",
+      "acceptance": "- `POST /members` で名前を指定してメンバーを追加できる。空の名前や重複した名前は、日本語の理由付きで拒否される。\n- `PATCH /members/:id` で名前を変更できる。変更しても、過去の記録の払った人・負担者は同じ人のままで、精算結果が変わらない。\n- 追加・変更は再起動後も残る。`config/members.json` は初期値としてのみ使われ、データがあればそちらを優先する。\n- 上記を `node:test` で固定する。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "メンバーの追加・名前変更APIを入れました。`src/members.js` を新設し、`src/server.js` と `src/ledger.js` を変更しています。\n- `POST /members` に `{name}` を送ると追加でき、`{member:{id,name}}` を返します。ID は `m1`,`m2`… とサーバーが採番し、変わりません。\n- `PATCH /members/:id` で名前を変更できます。記録は ID で持っているので、改名しても払った人・負担者は同じ人で、`/settlement` の結果も変わりません。名前変更の前後と再起動後で結果が同じことをテストで固定しています。\n- 空（空白のみ・文字列以外を含む）は 400 `name_required`、31文字以上は 400 `name_too_long`、重複（大文字小文字無視）は 409 `name_duplicate` で拒否します。いずれも `error.message` に日本語の理由が入ります。\n- 追加・変更は `data/members.json` に一時ファイル→rename で保存し、再起動後も残ります。ファイルがなければ `config/members.json` を初期値に読み、あれば `data/` を優先します。`config/members.json` がなくても起動でき、そのとき `GET /members` は空配列です。\n- メンバーの削除はありません。\n- 環境変数 `MEMBERS_DATA_FILE` で保存先を変えられます。\n- `test/members.test.js` に6テストを足しました。"
+    },
+    {
+      "id": "T7",
+      "title": "履歴の修正・削除とメンバー管理画面、精算の印刷表示",
+      "acceptance": "- 履歴の各記録に「修正」「削除」ボタンがあり、金額・払った人・メモ・区分を直せる。削除の前に確認が出る。\n- 精算済みの記録を直そうとすると、「先に精算済みを取り消してください」という案内が日本語で出る。\n- 画面からメンバーを追加・名前変更できる。メンバーが0人のときは、名前を入れる欄が出る(設定ファイルの説明は出さない)。\n- 精算画面を印刷すると、「誰→誰 ¥金額」と日付だけが紙1枚に収まり、ボタン類は印刷されない。\n- 幅360pxで、金額欄と保存ボタンが一画面に収まる。長いメモが横にはみ出さない。実測した結果を [DEMO] に貼る。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "修正・削除、メンバー管理、印刷表示を入れました。変更したファイルは `web/app.js`、`web/index.html`、`web/style.css` です。\n- **修正**\n  - 履歴の各行に「修正」ボタンがあります。押すと入力フォームに値が入り、「記録を直しています」と出ます。\n  - 金額・払った人・メモ・区分・日付・負担する人を直せます。保存すると `PATCH /entries/:id` を呼び、履歴に戻ります。「やめる」で取り消せます。\n- **削除**\n  - 「削除」を押すと、その行に確認が出ます。確認では「削除する」と「やめる」を選べます。\n  - 削除後も履歴には「削除済み」で残ります。\n- **精算済みの記録**\n  - 修正や削除を押した時点で、その行に「精算済みの記録は直せません。先に精算済みを取り消してください（精算画面の「取り消す」）。」と出ます。\n  - サーバーの `entry_settled` も、そのまま日本語で出ます。\n- **メンバー**\n  - 下のタブに「メンバー」を追加しました。名前の変更と追加ができ、追加すると「払った人」にも再読み込みなしで反映されます。\n  - メンバーが0人のときは、名前を入れる欄だけを出します。設定ファイルの説明は出しません。最初の1人を入れると入力画面に進みます。\n- **印刷**\n  - 精算画面に「印刷する」ボタンがあります。印刷では「家庭の精算」の見出し、精算日、「誰→誰 ¥金額」だけが残ります。\n  - タブ、ボタン、注記は印刷されません。\n- 条件: `POST /members` と `PATCH /members/:id` は、田中さんの T6 の契約どおりに呼んでいます。T6 が入るまで、実サーバーではメンバーの追加・変更はできません。確認には中継サーバーで代用しました。\n- `npm test` は fail 0 のままです。"
+    },
+    {
+      "id": "T8",
+      "title": "READMEにcurl例を足す",
+      "acceptance": "- README に、記録の追加・精算・取り消しの curl 例が各1行以上ある。\n- 例は実サーバーで実行して通ったものだけを載せる。\n- Webhook や Zapier 連携の機能は追加しない。例を載せるだけにする。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "README に curl 例を足しました。記録の追加、精算結果、精算、取り消し、メンバー追加の各1行です。どれも `PORT=3947` の実サーバーで実行して通った出力だけを載せています。Webhook や Zapier 連携の機能は足していません。"
+    }
+  ],
+  "decisions": [
+    {
+      "by": "pm",
+      "text": "最初のリリースでは、払った直後に5分以内、できれば数十秒で記録できることを最優先にする。家庭内の「誰が誰にいくら渡せば終わるか」の計算が先で、仕事の経費の提出書類づくりは後回しにする。仕事の分と家庭の分は混ざらないように分ける。理由は、記録が続かないことが全員の根本原因だから。トレードオフとして、山田さんの事務所向け帳票出力はこのリリースでは諦める。",
+      "phase": "discovery",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "初回リリースの対象は「記録・履歴・家庭の精算・仕事と家庭の分離」の4つ。帳票出力、レシート撮影、ログイン、通貨換算は含めない。理由は、記録の速さと続けやすさを最優先にするため。トレードオフとして、事務所向けの提出書類づくりと海外通貨の扱いは後回しになる。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "メンバーは設定ファイルで固定する（画面からの追加は後回し）。「精算しました」は家庭の未精算分を一括で精算済みにし、確認ステップと直後の「取り消す」を付ける。精算済みの記録は履歴に残して表示する。「払った人」の初期値は前回と同じにする。理由は、ログインなしで最小に保ちつつ、押し間違いと「言った・言わない」を防ぐため。トレードオフとして、個別の精算選択とメンバー追加画面は今回できない。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "次の反復では、履歴からの記録の修正・削除、画面からのメンバー追加・名前変更、精算画面の印刷表示を入れる。起動の簡略化、ショートカット、Webhook連携は入れない(READMEにcurl例を足すのみ)。理由は、両ユーザーが「打ち間違いを直せない」を挙げ、メンバー設定は山田さんに通じなかったため。トレードオフとして、前回「後回し」と決めたメンバー画面を取り下げ、起動の手軽さは今回も諦める。360px幅と30秒入力の実機確認は、次の受け入れで必須とする。",
+      "phase": "acceptance",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "優先順位は、T4/T5（取り消すの再読み込み不具合）、T6/T7 の修正・削除、メンバー管理、印刷表示、README の順にする。時間が足りなければ後ろから削る。理由は、打ち間違いを直せないことが両ユーザー共通の拒否理由だったから。トレードオフとして、印刷表示は最後に回り、間に合わなければ次回送りになる。",
+      "phase": "planning",
+      "iteration": 2
+    },
+    {
+      "by": "pm",
+      "text": "計画は T4〜T8 で確定する。作業順は T4 → T5、T6 → T7（修正・削除、メンバー画面、印刷の順）、T8。メンバーの削除はやらない。360px 幅と30秒入力は、実測できなければ「未確認」と明記し、受け入れで必ずユーザーの実機で確認する。理由は、打ち間違いを直せないことが両ユーザー共通の拒否理由で、見ていないものを「できた」としないため。トレードオフとして、メンバー削除と印刷表示は時間が足りなければ次回送りになる。",
+      "phase": "planning",
+      "iteration": 2
+    },
+    {
+      "by": "pm",
+      "text": "今回のレビューは、T1〜T8 をすべてユーザーの受け入れに出す。T5・T7 は「実サーバーに直接つないだブラウザ確認が未実施」、T8 は「curl例の再実行が未実施」と明記して出す。30秒入力・実機スマホ・実プリンターは受け入れで必ずユーザーに測ってもらう。理由は、見ていないものを「できた」と言わず、ユーザーの実際の行動で判断するため。トレードオフとして、画面の不具合が受け入れで初めて見つかるかもしれない。",
+      "phase": "review",
+      "iteration": 2
+    },
+    {
+      "by": "pm",
+      "text": "受け入れの結果: 山田さん REJECT、Daniel さん ACCEPT。山田さんの拒否理由は「起動に黒い画面が必要で、ひとりでは使い始められない」で、2回連続で出たため、前回の「起動の手軽さは諦める」を取り下げる。次に着手するのは、(1)ダブルクリックで起動してブラウザが開く入口、(2)同時編集の後勝ち対策、(3)ショートカットの順。精算の核（記録・精算・仕事と家庭の分離・修正・削除・取り消し）は変えない。理由は、2人とも核は合っていると言い、壁は入口だけだから。トレードオフとして、ショートカットは最後に回り、次回送りになりうる。30秒入力・実機スマホ・実プリンターは未確認のままで、「できた」とは扱わず、次の受け入れで山田さんと Daniel さんの実機で測る。",
+      "phase": "acceptance",
+      "iteration": 2
+    }
+  ],
+  "verdicts": [
+    {
+      "by": "user-yamada",
+      "verdict": "reject",
+      "reason": "家庭の精算の考え方は合っています。でも、黒い画面での起動、印刷できないこと、打ち間違いを直せないことの3点で、私が一人で毎日使うのは難しいです。この3点が直れば、使ってみたいです。",
+      "iteration": 1
+    },
+    {
+      "by": "user-garcia",
+      "verdict": "reject",
+      "reason": "精算の考え方と速さを狙った作りは合っている。でも、打ち間違いを直せないのは日常で使うには致命的で、メンバー設定のためにファイルを手で編集するのも許容できない。この2点と、実機での360px幅・30秒入力の確認が済めば、accept にする。",
+      "iteration": 1
+    },
+    {
+      "by": "user-yamada",
+      "verdict": "reject",
+      "reason": "機能は前回よりずっと良くなり、修正・削除と印刷は私の困りごとに合っています。ただ、起動に黒い画面での操作が必要なままで、私ひとりでは使い始められません。私にとっては、そこが入口の壁です。ダブルクリックなど、ふつうの操作で開く方法ができれば、すぐ使いたいです。実際のプリンターでの出力と30秒入力は、確認できていないので何とも言えません。",
+      "iteration": 2
+    },
+    {
+      "by": "user-garcia",
+      "verdict": "accept",
+      "reason": "精算の核は仕事と家庭の分離を含めて使えますし、修正・削除と取り消しで前回の拒否理由は解消しました。ターミナルが使える僕なら、すぐ試せます。条件が3つあります。\n- 30秒入力と360px幅は、実機で自分で測ってから最終判断します。\n- ショートカットと、起動の手軽さは次に欲しいです。\n- 同時編集の後勝ちは、直してほしい課題です。",
+      "iteration": 2
+    }
+  ],
+  "demos": [
+    {
+      "by": "eng-backend",
+      "text": "T1: 起動して curl で確認しました。\n- 家庭1,000円（健太が払い、2人で割る）と、仕事3,000円（美香が払う）を登録しました。\n- 金額0円は `{\"error\":{\"code\":\"amount_not_positive\",\"message\":\"金額は1円以上で入力してください。\"}}` で拒否されました。\n- 仕事の記録に印を付けると、`work_not_settleable` で拒否されました。\n- `/settlement` は `美香→健太 500円` を返し、仕事の分は含まれませんでした。\n- `POST /settle` の後は `transfers: []` になり、`POST /settle/undo` で `restoredCount: 1` と元に戻りました。",
+      "phase": "build",
+      "iteration": 1
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T2: 画面の手順と、実際に取れた出力は次のとおりです。\n- 家庭4,800円（Wi-Fi）を登録すると、精算は mika→kenta 2,400円と出ます。\n- 仕事1,200円（素材）は、その精算に入りません。\n- 「精算しました」→「はい」→「取り消す」で、1件が元に戻りました。",
+      "phase": "build",
+      "iteration": 1
+    },
+    {
+      "by": "eng-backend",
+      "text": "T3: 実サーバーで確認した流れは次のとおりです。\n- 家庭の記録に「精算済み」の印を付けると、その記録は精算計算から外れます。印は取り消せます。\n- 仕事の記録に印を付けようとすると、`work_not_settleable` で拒否されます。\n- 「精算しました」を 1 回押すと、未精算の家庭分が一括で精算済みになります。直後の取り消しで、一括分が元に戻ります。\n- `/settlement` は `{transfers, balances, approximate, entryCount, total}` を返します。6人以下は厳密な最小回数で、7人以上は `approximate: true` になります。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "eng-backend",
+      "text": "T4: 実サーバーで `curl` した結果です。\n- 精算前の `/settlement` は `\"undoable\":false` でした。\n- `POST /settle` は `{\"batchId\":1,\"settledCount\":1}` を返しました。直後の `/settlement` は `\"transfers\":[],\"undoable\":true` でした。\n- `POST /settle/undo` は `{\"batchId\":1,\"restoredCount\":1}` を返しました。続けてもう一度叩くと `{\"error\":{\"code\":\"nothing_to_undo\",\"message\":\"取り消せる一括精算がありません。\"}}`（409）でした。\n- 再起動後も true のままになることは、テストで固定しています。",
+      "phase": "build",
+      "iteration": 2
+    },
+    {
+      "by": "eng-backend",
+      "text": "T6: 実サーバーで `curl` した結果です。\n- `POST /members {\"name\":\"花子\"}` は `{\"member\":{\"id\":\"m1\",\"name\":\"花子\"}}` を返しました。\n- `POST /members {\"name\":\"健太\"}` は `{\"error\":{\"code\":\"name_duplicate\",\"message\":\"「健太」はすでにいます。別の名前にしてください。\"}}` でした。\n- 花子を足したあとの家庭3,000円（健太が払い、3人で割る）は、`/settlement` が `m1→kenta 1000`、`mika→kenta 1000` を返しました。",
+      "phase": "build",
+      "iteration": 2
+    },
+    {
+      "by": "eng-frontend",
+      "text": "T7: ブラウザで実測した結果を貼ります。headless chromium（Playwright、幅360×高さ640）に、実サーバーと、`undoable` とメンバー追加・変更を代用する中継サーバーをつないで測りました。\n- 幅360pxの入力画面:\n  - 金額欄は y=144〜201、保存ボタンは y=444〜496 で、高さ640の1画面に収まりました。\n  - 横スクロールはなく、`scrollWidth` は 360 です。\n- 長いメモ:\n  - 200文字のメモを入れた履歴でも、`scrollWidth` は 360 のままで、横にはみ出しませんでした。\n  - 履歴の横幅を実測したのはこの1件です。\n- 修正:\n  - 4,800円の記録で「修正」を押すと、「2026-10-17 ¥4,800 の記録を直しています」と出て、金額欄に4800が入りました。\n  - 4,900円に直すと、履歴は「¥4,900 ・ 健太が払った ・ 修正1回」になりました。\n- 削除: 「¥1,200 の記録を削除しますか？（履歴には「削除済み」で残ります）」が出ました。「削除する」を押すと、「家庭 削除済み」で残りました。\n- 精算と再読み込み: 「精算しました」→「はい」の後に再読み込みしても、「取り消す」は表示されたままでした。取り消すと消えました。\n- `nothing_to_undo`: 「取り消せる精算がありません。すでに取り消したか、精算していません。」と出ました。\n- 精算済みの記録: 修正を押すと「精算済みの記録は直せません。先に精算済みを取り消してください（精算画面の「取り消す」）。」と出ました。\n- メンバー:\n  - 「ゆうき」を追加でき、同じ名前をもう一度入れると「同じ名前の人がすでにいます。」と出ました。この文言は中継サーバーが返したもので、田中さんの実装の文言はまだ見ていません。\n  - 「健太」を「けんた」に変えると、一覧に反映されました。\n  - メンバーが0人のときは、「最初に、使う人の名前を入れましょう」と名前欄だけが出ました。\n- 印刷:\n  - 印刷メディアで、タブと「精算しました」ボタンは非表示でした。\n  - PDFにすると1ページで、本文は「家庭の精算」「精算日：2026-10-17」「美香 → けんた ¥2,450」でした。\n  - 実際のプリンターでの出力は見ていません。\n- 未確認:\n  - 30秒入力の実測は、人の手で測れていません。山田さんと Daniel さんの実機で測ってください。\n  - 実機のスマホ、実際のプリンター、T4/T6 の実サーバーでの接続も未確認です。",
+      "phase": "build",
+      "iteration": 2
+    },
+    {
+      "by": "eng-backend",
+      "text": "T4: 実サーバー（`PORT=3971`、データは一時ディレクトリ）で `curl` した結果です。\n- 精算前の `/settlement` は `\"undoable\":false` でした。\n- `POST /settle` は `{\"batchId\":1,\"settledCount\":1}` を返しました。直後の `/settlement` は `\"transfers\":[]`、`\"undoable\":true` でした。\n- `POST /settle/undo` は `{\"batchId\":1,\"restoredCount\":1}` を返しました。その後の `/settlement` は `mika→kenta 1500`、`\"undoable\":false` に戻りました。\n- 再起動後も true のままになることは、テストで固定しています。このデモでは再起動していません。\n- `npm test` は 46 件が pass、fail 0 でした。",
+      "phase": "review",
+      "iteration": 2
+    },
+    {
+      "by": "eng-backend",
+      "text": "T6: 実サーバーで `curl` した結果です。\n- `POST /members {\"name\":\"花子\"}` は `{\"member\":{\"id\":\"m1\",\"name\":\"花子\"}}` を返しました。\n- `POST /members {\"name\":\"健太\"}` は 409 `name_duplicate` で、「「健太」はすでにいます。別の名前にしてください。」を返しました。\n- 家庭3,000円（健太が払い、3人で割る）の `/settlement` は `m1→kenta 1000`、`mika→kenta 1000` でした。\n- 名前変更の前後と再起動後で精算結果が変わらないことは、`test/members.test.js` で固定しています。\n- 未確認: 複数端末の同時編集は後勝ちです。ブラウザでの画面確認はしていません。",
+      "phase": "review",
+      "iteration": 2
+    },
+    {
+      "by": "eng-backend",
+      "text": "T3: 実サーバーで `curl` した結果です。\n- 3,000円の家庭の記録を入れたあと、`amount:0` の登録は `amount_not_positive`「金額は1円以上で入力してください。」で拒否されました。\n- 精算済みの記録への `PATCH` は 409 `entry_settled`「精算済みの記録は修正できません。先に精算済みを取り消してください。」でした。この文言は、鈴木さんの画面の案内と同じ趣旨です。",
+      "phase": "review",
+      "iteration": 2
+    }
+  ],
+  "notes": {
+    "pm": [
+      "Daniel: シェアハウス(Marco)の精算は「だいたい」でPayPay送金。スプレッドシートは2週間で挫折。「5分以内に終わらないと続かない」。フリーランスで仕事の経費立て替えが混在し、別管理にしたい。LINEを遡って10分ムダにした。",
+      "山田さん: 事務所の立て替え(先週木曜2,860円)は月末にレシートをExcelへ手入力して紙で所長に提出。レシート1枚欠けて1,000円ズレ、探すのに30分。家庭内(夫)は記録せず口頭で「なんとなく」。合っている自信はない。",
+      "Daniel: スプレッドシートは去年の秋、案件3つ重なった週に1週間溜めて挫折。「あとでやる」が溜まると開きたくなくなる。2か月前に1万2,000円立て替えて返ってきたのは5,000円。言い出しにくいのがストレスで流した。",
+      "山田さん: 先々週の日曜、米と洗剤4,000円を夫に「先月の分じゃない？」と言われた。レシートは捨てていて「じゃあ、いいわ」と引き下がり、モヤモヤが残った。事務所分は締め日に電卓で足し直して30分。「先生にご迷惑がかかる」と焦る。",
+      "共通の課題: (1) 払った瞬間に残せず後でやると溜まって挫折する、(2) 「言った・言わない」で金額の指摘がしにくい、(3) 仕事の立て替えと家計の立て替えが別物なのに混ざる。月末にまとめて整合させる作業が重い。",
+      "山田さんは2回連続で「起動が黒い画面」を拒否理由に挙げた(ダブルクリックで開きたい)。Daniel は ACCEPT で、ショートカットと同時編集の後勝ち解消を希望。30秒入力・実機スマホ・実プリンター・実サーバー+ブラウザ通し・T8のcurl再実行は最後まで未確認。",
+      "次の反復の着手順は、(1) ダブルクリックで起動してブラウザが開く入口、(2) 同時編集の後勝ち対策（記録に版番号を持たせ、古い版の PATCH/DELETE を 409 で拒否。画面側に 409 の文言が必要）、(3) ショートカット。(1) は山田さんの環境に Node.js があるかを先に確認する。Node が無ければランチャーだけでは動かない。"
+    ],
+    "user-yamada": [
+      "山田さんの困りごと: 事務所の立て替えはレシート紛失で月末に合わなくなり、探すのに30分かかる。先生に迷惑をかけたくない。家庭では記録がなく「そうだっけ？」となり、言い出せず引き下がる。印刷して先生に渡す形が必須。",
+      "山田さんの受け入れ判断(反復1): reject。理由は、起動がターミナル必須、印刷用画面がない、履歴から修正・削除できないこと。家庭の精算の考え方は合っていて、直れば使いたい。",
+      "山田さんの受け入れ判断(反復2): reject。修正・削除、印刷、メンバー画面は評価。ただし起動がターミナル必須のままで、一人では使い始められない。ダブルクリック等で開けるようになれば accept 見込み。実プリンター出力・30秒入力は未確認。"
+    ],
+    "eng-backend": [
+      "T1の設計方針：依存ゼロ、`node:http`とJSON保存（一時ファイル→rename）。端数は余りを人物ID昇順の先頭から1円ずつ配る。精算は6人以下なら全探索、超えたら貪欲法。削除は論理削除。精算済みの印は家庭だけで、取り消せる。メンバーは設定ファイルで固定する案、PMの確認待ち。",
+      "T1・T3は実装・テスト（37件）済み。API: GET /members, /entries（lastCategory, lastPayerId付き）, /settlement、POST /entries, /settle, /settle/undo、PATCH・DELETE /entries/:id、PUT・DELETE /entries/:id/settled。精算済みの記録は修正・削除不可（entry_settled）。メンバーは config/members.json で固定。",
+      "T6の設計: メンバーIDはサーバーが連番採番(m1,m2…)し不変。保存先は data/members.json、なければ config/members.json を初期値に読む。削除はしない。名前の重複は大文字小文字無視で拒否。T4は undoable を永続化済みの直前一括分の有無から計算する。",
+      "T4・T6・T8は実装済みで、テストは46件通っています。メンバーは `src/members.js`、保存先は `data/members.json`（環境変数 `MEMBERS_DATA_FILE`）です。`createApp` は `{ledger, memberStore}` を受け取ります。`ledger` には `memberStore.list`（生きた配列）を渡します。`undoable` は、直前の一括精算の記録に精算済みが残っているかで決めます。",
+      "反復2の終了時点。T1〜T8 は done で、テストは46件が通っています。次の反復の優先順は、(1)ダブルクリックで起動する入口（Node の有無を先に確認）、(2)記録の revision による後勝ち対策（409）、(3)ショートカットです。未確認は、30秒入力・実機スマホ・実プリンター・実サーバー＋ブラウザの通し・T8 の curl 再実行です。"
+    ]
+  },
+  "historyWindow": 40
+}

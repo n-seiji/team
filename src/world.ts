@@ -1,7 +1,7 @@
 // The "world" (TinyWorld analogue): roster, shared transcript, phase/turn
 // scheduling and the effects of each action. Pure state transitions live here;
 // persistence is in store.ts so this module is easy to test.
-import type { Entry, EntryKind, PersonaSpec, PhaseDef, SessionState, Task } from "./types.ts";
+import type { Entry, EntryKind, PersonaSpec, PhaseDef, SessionState, Task, TaskStatus, Trial } from "./types.ts";
 import { parseReply, type Action } from "./protocol.ts";
 import { allowedActions } from "./sop.ts";
 
@@ -12,6 +12,7 @@ interface NewSessionOptions {
   phases: PhaseDef[];
   language?: string;
   workspace?: string;
+  externalWorkspace?: boolean;
   maxIterations?: number;
   historyWindow?: number;
   now?: () => string;
@@ -43,11 +44,12 @@ export class World {
       brief: o.brief,
       language: o.language ?? "ja",
       workspace: o.workspace ?? "workspace",
+      ...(o.externalWorkspace ? { externalWorkspace: true } : {}),
       createdAt: now(),
       status: "running",
       members: o.members,
       phases: o.phases,
-      phaseIndex: 0,
+      phaseIndex: Math.max(0, o.phases.findIndex((p) => !p.finale)),
       iteration: 1,
       maxIterations: o.maxIterations ?? 2,
       round: 0,
@@ -58,6 +60,8 @@ export class World {
       tasks: [],
       decisions: [],
       verdicts: [],
+      demos: [],
+      questions: [],
       notes: {},
       historyWindow: o.historyWindow ?? 40,
     };
@@ -74,6 +78,22 @@ export class World {
 
   member(id: string): PersonaSpec | undefined {
     return findMember(this.state, id);
+  }
+
+  /** Whether the runtime still has to run the verification command before this phase's first turn. */
+  get trialDue(): boolean {
+    return this.state.status === "running" && !!this.phase.trial && !this.state.trials?.some((t) => t.iteration === this.state.iteration);
+  }
+
+  /** Record the runtime's run of the verification command (see trialDue). */
+  addTrial(t: Omit<Trial, "iteration" | "at">): void {
+    const trial: Trial = { ...t, iteration: this.state.iteration, at: this.now() };
+    (this.state.trials ??= []).push(trial);
+    const result = !t.command
+      ? "No verification command was declared ([VERIFY]); users judge from the demos only."
+      : `Trial run of \`${t.command}\`: ${t.timedOut ? "timed out" : `exit ${t.exitCode}`}` +
+        (t.artifacts.length ? `, ${t.artifacts.length} file(s) saved` : "") + ".";
+    this.log("system", "system", result);
   }
 
   /** Members who should act now. Empty when the session is done. */
@@ -137,24 +157,55 @@ export class World {
           owner,
           status: "todo",
           createdBy: m.id,
+          phase: this.phase.id,
+          iteration: s.iteration,
         };
         s.tasks.push(t);
         this.log(m.id, "task", `${t.id} owner=${owner ?? "-"}: ${t.title}${t.acceptance ? "\n" + t.acceptance : ""}`);
         if (owner && !this.member(owner)) this.log("system", "system", `Warning: ${t.id} owner "${owner}" is not a team member.`);
+        // [TASK replaces=T1]: the new task supersedes T1, so T1 no longer holds the build open.
+        for (const old of (a.attrs.replaces ?? "").split(",").map((x) => x.trim()).filter(Boolean)) {
+          const o = s.tasks.find((x) => x.id === old && x !== t);
+          if (!o) {
+            this.log("system", "system", `Warning: ${t.id} replaces unknown task "${old}".`);
+            continue;
+          }
+          this.updateTask(m.id, o, "dropped", `replaced by ${t.id}`);
+        }
         break;
       }
       case "TASK_START":
-      case "TASK_DONE": {
+      case "TASK_DONE":
+      case "TASK_BLOCKED":
+      case "TASK_DROP": {
         const tid = a.arg ?? /\bT\d+\b/.exec(a.text)?.[0];
         const t = s.tasks.find((x) => x.id === tid);
         if (!t) {
           this.log("system", "system", `Ignored [${a.type}] from ${m.id}: unknown task "${tid ?? ""}".`);
           break;
         }
-        t.status = a.type === "TASK_DONE" ? "done" : "doing";
         t.owner ??= m.id;
-        if (a.type === "TASK_DONE") t.summary = a.text;
-        this.log(m.id, "task_update", `${t.id} → ${t.status}${a.text ? ": " + a.text : ""}`);
+        this.updateTask(m.id, t, TASK_STATUS[a.type], a.type === "TASK_START" ? undefined : a.text);
+        break;
+      }
+      case "VERIFY": {
+        const command = a.text.replace(/^`+|`+$/g, "").trim();
+        if (!command || command.includes("\n")) {
+          this.log("system", "system", `Ignored [VERIFY] from ${m.id}: give one command on one line.`);
+          break;
+        }
+        s.verify = { command, by: m.id };
+        this.log(m.id, "verify", command);
+        break;
+      }
+      case "ASK_HUMAN":
+        (s.questions ??= []).push({ by: m.id, text: a.text, phase: this.phase.id, iteration: s.iteration });
+        this.log(m.id, "ask_human", a.text, ["human"]);
+        break;
+      case "DEMO": {
+        const tid = a.arg ?? /\bT\d+\b/.exec(a.text)?.[0];
+        (s.demos ??= []).push({ by: m.id, text: tid && a.arg ? `${tid}: ${a.text}` : a.text, phase: this.phase.id, iteration: s.iteration });
+        this.log(m.id, "demo", tid && a.arg ? `${tid}: ${a.text}` : a.text);
         break;
       }
       case "DECISION":
@@ -182,6 +233,12 @@ export class World {
     }
   }
 
+  private updateTask(by: string, t: Task, status: TaskStatus, summary?: string): void {
+    t.status = status;
+    if (summary !== undefined) t.summary = summary;
+    this.log(by, "task_update", `${t.id} → ${status}${summary ? ": " + summary : ""}`);
+  }
+
   /**
    * Conversation dynamics: addressed members who are still waiting this round
    * speak next; addressed members who already spoke get one more turn at the
@@ -195,7 +252,7 @@ export class World {
     const waiting = targets.filter((id) => s.queue.includes(id));
     s.queue = [...waiting, ...s.queue.filter((q) => !waiting.includes(q))];
     for (const id of targets) {
-      if (waiting.includes(id) || s.insertions >= speakers.size) continue;
+      if (waiting.includes(id) || s.insertions >= REPLY_BUDGET * speakers.size) continue;
       s.queue.push(id);
       s.insertions++;
     }
@@ -214,7 +271,7 @@ export class World {
       if (guard > 1000) throw new Error("scheduler did not converge");
       if (s.queue.length === 0) {
         const p = this.phase;
-        const tasksDone = !!p.untilTasksDone && s.tasks.length > 0 && s.tasks.every((t) => t.status === "done");
+        const tasksDone = !!p.untilTasksDone && s.tasks.length > 0 && s.tasks.every(isSettled);
         if (s.round > 0 && (s.round >= p.maxRounds || tasksDone)) {
           this.endPhase();
           continue;
@@ -235,32 +292,73 @@ export class World {
     }
   }
 
-  /** Next phase; after the last one, either loop (users rejected) or finish. */
+  /**
+   * Next phase; after the last one, either loop (users rejected) or finish. Before finishing, a `finale`
+   * phase (wrap-up) runs once if tasks are still open or decisions came after the last chance to build.
+   */
   private endPhase(): void {
     const s = this.state;
     s.round = 0;
     s.queue = [];
-    if (s.phaseIndex < s.phases.length - 1) {
-      s.phaseIndex++;
-      this.logPhaseStart();
-      return;
+    if (!this.phase.finale) {
+      const next = s.phases.findIndex((p, i) => i > s.phaseIndex && !p.finale);
+      if (next >= 0) {
+        s.phaseIndex = next;
+        this.logPhaseStart();
+        return;
+      }
+      const vs = s.verdicts.filter((v) => v.iteration === s.iteration);
+      const rejected = vs.filter((v) => v.verdict === "reject");
+      // Tasks added after the last chance to build (e.g. users' conditions in acceptance) are new scope:
+      // build them in another iteration so users see them, never silently in wrap-up.
+      const followUps = wrapupItems(s).followUps;
+      if ((rejected.length > 0 || followUps.length > 0) && s.iteration < s.maxIterations) {
+        s.iteration++;
+        s.phaseIndex = Math.max(0, s.phases.findIndex((p) => p.iterationStart && !p.finale));
+        const why = rejected.length
+          ? `${rejected.length}/${vs.length} users rejected (${rejected.map((r) => r.by).join(", ")})`
+          : `follow-up tasks were added after the build (${followUps.map((t) => t.id).join(", ")})`;
+        this.log("system", "system", `Iteration ${s.iteration} begins: ${why}.`);
+        this.logPhaseStart();
+        return;
+      }
+      const finale = s.phases.findIndex((p) => p.finale);
+      const left = wrapupItems(s);
+      if (finale >= 0 && (left.tasks.length || left.decisions.length || left.followUps.length)) {
+        s.phaseIndex = finale;
+        this.log(
+          "system",
+          "system",
+          `Wrap-up before finishing: ${left.tasks.length} open task(s), ${left.decisions.length} late decision(s) to apply, ` +
+            `${left.followUps.length} follow-up(s) to hand over.`,
+        );
+        this.logPhaseStart();
+        return;
+      }
     }
+    this.finish();
+  }
+
+  private finish(): void {
+    const s = this.state;
+    s.status = "done";
     const vs = s.verdicts.filter((v) => v.iteration === s.iteration);
-    const rejected = vs.filter((v) => v.verdict === "reject");
-    if (rejected.length === 0 || s.iteration >= s.maxIterations) {
-      s.status = "done";
-      const summary = vs.length ? `${vs.length - rejected.length}/${vs.length} users accepted.` : "No user verdicts were given.";
-      this.log("system", "system", `Session finished after iteration ${s.iteration}. ${summary}`);
-      return;
-    }
-    s.iteration++;
-    s.phaseIndex = Math.max(0, s.phases.findIndex((p) => p.iterationStart));
-    this.log(
-      "system",
-      "system",
-      `Iteration ${s.iteration} begins: ${rejected.length}/${vs.length} users rejected (${rejected.map((r) => r.by).join(", ")}).`,
-    );
-    this.logPhaseStart();
+    const accepted = vs.filter((v) => v.verdict === "accept").length;
+    const summary = vs.length ? `${accepted}/${vs.length} users accepted.` : "No user verdicts were given.";
+    const list = (status: (t: Task) => boolean) =>
+      s.tasks
+        .filter(status)
+        .map((t) => `${t.id} (${t.title})`)
+        .join(", ");
+    const open = list((t) => !isSettled(t));
+    const blocked = list((t) => t.status === "blocked");
+    const questions = s.questions ?? [];
+    const rest = [
+      open && `Still open: ${open}.`,
+      blocked && `Waiting on a person: ${blocked}.`,
+      questions.length && `${questions.length} question(s) for the human (see team status).`,
+    ].filter(Boolean);
+    this.log("system", "system", `Session finished after iteration ${s.iteration}. ${summary}${rest.map((r) => " " + r).join("")}`);
   }
 
   private logPhaseStart(): void {
@@ -283,6 +381,44 @@ export class World {
 }
 
 const systemNow = () => new Date().toISOString();
+
+/** Extra reply turns per round, per speaker: enough for a few question-and-answer exchanges, but bounded. */
+const REPLY_BUDGET = 2;
+
+const TASK_STATUS: Record<string, TaskStatus> = {
+  TASK_START: "doing",
+  TASK_DONE: "done",
+  TASK_BLOCKED: "blocked",
+  TASK_DROP: "dropped",
+};
+
+/** Nothing more the team itself can do: done, dropped, or waiting on a real person. */
+export function isSettled(t: Task): boolean {
+  return t.status === "done" || t.status === "dropped" || t.status === "blocked";
+}
+
+/**
+ * What a wrap-up phase must take care of: tasks not done, and decisions of this iteration made in or after the
+ * last regular phase where anyone could edit the workspace (so nobody has applied them yet). Open tasks created
+ * after that phase are follow-ups: new scope that users have not seen, handed over instead of built.
+ */
+export function wrapupItems(s: SessionState): {
+  tasks: Task[];
+  decisions: SessionState["decisions"];
+  followUps: Task[];
+} {
+  const regular = s.phases.map((p, i) => ({ p, i })).filter(({ p }) => !p.finale);
+  const lastEdit = Math.max(-1, ...regular.filter(({ p }) => p.editors?.length).map(({ i }) => i));
+  const late = (phase: string | undefined, iteration: number | undefined) =>
+    lastEdit >= 0 && iteration === s.iteration && s.phases.findIndex((p) => p.id === phase) > lastEdit;
+  const open = s.tasks.filter((t) => !isSettled(t));
+  const followUps = open.filter((t) => late(t.phase, t.iteration) && !s.phases.find((p) => p.id === t.phase)?.finale);
+  const decisions =
+    lastEdit < 0
+      ? []
+      : s.decisions.filter((d) => d.iteration === s.iteration && s.phases.findIndex((p) => p.id === d.phase) >= lastEdit);
+  return { tasks: open.filter((t) => !followUps.includes(t)), decisions, followUps };
+}
 
 export function currentPhase(s: SessionState): PhaseDef {
   return s.phases[s.phaseIndex];

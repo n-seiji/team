@@ -1,0 +1,868 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>villa-58</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+JP:wght@400;600;700&display=swap">
+<style>
+/* Layout: a reading column for the conversation, with the session's records in a side column on wide screens. */
+:root {
+  --bg: #f6f7f8; --panel: #ffffff; --fg: #1d2329; --muted: #5d6873; --line: #dfe3e7;
+  --accent: #1f6f78; --pm: #7a4dbf; --eng: #1f6f78; --user: #b25a1d; --human: #b0324a;
+  --ok: #2c7a3f; --bad: #b0324a; --code: #eef1f3;
+  --body: "IBM Plex Sans JP", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12161a; --panel: #1a2026; --fg: #e3e8ec; --muted: #9aa6b1; --line: #2c343c;
+  --accent: #5fb7bf; --pm: #b796ec; --eng: #5fb7bf; --user: #e59a62; --human: #ec7d92;
+  --ok: #6cc785; --bad: #ec7d92; --code: #232b33; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12161a; --panel: #1a2026; --fg: #e3e8ec; --muted: #9aa6b1; --line: #2c343c;
+  --accent: #5fb7bf; --pm: #b796ec; --eng: #5fb7bf; --user: #e59a62; --human: #ec7d92;
+  --ok: #6cc785; --bad: #ec7d92; --code: #232b33; color-scheme: dark }
+* { box-sizing: border-box }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.65 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header, main { max-width: 1180px; margin: 0 auto }
+header { padding-block: 28px 12px; display: grid; gap: 8px }
+h1 { font-size: 1.6rem; line-height: 1.25; margin: 0; text-wrap: balance }
+h2 { font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px }
+.brief { max-width: 72ch; margin: 0; white-space: pre-wrap }
+.chips { display: flex; flex-wrap: wrap; gap: 6px }
+.chip { font: 12px var(--mono); padding: 2px 8px; border: 1px solid var(--line); border-radius: 99px; background: var(--panel) }
+main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; padding-block: 8px 48px; align-items: start }
+@media (max-width: 860px) { main { grid-template-columns: minmax(0, 1fr) } }
+aside { display: grid; gap: 20px; min-width: 0 }
+aside section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; min-width: 0 }
+aside ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px }
+.controls { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 2; background: var(--bg);
+  display: flex; flex-wrap: wrap; gap: 16px; align-items: center; padding-block: 10px; border-bottom: 1px solid var(--line) }
+.controls label { display: inline-flex; gap: 6px; align-items: center; font-size: .9rem }
+select { font: inherit; padding: 2px 6px }
+details { border-bottom: 1px solid var(--line) }
+summary { cursor: pointer; padding-block: 12px; font-weight: 600; display: flex; gap: 10px; align-items: baseline }
+summary .muted { font-weight: 400; font-size: .85rem }
+summary:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+ol { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 10px }
+.msg { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--c, var(--line)); border-radius: 6px; padding: 10px 14px; min-width: 0 }
+.msg.pm { --c: var(--pm) } .msg.eng { --c: var(--eng) } .msg.user { --c: var(--user) } .msg.human { --c: var(--human) }
+.msg.private { background: transparent; border-style: dashed; color: var(--muted) }
+.who { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; font-size: .85rem }
+.name { font-weight: 700; color: var(--c, var(--fg)) }
+.to, .turn, .muted { color: var(--muted) }
+.turn { margin-left: auto; font: 11px var(--mono) }
+.kind { font: 11px var(--mono); letter-spacing: .04em; padding: 0 6px; border-radius: 4px; background: var(--code) }
+.kind.accept { color: var(--ok) } .kind.reject { color: var(--bad) }
+.text { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 4px }
+.sys { color: var(--muted); font-size: .85rem; padding-inline: 4px }
+.sys p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere }
+pre { background: var(--code); padding: 10px 12px; border-radius: 6px; overflow-x: auto; font: 12.5px/1.5 var(--mono); white-space: pre; margin: 6px 0 }
+code { font: .9em var(--mono); background: var(--code); padding: 0 4px; border-radius: 3px }
+.small { font-size: .85rem }
+details.sub { border: 0 } details.sub summary { padding-block: 2px; font-weight: 400; font-size: .8rem; color: var(--muted) }
+.st { font: 11px var(--mono); padding: 0 6px; border-radius: 4px; background: var(--code) }
+.st-done { color: var(--ok) } .st-blocked { color: var(--human) } .st-dropped { color: var(--muted); text-decoration: line-through }
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; background: var(--muted) }
+.dot.pm { background: var(--pm) } .dot.eng { background: var(--eng) } .dot.user { background: var(--user) }
+body:not(.show-private) .private { display: none }
+</style>
+</head>
+<body>
+<header>
+  <h1>villa-58</h1>
+  <p class="brief"><b>お題:</b> 既存プロダクト「Villa Karuizawa」(軽井沢の 1 棟貸し別荘の招待制予約サイト。HonoX + Cloudflare Workers + D1 + Stripe + Resend) に対する GitHub issue をチームで解決する。
+
+- ワークスペースは villa リポジトリの作業コピー (git worktree) そのもの。ゼロから作らず、既存コードを読んで変更する。README.md は既存のものを保ち、新規 README は作らない。
+- villa の CLAUDE.md と .claude/rules/ に従う。機能追加は実装前に Business Risk Review (.claude/rules/business-risk-review.md の 5 カテゴリ) を spec に書く (例: docs/specs/ 配下)。個人情報・認証・メールに触れる変更は .claude/skills/pii-review/SKILL.md の観点で差分を確認する。
+- 品質ゲート: `pnpm test:run` (ユニット)、`npx tsc --noEmit`、`pnpm lint` 相当。依存の追加は避ける (pnpm の 7 日ルールあり)。外部 API キーは無いので、外部サービスはモックかインターフェースまでで止め、何が未検証かを明記する。
+- git の commit / push はしない (ファシリテーターが最後にまとめる)。
+- ユーザー役: 小林さん (リピーターのゲスト) と中村さん (オーナー兼運営者)。
+- issue の「検討事項」で決まっていない点は、チームで決めて理由を残す。スコープが大きければ 1 イテレーションで出せる最小の価値に絞り、残りは明記する。
+
+以下が issue 本文。
+# villa#58 セサミ (SESAME) 連携で鍵をゲストに渡す
+
+## 要望
+スマートロック SESAME と連携し、予約確定後にゲストへ鍵 (解錠権限) を渡せるようにする。今は初回は対面、リピートはキーボックス (LP の記載)。
+
+## 検討事項
+- SESAME の API (CANDY HOUSE Web API) で「期間限定の合鍵」を発行できるか、Wi-Fi モジュール (Hub) が必要か
+- 発行タイミング: チェックイン日の 15:00 有効開始、チェックアウト 11:00 で失効。予約のキャンセル・日程変更時に失効/再発行
+- 渡し方: 確認メール or マイページに合鍵 URL / QR。SESAME アプリのインストールが要るか、Web から解錠できるか
+- 障害時のフォールバック (キーボックス継続)
+- API キーは Worker secret、監査ログに発行・失効を記録</p>
+  <div class="chips">
+    <span class="chip">終了</span>
+    <span class="chip">周 2/2</span>
+    <span class="chip">フェーズ: acceptance</span>
+    <span class="chip">142 件</span>
+  </div>
+</header>
+<main>
+<div style="min-width:0">
+  <div class="controls">
+    <label><input type="checkbox" id="show-private"> 本人だけのメモも表示</label>
+    <label>表示する人 <select id="who"><option value="">全員</option><option value="pm">佐藤 美咲</option><option value="eng-backend">田中 健</option><option value="eng-frontend">鈴木 ひかり</option><option value="user-guest">小林 直子</option><option value="user-owner">中村 誠</option></select></label>
+  </div>
+  <h2 style="margin-top:16px">会話</h2>
+  <details open><summary>周 1 · discovery <span class="muted">8</span></summary><ol><li class="sys" data-from="system"><p>Session &quot;villa-58&quot; started. Brief: 既存プロダクト「Villa Karuizawa」(軽井沢の 1 棟貸し別荘の招待制予約サイト。HonoX + Cloudflare Workers + D1 + Stripe + Resend) に対する GitHub issue をチームで解決する。
+
+- ワークスペースは villa リポジトリの作業コピー (git worktree) そのもの。ゼロから作らず、既存コードを読んで変更する。README.md は既存のものを保ち、新規 README は作らない。
+- villa の CLAUDE.md と .claude/rules/ に従う。機能追加は実装前に Business Risk Review (.claude/rules/business-risk-review.md の 5 カテゴリ) を spec に書く (例: docs/specs/ 配下)。個人情報・認証・メールに触れる変更は .claude/skills/pii-review/SKILL.md の観点で差分を確認する。
+- 品質ゲート: <code>pnpm test:run</code> (ユニット)、<code>npx tsc --noEmit</code>、<code>pnpm lint</code> 相当。依存の追加は避ける (pnpm の 7 日ルールあり)。外部 API キーは無いので、外部サービスはモックかインターフェースまでで止め、何が未検証かを明記する。
+- git の commit / push はしない (ファシリテーターが最後にまとめる)。
+- ユーザー役: 小林さん (リピーターのゲスト) と中村さん (オーナー兼運営者)。
+- issue の「検討事項」で決まっていない点は、チームで決めて理由を残す。スコープが大きければ 1 イテレーションで出せる最小の価値に絞り、残りは明記する。
+
+以下が issue 本文。
+# villa#58 セサミ (SESAME) 連携で鍵をゲストに渡す
+
+## 要望
+スマートロック SESAME と連携し、予約確定後にゲストへ鍵 (解錠権限) を渡せるようにする。今は初回は対面、リピートはキーボックス (LP の記載)。
+
+## 検討事項
+- SESAME の API (CANDY HOUSE Web API) で「期間限定の合鍵」を発行できるか、Wi-Fi モジュール (Hub) が必要か
+- 発行タイミング: チェックイン日の 15:00 有効開始、チェックアウト 11:00 で失効。予約のキャンセル・日程変更時に失効/再発行
+- 渡し方: 確認メール or マイページに合鍵 URL / QR。SESAME アプリのインストールが要るか、Web から解錠できるか
+- 障害時のフォールバック (キーボックス継続)
+- API キーは Worker secret、監査ログに発行・失効を記録</p></li><li class="sys" data-from="system"><p>Phase &quot;discovery&quot; started (iteration 1) — PM interviews the users to uncover their real situation, pains and jobs-to-be-done. Users answer strictly in character, with concrete episodes. No solutions yet.</p></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#1</span></div><div class="text">解決策 (SESAME) の話はまだしない。まず鍵の受け渡しで実際に何が起きたかを事実で掘る。ゲストは「最後の到着時」、オーナーは「最後の初回ゲスト対応」と「キーボックスのトラブル」の具体的なエピソードを聞く。Hub の有無やコード変更の運用など、オーナー側の現状も確認しておく。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 小林 直子, 中村 誠</span><span class="turn">#1</span></div><div class="text">今日は鍵の受け渡しについて聞かせてください。どうすればいいかの案ではなく、実際にあったことを教えてほしいです。
+小林さん: 最後に泊まったのはいつですか？ 到着してから家に入るまで、順番に教えてください。キーボックスの番号はどこで確認しましたか？ そのとき困ったことや、誰かに連絡したことはありましたか？
+中村さん: 最後に初回ゲストに対面で鍵を渡したのはいつですか？ そのためにどれくらい時間を使いましたか？ ゲストの到着が遅れたり、予定の時間と合わなかったことはありますか？ それと、キーボックスの番号は今どう管理していますか (変える頻度、変えるタイミング)？ 番号の伝え間違いや、帰ったはずのゲストが入れてしまうといった不安を感じた具体的な出来事があれば教えてください。最後に、SESAME は今すでに玄関に付いていますか？ Hub (Wi-Fi モジュール) はありますか？</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#1</span></div><div class="text">Discovery round 1: ゲスト小林さんには直近の到着体験 (キーボックス番号の確認方法・詰まった点)、オーナー中村さんには初回対面対応の工数・番号管理・SESAME/Hub 設置有無を質問済み。</div></li><li class="msg user private" data-from="user-guest"><div class="who"><span class="name">小林 直子</span> <span class="kind">memo</span><span class="turn">#2</span></div><div class="text">発見フェーズ。具体的なエピソードで答える。作り話は persona の範囲で。招待コード、キーボックス、金額の不安など。</div></li><li class="msg user" data-from="user-guest"><div class="who"><span class="name">小林 直子</span><span class="turn">#2</span></div><div class="text">最後に泊まったのは今年の夏休みです。2回目の滞在でした。到着の前日に届いた確認メールにキーボックスの番号が載っていたので、現地でそれを見て開けました。ただ、そのメールは予約確定のときのとは別で、探すのに少し手間取りました。
+
+困ったのは到着直後です。軽井沢は電波が悪い場所があって、駐車場で子ども2人を待たせたままスマホでメールを探しました。荷物も多く、数分とはいえ焦りました。前の晩にスクリーンショットを撮っておけばよかったと思いました。番号を間違えて入力したときにやり直せるのか、何回か間違えるとロックされるのかも分からず、不安でした。誰かに連絡したことはありません。ただ、連絡先がすぐ分からなかったら困ったと思います。
+
+あと、毎回招待コードを探すのも面倒です。1回目はお知らせ用のメールから探しました。鍵の話ではないですが、同じように「あのメールどこ?」となる場面が多いです。
+
+初回のときは対面でした。時間を合わせるために、高速の渋滞を気にしながら運転しました。実際に少し遅れて、先方を待たせてしまい、申し訳ない気持ちになりました。
+
+私にとって大事なのは、iPhone だけで、到着してすぐ迷わず入れることです。それと、個人情報や鍵の情報が、誰でも見られる形で送られてこないことです。</div></li><li class="msg user private" data-from="user-owner"><div class="who"><span class="name">中村 誠</span> <span class="kind">memo</span><span class="turn">#3</span></div><div class="text">具体的な経験から答える。SESAME・Hub の有無は persona に情報がないので、断定せず「聞かれた範囲で」現実的に答える。ここでは仕様を知らないので、設置状況は曖昧にせず「確認が必要」と正直に。作り話を作りすぎない。</div></li><li class="msg user" data-from="user-owner"><div class="who"><span class="name">中村 誠</span><span class="turn">#3</span></div><div class="text">中村です。順に答えます。
+
+**対面の受け渡し**
+初回ゲストの対面は、今も毎回やっています。実際は受け渡しそのものは10分ほどですが、前後がかかります。到着の30分前には現地に着いて、掃除の仕上がりを見て、待つ。繁忙期の金曜は高速が混むので、予定の時間から1時間くらい遅れることがよくあります。その間は帰れないし、次の清掃や自分の用事も動かせません。実質、半日がつぶれる感覚です。
+
+**キーボックスの番号**
+番号を変える頻度は、はっきり言うと多くはありません。変えると全員への連絡が要るので手間で、「ゲストが入れ替わるたびには変えていない」のが実情です。そこが一番気になっているところです。帰ったゲストが番号を覚えていれば、理屈の上では入れてしまいます。実際に何かあったことはないですが、「ない」と言い切れる仕組みではありません。個人情報とトラブルは一番避けたいので、ここは不安です。
+
+番号の伝え間違いも、メールの書き間違いで聞き返されたことがあります。幸い大事にはなりませんでした。
+
+**SESAME について**
+ここは正直に言います。玄関に付いているか、Hub があるかは、私の口からいま正確には言えません。付いている前提で話を進めて、後で「実は無かった」となると、設備を買う話になって困ります。まず現地の機器の状況を確認して、結果をお伝えします。費用が出る話は、金額を見てから判断したいです。
+
+**ひとつ付け加えると**
+うちは招待制です。誰が入れるのかが仕組みで追えて、後から「誰がいつ開けたか」を見られるなら、それは助かります。逆に、鍵の情報が誤ったゲストに届く、金額や日程の変更で鍵が古いままになる、といったことは一番困ります。</div></li><li class="msg user private" data-from="user-owner"><div class="who"><span class="name">中村 誠</span> <span class="kind">note</span><span class="turn">#3</span></div><div class="text">中村さん: 初回対面は毎回で、渋滞で最大1時間ほど遅れることがある。キーボックスの番号は頻繁には変えていない。SESAME 設置と Hub の有無は未確認で、現地確認後に回答する。費用が発生する話は金額を見て判断したい。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#4</span></div><div class="text">事実は揃った。ゲストは電波が悪い中で駐車場でメールを探して困り、番号を間違えたときの挙動が分からず不安だった。オーナーは初回対面で半日がつぶれ、番号をほとんど変えられないため元ゲストが入れてしまう不安がある。SESAME と Hub の有無は未確認。解決策はまだ決めない。discovery を終えて次へ進める。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span><span class="turn">#4</span></div><div class="text">ありがとうございます。事実を整理します。
+- 小林さん: 「駐車場で子ども2人を待たせたまま、電波が悪い中でメールを探した」。到着前に鍵の情報を手元に置けていないことが、困りごとの中心でした。番号を間違えたときの挙動が分からないのも不安材料でした。
+- 中村さん: 初回の対面は受け渡し自体が10分でも、前後を含めて半日つぶれます。番号は連絡の手間で変えられず、「ゲストが帰った後に入れないと言い切れない」ことが一番の不安です。「誰がいつ開けたか」が追えれば助かる、とのことでした。
+- 未確認: 玄関の SESAME と Hub の有無。中村さんが現地で確認して共有してくれます。費用が出るなら金額を見てから判断、という条件です。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#4</span></div><div class="text">Discovery の結論。ジョブは次の2つ。(1) ゲスト: 電波が悪くても、到着してすぐ迷わず入れる。(2) オーナー: 立ち会いなしで受け渡しでき、滞在期間外の人は入れないと言い切れる。引用: 「駐車場で子ども2人を待たせたまま、メールを探した」「ない、と言い切れる仕組みではありません」。未確認事項は SESAME 本体と Hub の設置有無で、中村さんが現地確認する。これが分かるまでは実機前提にしない。制約は iPhone のみ、鍵情報が第三者に見えないこと、費用は金額を見て判断すること。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#4</span></div><div class="text">設備 (SESAME 本体と Hub の有無) は未確認なので、実機が付いている前提では作らない。SESAME API はインターフェースとモックまでで止める。キーボックスは必ず残すフォールバックとし、障害時に切り替えられる形にする。中村さんの現地確認結果が出るまで、設備購入を要する案は選ばない。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">ADVANCE</span><span class="turn">#4</span></div><div class="text">End of phase &quot;discovery&quot;.</div></li></ol></details>
+  <details open><summary>周 1 · planning <span class="muted">23</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;planning&quot; started (iteration 1) — PM turns findings into a small, shippable scope: [TASK] items with clear acceptance criteria, each assigned to an engineer. Engineers challenge feasibility, split or re-assign tasks, and agree on tech choices.</p></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#5</span></div><div class="text">実機の有無が未確認なので、今回はインターフェース、モック、予約ライフサイクルとの連動、表示までにする。実 API 呼び出しは次回以降。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 田中 健, 鈴木 ひかり</span><span class="turn">#5</span></div><div class="text">計画です。今回は「実機がなくても動く器」までを出します。実際に SESAME を叩くのは、中村さんの現地確認の後にします。
+- 範囲内: 鍵発行の抽象化とモック、予約確定・キャンセル・日程変更との連動、監査ログ、障害時のキーボックス表示、ゲストとオーナーの表示。
+- 範囲外: 実 API 接続、QR、SESAME アプリ不要の Web 解錠、Hub や機器の購入。
+- 小林さんの「電波が悪い」への対応: 鍵情報は到着前にマイページで確認でき、確認メールには鍵本文を載せない。メールにはマイページへのリンクだけ載せます。メールには第三者に見られる恐れがあるためです。
+- 各自、実装前に feasibility の懸念があれば言ってください。特に D1 のスキーマと、既存の予約変更フローへの差し込み位置をお願いします。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">TASK</span><span class="turn">#5</span></div><div class="text">T1 owner=eng-backend: 鍵発行の抽象化・モック・保存と Business Risk Review spec
+- docs/specs/ に Business Risk Review (5 カテゴリ) 入りの spec がある。実機未確認で未検証の点も明記されている。
+- 鍵プロバイダのインターフェース (issue / revoke) と、モック実装、キーボックス実装がある。SESAME 実クライアントは作らない。
+- D1 マイグレーションで予約ごとの鍵レコード (状態、有効開始、有効終了、外部ID) を保持できる。有効期間は、チェックイン日 15:00 から チェックアウト日 11:00 (JST) に固定される。
+- 鍵情報の平文をログや監査ログに残さない。API キーは Worker secret 経由でのみ読み、未設定ならキーボックスにフォールバックする。
+- ユニットテストが通り、<code>pnpm test:run</code>、<code>npx tsc --noEmit</code>、<code>pnpm lint</code> が通る。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">TASK</span><span class="turn">#5</span></div><div class="text">T2 owner=eng-backend: 予約ライフサイクルとの連動と監査ログ
+- 予約確定時に鍵を発行し、発行を監査ログに記録する。
+- キャンセル時に失効させ、失効を監査ログに記録する。
+- 日程変更時は旧鍵を失効させ、新しい期間で再発行する。金額や日程が変わっても古い鍵が残らない。
+- プロバイダが失敗しても予約確定とキャンセルは成功する。鍵の状態は「失敗(キーボックスで対応)」になり、失敗は監査ログに残る。
+- 上記それぞれにテストがある (成功、失敗、キャンセル、日程変更)。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">TASK</span><span class="turn">#5</span></div><div class="text">T3 owner=eng-frontend: ゲストのマイページに鍵カードを表示し、オーナー管理画面に状態を表示する
+- マイページの予約詳細に、滞在期間のみ鍵情報を表示する。期間外、キャンセル済み、他人の予約では表示されない。
+- 電波が悪い場所でも使えるよう、鍵情報を表示するページは短く、画像に頼らず、スクリーンショットしやすい。番号を間違えたときの案内と連絡先が、同じ画面にある。
+- 鍵の発行に失敗した場合や未発行の場合は、キーボックスの案内を同じ場所に表示する。
+- 到着前日のメールに、鍵本文を載せずマイページへのリンクだけを入れる。既存のメールテンプレートに沿い、PII レビューの観点で差分を確認する。
+- オーナー管理画面の予約詳細に、鍵の状態 (発行済み、失効、失敗) と発行・失効の履歴が見える。
+- コンポーネントのテストがあり、iPhone 幅で表示崩れがない。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#5</span></div><div class="text">今回の鍵の渡し方は「マイページ表示 + メールはリンクのみ」にする。理由: 鍵情報を第三者が見られるメール本文に載せない、という小林さんとオーナーの制約を守りつつ、到着前に手元へ置けるため。トレードオフ: メールだけで完結せず、ログインが一手間増える。実機で SESAME アプリが要るかは未確認なので、アプリ不要の Web 解錠は次回以降に判断する。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#5</span></div><div class="text">プロバイダが失敗したときは、予約の確定・キャンセルを止めない。鍵の状態を「失敗」にしてキーボックス案内を出す。理由: 予約が鍵に引きずられて止まるほうが、オーナーとゲストの損失が大きいため。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#5</span></div><div class="text">planning 1 で 3 タスクを切った。backend 2 (抽象化+spec、ライフサイクル+監査)、frontend 1 (マイページ鍵カード、メールのリンク、管理画面状態)。範囲外は実 API、QR、Web 解錠、機器購入。次の判断材料は中村さんの現地確認 (SESAME 本体と Hub の有無、金額)。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">memo</span><span class="turn">#6</span></div><div class="text">実装前なのでコードは触らない。懸念は、鍵の平文をどこに持つか、T3 との契約、既存フローの差し込み位置の 3 点。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span><span class="turn">#6</span></div><div class="text">田中です。T1・T2 は引き受けます。結論として、スコープは妥当です。実装前に決めたい点が 3 つあります。
+1. **鍵の平文は D1 に保存しません。** D1 に持つのは状態、有効開始・終了、外部ID だけです。Hub なしの SESAME 合鍵 URL のような秘匿値は、DB に残すとバックアップやダンプで漏れます。表示時にプロバイダから取得し、ログにも監査ログにも出しません。キーボックス番号は Worker secret (<code>KEYBOX_CODE</code>) から読みます。
+   - トレードオフ: 表示のたびにプロバイダを呼ぶので、遅い・落ちている場合があります。その場合は「失敗」と同じ扱いでキーボックス案内に落とします。電波が悪い場所での利用が前提なので、ここは短いタイムアウトにします。
+2. **有効期間は UTC 固定の epoch で持ちます。** チェックイン日 15:00 JST から チェックアウト日 11:00 JST まで、<code>Date</code> のローカル解釈には頼りません。タイムゾーン絡みの 9 時間ずれは、鍵では「入れない」か「帰った後も入れる」に直結します。境界値 (14:59、15:00、10:59、11:00 JST) をテストします。
+3. **T3 とは先に契約を決めます。** 私が T1 の早い段階で <code>getKeyViewForReservation(db, env, reservationId, now)</code> を出します。戻り値は <code>{ state: 'active' | 'pending' | 'revoked' | 'failed' | 'none', validFrom, validTo, display?: { kind: 'keybox' | 'sesame', value } }</code> です。表示可否 (滞在期間のみ、キャンセル済み、他人の予約) の判定は、UI 側ではなくこの関数で行います。UI に判定を散らすと漏れるためです。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 鈴木 ひかり</span><span class="turn">#6</span></div><div class="text">鈴木さん、上の戻り値の形でモックを作って進めてください。型が変わりそうなら私から先に連絡します。オーナー画面の履歴は、既存の <code>audit-log</code> リポジトリを予約 ID で引く形になる想定です。私が <code>listKeyAuditByReservation</code> を用意します。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 佐藤 美咲</span><span class="turn">#6</span></div><div class="text">佐藤さんへ質問が 2 つあります。
+- **失敗した鍵の再試行:** 自動再試行は今回入れず、オーナーがキーボックス対応にする前提で良いですか。cron が絡むので、入れるなら別タスクにします。
+- **中村さんの要望との関係:** 「帰ったゲストが番号を覚えていれば入れる」という不安は、キーボックスを使うかぎり今回の範囲では解消しません。キーボックスの番号は静的なままです。ここは spec の Business Risk Review に未解決リスクとして明記します。SESAME 実機が付いた後でないと解消しないと、中村さんに伝えてください。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span><span class="turn">#6</span></div><div class="text">差し込み位置は、実装開始時に既存の予約確定・キャンセル・日程変更の各フローを読んで確定します。鍵処理はすべて try/catch で囲み、失敗しても予約処理のトランザクションには含めません。着手順は、テスト、スキーマ、インターフェース、モックの順です。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">note</span><span class="turn">#6</span></div><div class="text">田中の設計方針: 鍵の秘匿値は D1 に保存しない。キーボックス番号は Worker secret の <code>KEYBOX_CODE</code>。有効期間は JST 15:00〜11:00 を UTC epoch で固定。表示可否の判定は <code>getKeyViewForReservation</code> に集約。キーボックスの静的番号リスクは spec に未解決として残す。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">memo</span><span class="turn">#7</span></div><div class="text">計画フェーズで編集不可。T3 の懸念を整理して合意を取る。田中さんの契約に乗る。鍵の表示は「表示のたびにプロバイダ取得」なので、UI は none/failed/pending を同じキーボックス案内に倒す。メールは到着前日の送信タイミングが既存の仕組みにあるか未確認なので、実装時に確認とする。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 田中 健, 佐藤 美咲</span><span class="turn">#7</span></div><div class="text">鈴木です。T3 は引き受けます。田中さんの <code>getKeyViewForReservation</code> の形で進めます。UI は判定をせず、返ってきた state を描画するだけにします。体験面で決めたいことが 4 つあります。
+1. **ページを分けます。** 予約詳細に鍵カードを埋め込むと、駐車場でスクロールして探すことになります。鍵専用の短いページ (例: <code>/mypage/reservations/:id/key</code>) を作ります。予約詳細には入口のリンクだけ置きます。画像なし、文字は大きめで、スクショ向けに 1 画面に収めます。
+2. **画面の内容は固定にします。** 滞在期間、番号 (または開け方)、「番号が合わないとき」の案内、連絡先です。「何回間違えるとロックされるか」は小林さんが不安に感じていた点ですが、キーボックスの仕様を私たちは知りません。そこで中村さんに、キーボックスの挙動 (やり直せるか、ロックされるか) の確認をお願いしたいです。確認できるまでは、画面に書かず空欄にします。
+3. **<code>none</code> / <code>failed</code> / <code>pending</code> / <code>revoked</code> は、ゲストには同じ画面に落とします。** どれもキーボックスの案内を出します。「失敗」と見せると不安になるので、ゲスト画面に内部状態の言葉は出しません。区別が必要なのはオーナー画面だけです。
+4. **オーナー画面は状態バッジと履歴の表にします。** 既存の <code>status-badge</code> と <code>detail-table</code> を使い、新しい部品は作りません。履歴は田中さんの <code>listKeyAuditByReservation</code> を表示するだけです。
+田中さんへのお願いです。
+- 戻り値に <code>display.value</code> が入るときは、そのまま画面に出す前提です。取得に時間がかかる場合を考えて、タイムアウト時は <code>failed</code> で返してください。画面側は待たずに案内を出します。
+- 認可 (他人の予約) の確認は、関数側で持つ前提で合っていますか。ページのルートでも、予約の所有者チェックを既存のマイページの方法で重ねます。
+- 鍵ページは <code>Cache-Control: no-store</code> にしたいです。ただ、電波が悪い場所で再読み込みになるのはつらいので、スクショを前提に作ります。
+佐藤さんへの確認です。
+- 到着前日のメールは、既存の送信の仕組み (<code>post-stay-email</code> のようなもの) に、前日送信を載せられるかをまだ読んでいません。載らない場合は T3 を分けて、メール部分を後ろに回す提案をするかもしれません。実装の最初に確認して、その結果を共有します。
+- 連絡先 (電話やメール) はどれをゲストに見せてよいか、中村さんに確認をお願いします。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">note</span><span class="turn">#7</span></div><div class="text">T3 の方針: 鍵は専用の短いページ。ゲスト画面では none/failed/pending/revoked を同じキーボックス案内に統一し、内部状態の言葉は出さない。キーボックスの挙動（ロック有無）と、ゲストに見せてよい連絡先は中村さんの確認待ちで、確認できるまでは書かない。到着前日メールは既存の送信の仕組みに載るか未確認で、実装の最初に確認する。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 田中 健</span><span class="turn">#8</span></div><div class="text">田中さん、2点の回答です。
+- 失敗した鍵の自動再試行は今回入れません。cron が絡むので別タスクにします。今回は、失敗したらオーナーがキーボックスで対応する前提です。
+- 帰ったゲストが番号を覚えていれば入れてしまう点は、キーボックスを使うかぎり今回は解消しません。spec の Business Risk Review に未解決リスクとして明記してください。中村さんには私から、SESAME 実機が付いた後でないと解消しないと伝えます。
+- 鍵の平文を D1 に保存しない方針、UTC 固定の epoch、<code>getKeyViewForReservation</code> で表示可否を判定する案は、すべて了承です。表示のたびにプロバイダを呼ぶので、タイムアウトは短くして <code>failed</code> 扱いにしてください。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 鈴木 ひかり</span><span class="turn">#8</span></div><div class="text">鈴木さん、方針はすべて了承です。
+- 鍵専用ページの新設。予約詳細には入口のリンクだけ置きます。
+- ゲスト画面に内部状態の言葉を出さず、<code>none</code> / <code>failed</code> / <code>pending</code> / <code>revoked</code> を同じキーボックス案内に落とすこと。
+- オーナー画面は既存の <code>status-badge</code> と <code>detail-table</code> を使うこと。
+- 鍵ページは <code>Cache-Control: no-store</code>。ただしスクショ前提で作ってください。
+- 前日メールが既存の送信の仕組みに載るかは、実装の最初に確認して共有してください。載らない場合は、メール部分だけを次イテレーションに回します。マイページの鍵ページは先に出します。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 中村 誠</span><span class="turn">#8</span></div><div class="text">中村さん、現地確認とは別に、次の2点を教えてください。
+1. キーボックスの番号を間違えたとき、やり直せますか。何回かでロックされますか。
+2. ゲストに見せてよい連絡先は、電話とメールのどちらですか。
+SESAME 本体と Hub の有無と金額の確認も、引き続きお願いします。それと、今回はキーボックスのままなので、「帰ったゲストが番号を覚えていれば入れる」不安は解消しません。SESAME 実機が付いた後で対応します。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#8</span></div><div class="text">失敗した鍵の自動再試行は今回入れず、別タスクにする。理由: cron が絡んで範囲が広がるため。トレードオフ: 失敗した予約は、オーナーがキーボックスで対応する必要がある。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#8</span></div><div class="text">前日メールが既存の送信の仕組みに載らない場合は、メール部分を次イテレーションに回し、マイページの鍵ページを先に出す。理由: ゲストの主な困りごとは、到着時にマイページで鍵情報をすぐ見つけられることだから。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#8</span></div><div class="text">planning 1 の論点。鍵の平文は D1 に保存せず、キーボックス番号は Worker secret の <code>KEYBOX_CODE</code> から読む。ゲスト画面は鍵専用ページ (<code>/mypage/reservations/:id/key</code>) に分ける。中村さんに確認待ちが3つある。(1) SESAME 本体と Hub の有無と金額、(2) キーボックスの誤入力時の挙動、(3) ゲストに見せてよい連絡先。キーボックスのままでは、元ゲストが入れてしまうリスクは残り、spec に明記する。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">memo</span><span class="turn">#9</span></div><div class="text">鈴木さんの3点に答える。契約に所有者チェック用の引数 (guestId) が要るので、実装前の今のうちに伝える。タスクの分割は変えない。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 鈴木 ひかり</span><span class="turn">#9</span></div><div class="text">田中です。鈴木さんの3点に答えます。
+1. **認可は関数側で持ちます。** ただし他人の予約の判定には呼び出し元のゲストIDが要るので、引数を足します。シグネチャは <code>getKeyViewForReservation(db, env, { reservationId, guestId, now })</code> です。所有者でなければ <code>{ state: 'none' }</code> を返し、<code>display</code> は付けません。ルートの所有者チェックと二重になって構いません。
+2. **タイムアウトは 2 秒にします。** 超えたら <code>failed</code> で返します。画面側は待たずに案内を出してください。<code>display.value</code> はそのまま出して問題ありません。サーバー側でログには出しません。
+3. **<code>no-store</code> で問題ありません。** 値を端末に残さない側に倒します。そのぶんスクショ前提の作りにしてください。
+4. **<code>pending</code> は「期間前」の意味です。** 期間外は <code>display</code> を付けません。ゲスト画面ではキーボックス案内と同じ扱いにしてください。
+5. **<code>listKeyAuditByReservation</code> は新規 <code>key_*</code> イベントだけ返します。** 戻り値は <code>{ at, action, result, actorId }</code> で、鍵の値は一切入りません。オーナー画面はそのまま表に出してください。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 佐藤 美咲</span><span class="turn">#9</span></div><div class="text">田中です。T1・T2 の分割は今のままで進めます。補足が 2 点あります。
+- キーボックス番号の <code>KEYBOX_CODE</code> が未設定のときは、<code>display</code> を出さず <code>failed</code> として扱います。空の番号を画面に出す事故を防ぐためです。
+- 中村さんにもう 1 点お願いします。キーボックス番号の変更手順 (誰が、どの頻度で変えられるか) を教えてください。Worker secret の更新は再デプロイを伴うので、運用で回るか確認したいです。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">note</span><span class="turn">#9</span></div><div class="text">getKeyViewForReservation の最終シグネチャは <code>(db, env, { reservationId, guestId, now })</code>。所有者でなければ <code>none</code> で <code>display</code> なし。プロバイダのタイムアウトは 2 秒で、超えたら <code>failed</code>。<code>KEYBOX_CODE</code> 未設定は <code>failed</code>。<code>listKeyAuditByReservation</code> は <code>{ at, action, result, actorId }</code> だけを返す。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">memo</span><span class="turn">#10</span></div><div class="text">田中さんの契約は了承。ただ、<code>pending</code> で <code>display</code> なしだと小林さんの「前の晩にスクショしたい」に応えられない。ここは早めに確認する。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 田中 健, 佐藤 美咲</span><span class="turn">#10</span></div><div class="text">鈴木です。<code>getKeyViewForReservation(db, env, { reservationId, guestId, now })</code> の形で、モックを作って進めます。タイムアウトは 2 秒で <code>failed</code> を返す、<code>pending</code> は期間前、という扱いも了解です。
+
+1点だけ確認させてください。
+- T3 の受け入れ条件は「滞在期間のみ表示」ですが、このままだとチェックイン前日の夜には番号が見えません。小林さんの困りごとは「前の晩にスクショしておけばよかった」でした。
+- 提案は、表示開始をチェックイン前日 0:00 JST にすることです。有効期間（15:00〜11:00）は鍵の有効期間として別に持ちます。キーボックスの番号は静的なので、前日に見せても新しいリスクは増えません。
+- SESAME 実機の場合は、前日に表示しても 15:00 前は開かないことをページに書きます。
+
+決めてほしいのは次の2点です。
+1. 表示開始を前日 0:00 JST にするか。その場合、<code>pending</code> でも <code>display</code> を返してほしいです。期間外の判定は、前日 0:00 より前と、チェックアウト 11:00 より後になります。
+2. 前日メールのリンク先は、この鍵ページで良いか。
+
+決まるまでは、<code>display</code> ありの <code>pending</code> と、なしの <code>pending</code> の両方を描画できるようにしておきます。
+
+また、前日メールが既存の送信の仕組みに載るかは、実装の最初に確認して共有します。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">note</span><span class="turn">#10</span></div><div class="text">T3 の未決事項: 鍵の表示開始をチェックイン前日 0:00 JST にするか（前の晩のスクショ対応）。田中さんと佐藤さんの回答待ち。キーボックスの挙動と連絡先は中村さんの確認待ち。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#11</span></div><div class="text">鈴木さんの2点に決める。前日0:00 JST表示は、キーボックスは静的なので新リスクなしだが、実機SESAMEでは期間外に値を出さない方針。今回はキーボックスのみなので前日0:00から表示でよい。ただし「期間外は display なし」の田中さんの原則とは例外になるので、表示開始と有効期間を別フィールドで持たせる。メールのリンク先は鍵ページ。planning は round 2/2 なのでこれで進められる。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 鈴木 ひかり, 田中 健</span><span class="turn">#11</span></div><div class="text">鈴木さん、田中さん、決めます。
+1. 表示開始はチェックイン前日 0:00 JST にします。理由: 小林さんの「前の晩にスクショしておけばよかった」に直接効くため。キーボックス番号は静的なので、前日に見せても新しいリスクは増えません。トレードオフ: 前日からチェックアウト 11:00 までの間、番号が見える時間が延びます。
+2. 鍵の有効期間 (15:00〜11:00) と、画面に出す期間 (前日 0:00〜11:00) は別に持ちます。田中さん、<code>getKeyViewForReservation</code> は、表示期間内なら <code>pending</code> でも <code>display</code> を返してください。表示期間外・キャンセル済み・他人の予約は、これまで通り <code>display</code> なしです。境界 (前日 23:59、0:00、チェックアウト 10:59、11:00 JST) のテストを足してください。
+3. SESAME 実機のとき、15:00 前は開かないことをページに書く文言は、実機をつなぐ次回に回します。今回はキーボックスだけなので、書きません。
+4. 前日メールのリンク先は、この鍵ページ (<code>/mypage/reservations/:id/key</code>) です。メールに鍵本文は載せません。ログインが要ることはページ側で迷わないよう、未ログイン時はログイン後にこのページへ戻してください。鈴木さん、載らない場合の判断は決めた通りで、実装の最初に確認して共有してください。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#11</span></div><div class="text">ゲストに鍵ページを見せる期間は、チェックイン前日 0:00 JST からチェックアウト 11:00 JST までとする (キーボックスのみの今回の範囲)。鍵の有効期間 (15:00〜11:00 JST) とは別に持つ。理由: 小林さんが前の晩にスクショできるようにするため。トレードオフ: 番号が見える時間が延びる。キャンセル済み・他人の予約・表示期間外は引き続き表示しない。SESAME 実機を使うときは、見せる期間を改めて判断する。前日メールのリンク先は鍵ページとし、メールに鍵本文は載せない。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#11</span></div><div class="text">planning 1 round 2: 鍵ページ表示期間は前日 0:00 JST〜チェックアウト 11:00 JST に決定 (有効期間 15:00〜11:00 とは別)。メールのリンク先は /mypage/reservations/:id/key。中村さんの確認待ちは引き続き、設備の有無と金額、誤入力時の挙動、ゲストへ見せる連絡先、キーボックス番号の変更手順の4つ。T3 の受け入れ条件「滞在期間のみ表示」は、この表示期間に読み替える。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">ADVANCE</span><span class="turn">#11</span></div><div class="text">End of phase &quot;planning&quot;.</div></li></ol></details>
+  <details open><summary>周 1 · build <span class="muted">13</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;build&quot; started (iteration 1) — Engineers implement their own tasks in the workspace (real files, runnable code, tests when sensible), coordinate interfaces with each other, and mark finished work with [TASK_DONE].</p></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">task</span><span class="turn">#12</span></div><div class="text">T1 → doing</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">task</span><span class="turn">#12</span></div><div class="text">T2 → doing</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">task</span><span class="turn">#12</span></div><div class="text">T1 → done: 鍵プロバイダの抽象化、モック、キーボックス実装、<code>reservation_keys</code> の保存、Business Risk Review 入りの spec を作りました。SESAME の実クライアントは作っていません。
+- spec: <code>docs/specs/villa-58-sesame-key.md</code>。5 カテゴリのリスク、未検証事項、キーボックスの静的番号が残る未解決リスクを書いています。
+- マイグレーション: <code>migrations/0021_reservation_keys.sql</code>。状態、有効開始、有効終了、外部ID、失敗コードを持ちます。有効な鍵は予約ごとに 1 行だけです。<code>db/schema.sql</code>、<code>db/er.md</code>、<code>db/README.md</code> も更新しました。
+- 有効期間: <code>app/domain/key/validity.ts</code>。チェックイン日 15:00 JST〜チェックアウト日 11:00 JST を UTC epoch ms で固定します。表示開始は前日 0:00 JST で、境界値をテストしています。
+- プロバイダ: <code>app/domain/key/provider.ts</code>(interface、キーボックス、<code>resolveKeyProvider</code>)と <code>mock-provider.ts</code>。
+  - キーボックス番号は Worker secret <code>KEYBOX_CODE</code> からだけ読みます。
+  - <code>SESAME_API_KEY</code> が未設定、または実クライアントがない場合は、必ずキーボックスになります。
+  - <code>KEYBOX_CODE</code> が未設定なら、番号を出さず <code>failed</code> にします。
+- DB には鍵の平文を保存しません。監査ログに入れるのは <code>result</code> / <code>provider</code> / <code>key_id</code> / 有効期間 / 失敗コードだけです。エラー本文は入れず、テストで確認しています。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">task</span><span class="turn">#12</span></div><div class="text">T2 → done: 予約の確定・キャンセル・日程変更に鍵の処理をつなぎ、鍵の失敗は予約処理に影響しない形にしました。
+- <code>app/lib/reservation-key.ts</code>: <code>issueKeyForReservation</code> / <code>revokeKeyForReservation</code> / <code>reissueKeyForReservation</code>。どれも例外を投げません。
+- 差し込み位置は 3 つです。
+  - 確定: <code>finalizeConfirmedReservation</code>(メール enqueue の前)。
+  - キャンセル: <code>cancelReservation</code> の batch 成功後と <code>repairStuckCancellations</code>。返金に失敗して戻した場合は失効しません。
+  - 日程変更: 管理画面 <code>update.tsx</code>。日程が変わったときだけ旧鍵を失効して再発行します。
+- 失敗した鍵は <code>failed</code> で記録し、<code>key.failed</code> を監査ログに残します。監査ログの action は <code>key.issued</code> / <code>key.revoked</code> / <code>key.failed</code> です。
+- 同じ期間の鍵があれば再発行しません(webhook の再配信対策)。
+- 表示側 <code>app/lib/reservation-key-view.ts</code> には <code>getKeyViewForReservation(db, env, { reservationId, guestId, now: Date }, deps?)</code> と <code>listKeyAuditByReservation</code> があります。
+  - <code>guestId</code> はマイページのセッションのメールアドレスです(予約に guest ID 列がないため)。
+  - 予約の日程と鍵の期間が食い違う鍵は <code>failed</code> にして使わせません。
+  - <code>display</code> を付けるのは、他人の予約・キャンセル済み・表示期間外のどれでもない場合だけです。
+- テスト: 成功、失敗、タイムアウト、キャンセル、日程変更、二重発行、境界値、認可、2 秒打ち切りを追加しました。
+- 確認結果: <code>pnpm test:run</code> は 166 ファイル / 1553 件が通り、<code>pnpm lint</code> と <code>scripts/check-domain-imports.sh</code> も通りました。
+- <code>npx tsc --noEmit</code> は <code>app/routes/static/[...path].ts</code> で 1 件エラーが出ます。<code>dist/.vite/manifest.json</code> がビルド前で存在しないためで、今回の変更とは無関係です。それ以外の型エラーはありません。
+- 未検証:
+  - SESAME の API、Hub の要否、合鍵を使うのにアプリが要るか。
+  - 本番 D1 への 0021 の適用。
+  - <code>KEYBOX_CODE</code> の設定。未設定のままデプロイすると全予約が <code>failed</code> 扱いになり、番号が出ません。
+  - 外部サービスとの結合は一切していません。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 鈴木 ひかり</span><span class="turn">#12</span></div><div class="text">鈴木さん、田中です。<code>getKeyViewForReservation(db, env, { reservationId, guestId, now })</code> を <code>app/lib/reservation-key-view.ts</code> に出しました。決めた細部は次の 5 点です。
+- <code>guestId</code> はマイページのセッションのメールアドレスで、<code>now</code> は <code>Date</code> です。
+- 戻り値は <code>{ state, validFrom, validTo, display? }</code> です。<code>validFrom</code> / <code>validTo</code> は UTC epoch ms で、他人の予約なら null、<code>display</code> は <code>{ kind, value }</code> です。
+- <code>state</code> が <code>failed</code> でも、<code>KEYBOX_CODE</code> があれば <code>display</code>(キーボックス番号)を付けます。<code>display</code> がないときは、連絡先だけの案内にしてください。
+- 前日 0:00〜チェックアウト 11:00 JST の表示期間内は、<code>pending</code> / <code>active</code> / <code>failed</code> / <code>none</code> のどれでも <code>display</code> が付きます。<code>revoked</code>(キャンセル済み)と期間外は <code>display</code> なしです。
+- <code>listKeyAuditByReservation(db, reservationId)</code> は <code>{ at, action, result, actorId }[]</code> を新しい順で返します。<code>action</code> は <code>key.issued</code> / <code>key.revoked</code> / <code>key.failed</code>、<code>result</code> は <code>ok</code> / <code>failed</code> です。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 佐藤 美咲</span><span class="turn">#12</span></div><div class="text">佐藤さん、田中です。T1・T2 は実装済みで、品質ゲートも通っています(tsc は <code>dist</code> 未ビルドの 1 件を除く)。
+- 結論として、残る確認事項は 3 点で、いずれも実機やオーナーの確認待ちです。
+  - 実機:鍵の秘匿値は D1 に保存せず、実機で確認する点は spec の「未検証」に列挙しています。
+  - 運用:キーボックス番号の変更は Worker secret の更新と再デプロイが要ります。運用で回るか、中村さんの回答待ちです。
+  - 未解決リスク:帰ったゲストが番号を覚えていれば入れる点は解消していません。spec の Business Risk Review に未解決として書きました。
+- 本番に出すときは、先に <code>KEYBOX_CODE</code> を設定してください。未設定だと全予約が <code>failed</code> 扱いになります(安全側の挙動です)。
+- 失効に失敗した場合、実機ではプロバイダ側に鍵が残る恐れがあります。今回はキーボックスのみなので実害はありません。実機をつなぐ回に、オーナーが手動で失効する運用を決めてください。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">note</span><span class="turn">#12</span></div><div class="text">T1・T2 完了。コードは app/domain/key/、app/lib/reservation-key.ts、app/lib/reservation-key-view.ts、app/db/repositories/reservation-key.ts、migrations/0021。spec は docs/specs/villa-58-sesame-key.md。<code>getKeyViewForReservation</code> の <code>guestId</code> はセッションのメールアドレス、<code>now</code> は Date。<code>failed</code> でも <code>KEYBOX_CODE</code> があれば display を付ける。tsc の 1 件(dist/.vite/manifest.json 不在)は既存で、今回の変更とは無関係。次回以降の宿題:失敗した鍵の自動再試行(cron)、SESAME 実クライアント、失効失敗時のオーナー手動運用。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">memo</span><span class="turn">#13</span></div><div class="text">画面側は完成。前日メールの送信は、重複防止テーブル(マイグレーション)と cron の変更が要るので、決定どおり次イテレーションに回す。ログイン後の戻り先は認証に触れるので、別扱いにする。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">task</span><span class="turn">#13</span></div><div class="text">T3 → doing: 鍵ページ、予約詳細の入口リンク、オーナー管理画面の鍵パネル、前日メールの本文ビルダーまで実装した。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span><span class="turn">#13</span></div><div class="text">鈴木です。T3 の画面側が動きました。前日メールの送信とログイン後の戻り先は、まだです。理由は下に書きます。
+**できたこと**
+- 鍵ページ <code>/mypage/reservations/:id/key</code>: <code>app/routes/mypage/reservations/[id]/key.tsx</code>、部品は <code>app/components/key-card.tsx</code>。
+  - 画像なし、1 画面。滞在期間、番号、「番号が合わないとき」、連絡先が同じ画面に入ります。
+  - <code>no-store</code> です。他人の予約とキャンセル済みは 404 にします。
+  - 前日 0:00 JST より前と、チェックアウト 11:00 JST 以降は、番号を出さず、プロバイダも呼びません。
+  - <code>none</code> / <code>failed</code> / <code>revoked</code> は、同じ「キーボックスで鍵をお渡しします」案内に落とします。内部状態の言葉は出しません。
+- 予約詳細 <code>[id].tsx</code>: 確定済みで表示期間内のときだけ、「鍵のご案内を見る」リンクを出します。
+- オーナー管理画面: <code>app/components/key-admin-panel.tsx</code>。状態バッジ(発行済み/失効/失敗/未発行)と、発行・失効・失敗の履歴の表を、予約詳細に差し込みました。失敗のときは「キーボックスでの対応が必要」と出します。
+- メール本文: <code>app/lib/arrival-reminder-mail.ts</code>。鍵ページへのリンクだけで、鍵の本文は載せません。
+- 表示期間の判定: <code>app/lib/key-page-window.ts</code>。境界 (前日 23:59/0:00、チェックアウト 10:59/11:00 JST) のテストがあります。
+- テスト: 鍵カード、管理パネル、窓判定、メール、ルートのテストを足しました。範囲は 鍵カード、管理パネル、窓判定、メール、ルートです。
+- 品質ゲート: 私の差分は lint と format が通っています。田中さんの関数 (<code>~/lib/reservation-key-view</code>) にそのままつないであります。
+
+**まだのこと、未検証のこと**
+1. **前日メールの送信は載せていません。** 決めたとおり次イテレーションに回します。
+   - 既存の日次 cron (<code>0 1 * * *</code>) には載せられます。ただ、二重送信を防ぐ記録テーブル(マイグレーション)と、予約を探すクエリが新しく要ります。
+   - 本文ビルダーだけ先に出しました。
+2. **ログイン後に鍵ページへ戻す処理は未実装です。** 今の <code>guestAuth</code> は <code>/mypage</code> へ飛ばすだけです。
+   - 戻り先の受け渡しは認証に触れます。戻り先は <code>/mypage/reservations/:id/key</code> の形だけ許可する方針で、メールを載せるときに一緒にやらせてください。
+3. **キーボックスの挙動と連絡先**: 中村さんの回答がまだなので、ロック有無は書いていません。
+   - 「番号が合わないとき」は、「ゆっくり入力し直して、開かなければ連絡」とだけ書きました。
+   - 連絡先は、既存の <code>CONTACT_EMAIL</code>(メール)のみです。電話は中村さんの回答待ちです。
+4. iPhone 幅は、固定幅を使わず折り返せることをテストで確認しただけです。実機の目視は未確認です。
+5. 田中さんの T2 側で <code>cancel-reservation</code> / <code>confirm-reservation</code> / webhook / admin の <code>update</code> のテスト 5 件が落ちています。実装途中と思うので、私の差分は触っていません。<code>tsc</code> のエラーは、元からある <code>dist/.vite/manifest.json</code> の 1 件だけです。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 田中 健</span><span class="turn">#13</span></div><div class="text">田中さん、結合メモです。
+- 鍵ページは <code>guestId</code> に、マイページのセッションのメールを渡しています。
+- 管理画面の状態は、<code>reservationKeyRepo.findLatest</code> の <code>issued</code> を「発行済み」に、<code>revoked</code> を「失効」、<code>failed</code> を「失敗」、記録なしを「未発行」にして出しています。
+- 履歴は <code>listKeyAuditByReservation</code> をそのまま表にしています。<code>actorId</code> は管理画面にそのまま出ます。メールが入る場合は、PII の観点で確認をお願いします。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">note</span><span class="turn">#13</span></div><div class="text">T3 の現状: 画面側 (鍵ページ、予約詳細のリンク、管理パネル、メール本文ビルダー) は実装済み。前日メールの送信 (重複防止テーブルと cron)、ログイン後の戻り先、キーボックスの挙動、電話の連絡先は未着手または回答待ち。mail は次イテレーション。田中さんの T2 側でテスト 5 件が落ちている (私の差分ではない)。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">task</span><span class="turn">#13</span></div><div class="text">T3 → done: 画面側を実装した。メール送信とログイン後の戻り先は未実装で、次イテレーションに回す。
+- 実装: <code>app/routes/mypage/reservations/[id]/key.tsx</code>、<code>app/components/key-card.tsx</code>、<code>app/components/key-admin-panel.tsx</code>、<code>app/lib/key-page-window.ts</code>、<code>app/lib/arrival-reminder-mail.ts</code>、予約詳細 (マイページ・管理画面) への差し込み。
+- 確認: <code>npx vitest run app/components/key app/lib/key-page app/lib/arrival app/routes/mypage</code>、<code>pnpm lint</code>。
+- 未実装: 前日メールの送信、ログイン後の戻り先。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 鈴木 ひかり, 佐藤 美咲</span><span class="turn">#14</span></div><div class="text">田中です。鈴木さんが報告してくれた「T2 側のテスト 5 件が落ちている」件を、今の作業コピーで確認しました。
+- 結論: 落ちているテストはありません。<code>pnpm test:run</code> は 166 ファイル / 1553 件がすべて通り、<code>pnpm lint</code> とフォーマットも通ります。<code>npx tsc --noEmit</code> のエラーは、元からある <code>dist/.vite/manifest.json</code> 不在の 1 件だけです。
+- 鈴木さんが確認した時点は、私の T2 の途中だった可能性があります。鈴木さんの側でもう一度流して、まだ落ちるものがあれば、テスト名を教えてください。
+- 鍵ページ(<code>key.tsx</code>)のテストと、鈴木さんの鍵カード・管理パネル・窓判定・メールのテストも、この 1553 件に含まれて通っています。
+
+鈴木さんの結合メモへの回答です。
+- <code>actorId</code> は、予約確定のシステム処理なら固定の識別子が入ります。管理画面の操作なら管理者 ID が入ります。ゲストのメールアドレスは入れていません。PII の面では、今のところ問題ありません。実装は <code>app/lib/reservation-key.ts</code> で確認済みです。
+- 管理画面の状態の対応づけ(発行済み、失効、失敗、未発行)は、<code>reservationKeyRepo.findLatest</code> の返す状態と一致しています。
+
+次イテレーションの宿題は 3 つです。いずれも私が引き取れます。
+1. 前日メール用の二重送信防止テーブルと、対象予約を探すクエリ(マイグレーション 0022 想定)。
+2. ログイン後の戻り先。<code>/mypage/reservations/:id/key</code> の形だけを許可する、オープンリダイレクト対策つきの実装。
+3. 失敗した鍵の再試行(cron)。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">note</span><span class="turn">#14</span></div><div class="text">最終確認(iteration 1 build): <code>pnpm test:run</code> は 166 ファイル / 1553 件が全部通り、lint とフォーマットも通る。<code>tsc</code> は <code>dist/.vite/manifest.json</code> 不在の 1 件のみ(既存)。鈴木さんが報告した 5 件の失敗は再現せず。次イテレーションの宿題: 前日メールの二重送信防止テーブルと検索クエリ(0022 想定)、ログイン後の戻り先(<code>/mypage/reservations/:id/key</code> の形だけ許可)、失敗した鍵の再試行(cron)。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 田中 健, 佐藤 美咲</span><span class="turn">#15</span></div><div class="text">鈴木です。田中さん、確認ありがとうございます。作業コピーで <code>pnpm test:run</code> を流し直したところ、166 ファイル / 1553 件がすべて通りました。前回「5 件落ちている」と書いたのは、田中さんの T2 の作業途中に当たったためだと思います。訂正します。T3 は完了のままで、報告も変わりません。
+- 次イテレーションは田中さんの宿題 3 つに合わせます。私は前日メールの送信側(<code>arrival-reminder-mail.ts</code> の組み込み)と、ログイン後の戻り先で出すログイン画面の文言を見ます。戻り先は <code>/mypage/reservations/:id/key</code> の形だけ許可する、という方針で合意です。
+- 中村さんの回答待ちは、キーボックスのやり直し・ロックの挙動と、ゲストに見せる連絡先(電話かメールか)です。回答が出るまで、「番号が合わないとき」の文言は今のままにします。
+- 未検証は、iPhone 実機での目視です。</div></li></ol></details>
+  <details open><summary>周 1 · review <span class="muted">7</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;review&quot; started (iteration 1) — Engineers review each other's work against the acceptance criteria and fix issues. PM checks every task against its acceptance criteria and states what is ready for users.</p></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">memo</span><span class="turn">#16</span></div><div class="text">key.tsx と key-page-window.ts を読んだ。認可、期間判定、プロバイダを呼ぶ条件、no-store はいずれも受け入れ条件どおり。実害のある指摘はなし。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 鈴木 ひかり, 佐藤 美咲</span><span class="turn">#16</span></div><div class="text">田中です。T3 のコード(<code>key.tsx</code>、<code>key-page-window.ts</code>、<code>key-admin-panel.tsx</code>)をレビューしました。修正が必要な点は見つかりませんでした。
+- **認可:** 予約が無い、未確定、メールアドレスが一致しない場合は、すべて 404 です。<code>getKeyViewForReservation</code> でも二重に確認しています。
+- **期間:** 期間外はプロバイダを呼びません。日付が壊れているときは <code>before</code>(何も見せない)に倒しています。+09:00 の絶対時刻で比べていて、ローカル解釈に依存しません。
+- **キャッシュ:** <code>private, no-store</code> と <code>noindex</code> が付いています。
+- **PII:** 管理画面の履歴に出るのは <code>actorId</code> だけです。T2 側ではゲストのメールアドレスを入れていません。
+- **小さな指摘(任意):** <code>key.tsx</code> の <code>const window</code> はグローバルの <code>window</code> を隠します。動作に問題はありません。次回 <code>keyWindow</code> に直せば十分です。
+
+T1・T2 の品質ゲートは、さきほどの確認のとおりです。<code>pnpm test:run</code> は 1553 件が通り、lint も通りました。<code>tsc</code> が出すのは、元からある <code>dist/.vite/manifest.json</code> 不在の 1 件だけです。
+
+PM の判断に必要な、ゲストに出せない点は次の 3 つです。
+1. SESAME は実機未確認なので、今回はキーボックスだけです。
+2. 本番に出す前に <code>KEYBOX_CODE</code> の設定と 0021 の適用が必要です。
+3. 前日メールの送信とログイン後の戻り先は未実装です。ログイン済みのゲストなら、予約詳細の入口リンクから鍵ページに入れます。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span><span class="turn">#17</span></div><div class="text">鈴木です。田中さん、T3 のレビューをありがとうございます。指摘された <code>key.tsx</code> の <code>window</code> の影を <code>keyWindow</code> に直しました。
+- 確認: 鍵ページ、マイページのルート、鍵カードのテスト（6 ファイル / 38 件）が通りました。<code>pnpm lint</code> とフォーマットも通りました。
+- 画面側の受け入れ条件（表示期間、キーボックス案内、管理画面の状態と履歴、メール本文ビルダー）は、今の作業コピーで満たしています。
+- ゲストに出せない点は 3 つです。
+  1. 前日メールの送信とログイン後の戻り先は未実装です。ログイン済みなら、予約詳細のリンクから鍵ページに入れます。
+  2. キーボックスのやり直し・ロックの挙動と、ゲストに見せる電話番号は、中村さんの回答待ちです。それまでは「ゆっくり入力し直して、開かなければメールで連絡」とだけ案内します。
+  3. iPhone 実機での目視は未確認です。テストで確認したのは、固定幅を使わず折り返せることだけです。
+- 本番に出す前に、<code>KEYBOX_CODE</code> の設定と 0021 の適用が必要です。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#18</span></div><div class="text">T1 と T2 は受け入れ条件を満たしている。T3 は画面側だけ満たしていて、前日メールの送信が未実装。iPhone 実機も未確認。残りは次イテレーションのタスクにして、review を終える。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span><span class="turn">#18</span></div><div class="text">佐藤です。review の結果を共有します。
+
+**ユーザーに出せるもの(キーボックスのみ、本番前提条件つき)**
+- T1: 受け入れ条件を満たしています。spec にはリスクと未検証が書いてあり、鍵の平文は DB にも監査ログにもありません。
+- T2: 受け入れ条件を満たしています。確定・キャンセル・日程変更で鍵が連動し、失敗しても予約は止まりません。監査ログは <code>key.issued</code> / <code>key.revoked</code> / <code>key.failed</code> です。
+- T3: 条件を一部満たしています。
+  - 満たしている点: 鍵ページ(前日 0:00〜チェックアウト 11:00 JST)、キーボックス案内、オーナー画面の状態と履歴。
+  - 満たしていない点: 前日メールは本文ビルダーだけで、送信は未実装です。iPhone 実機での目視も未確認です。
+  - 影響: 今のゲストは、ログインして予約詳細のリンクから鍵ページに入ります。前日の通知はありません。
+
+**本番に出す前の条件**
+- <code>KEYBOX_CODE</code> を設定する。未設定だと全予約が <code>failed</code> 扱いになります。
+- 0021 を本番 D1 に適用する。
+
+**未検証・未解決**
+- SESAME の API、Hub の要否、アプリの要否は実機未確認です。
+- 「帰ったゲストが番号を覚えていれば入れる」不安は、キーボックスのままでは解消しません。
+- 中村さんの回答待ちが 4 つあります。
+  - 設備の有無と金額
+  - 誤入力時の挙動
+  - ゲストに見せる連絡先
+  - 番号の変更手順
+- <code>npx tsc --noEmit</code> は、既存の <code>dist/.vite/manifest.json</code> 不在による 1 件だけです。それ以外は <code>pnpm test:run</code>(1553 件)と lint が通っています。
+
+次イテレーションは、前日メールの送信とログイン後の戻り先に絞ります。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">TASK</span><span class="turn">#18</span></div><div class="text">T4 owner=eng-backend: 前日メールの二重送信防止と、ログイン後の戻り先
+- マイグレーション 0022 で、前日メールの送信記録を予約ごとに 1 件だけ持てる。同じ予約に 2 回送っても、2 通目は送られない(テストあり)。
+- 日次 cron で、翌日チェックインの確定済み予約だけを探せる。キャンセル済みと対象外の日付は拾わない(テストあり)。
+- 未ログインで <code>/mypage/reservations/:id/key</code> を開くとログインに進み、ログイン後にそのページへ戻る。戻り先は <code>/mypage/reservations/:id/key</code> の形だけ許可する。外部 URL や別パスは <code>/mypage</code> に落とし、オープンリダイレクトにならない(テストあり)。
+- 認証に触れる差分を pii-review の観点で確認し、結果を spec に書く。
+- 送信失敗は予約と鍵の状態に影響せず、次回 cron で再試行できる。
+- <code>pnpm test:run</code>、<code>npx tsc --noEmit</code>、<code>pnpm lint</code> が通る。tsc の <code>dist</code> 不在 1 件は既知として明記する。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">TASK</span><span class="turn">#18</span></div><div class="text">T5 owner=eng-frontend: 前日メールの組み込みと iPhone 幅の確認
+- <code>arrival-reminder-mail.ts</code> を既存のメール送信の仕組みに組み込む。本文は鍵ページへのリンクのみで、番号や鍵の値は入らない(テストあり)。
+- 既存のメールテンプレートに沿った体裁で、件名とリンクが iPhone のメールアプリで読める。PII の観点で差分を確認する。
+- 未ログインで鍵ページに来たゲストに、ログインが必要な理由とメールでログインする案内が出る。迷わず戻れる文言にする。
+- 鍵ページを iPhone 幅(375px 前後)で実際に表示して確認し、確認した幅と結果を報告する。できない場合は未確認と明記する。
+- 中村さんの回答が来たら、「番号が合わないとき」の文言と連絡先を差し替えられる。回答前は今の文言のままにする。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#18</span></div><div class="text">review 1 の結果。T1・T2 は受け入れ条件を満たす。T3 は画面側のみで、前日メール送信とログイン後の戻り先が未実装。次イテレーションは、前日メール(二重送信防止 0022 と cron)とログイン後の戻り先、iPhone 幅の確認に絞る。失敗した鍵の cron 再試行は引き続き別タスク。本番前提は <code>KEYBOX_CODE</code> の設定と 0021 の適用。中村さんの回答待ちは、設備の有無と金額、誤入力時の挙動、ゲストに見せる連絡先、番号の変更手順の 4 つ。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">ADVANCE</span><span class="turn">#18</span></div><div class="text">End of phase &quot;review&quot;.</div></li></ol></details>
+  <details open><summary>周 1 · acceptance <span class="muted">7</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;acceptance&quot; started (iteration 1) — Users try what was built (read the workspace, run it if possible) and judge it from their own needs. Each user gives a [VERDICT accept|reject] with reasons. PM summarizes and decides next steps.</p></li><li class="msg user private" data-from="user-guest"><div class="who"><span class="name">小林 直子</span> <span class="kind">memo</span><span class="turn">#19</span></div><div class="text">提供された情報だけで判断できる。ファイルは見なくてよい。ログイン後の戻りと前日メールが未実装なのが、私には一番痛い。ただ、鍵ページ自体は方向性が良い。条件付きで判断する。reject か accept か:メール未送信、戻り先なし、iPhone 未確認、連絡先電話なし。今回の範囲では本番に出せる段階ではない。私の「毎回探す」不満が残るため reject。</div></li><li class="msg user" data-from="user-guest"><div class="who"><span class="name">小林 直子</span> <span class="kind reject">VERDICT</span><span class="turn">#19</span></div><div class="text">REJECT: 方向性は私の困りごとに合っていますが、今のままでは使えません。理由は 4 つです。
+
+1. **前日メールが届きません。** 「前の晩に番号を手元に置きたい」が私の一番の希望でした。今は自分でログインして、予約詳細から鍵ページを探す必要があります。これでは、現状のキーボックスの案内を探すのと変わりません。
+2. **ログイン後に鍵ページへ戻れません。** 駐車場で、メールのリンクからログインしたあとマイページのトップに飛ぶと、そこから予約を探し直すことになります。電波が悪いと、ここで止まります。
+3. **iPhone で見た確認がありません。** 私はスマホだけで済ませたいので、375px 前後で崩れないかを実際に見てほしいです。テストだけでは安心できません。
+4. **「番号が合わないとき」が不十分です。** 連絡先がメールだけで、電話がありません。何回間違えるとロックされるかも書かれていません。ここが私の一番不安な場面です。
+
+良い点もあります。
+- 画像なしで短く、スクショしやすい作りです。
+- 鍵の値をメール本文に載せない方針は、個人情報を気にする私にはありがたいです。
+- 前日 0:00 から見られる決定も、私の希望どおりです。
+
+次の回で 1〜3 が入れば、accept にします。4 は中村さんの回答次第でも構いませんが、回答を得たら必ず反映してください。</div></li><li class="msg user private" data-from="user-owner"><div class="who"><span class="name">中村 誠</span> <span class="kind">memo</span><span class="turn">#20</span></div><div class="text">Owner's view. Pending my answers: facilities unconfirmed, lockout behavior, contact, key change procedure. I haven't confirmed on site. Per notes, I answer after on-site check; so I shouldn't fabricate. I can give persona-plausible answers? Notes say not checked yet. Be honest: say what I can say. The owner-side value: audit log, failures don't stop reservations, KEYBOX_CODE unset → all fail (worry). Verdict: reject-ish? The product doesn't reduce my work yet (still keybox). Key concern: static number visible from the day before, and guests remembering. I'd accept conditionally? Honest: accept the owner-side parts, but reject for now because pending items and production precondition risk. Since iteration 1/2, I'll go with reject w/ clear items, including that I'll answer pending questions.</div></li><li class="msg user" data-from="user-owner"><div class="who"><span class="name">中村 誠</span> <span class="kind reject">VERDICT</span><span class="turn">#20</span></div><div class="text">REJECT: オーナーとしては、方向は良いですが、まだ出せません。
+
+良い点:
+- 鍵の発行や失敗で予約が止まらない作りは安心です。繁忙期の金曜に鍵のせいで予約が止まるのが一番困ります。
+- 管理画面で状態(発行済み・失効・失敗)と履歴が見えるのは助かります。
+- 鍵の値が DB・ログ・メールに残らないのも、個人情報を気にする私には大事な点です。
+
+出せない理由:
+1. **番号を前日 0:00 から見せる件は、まだ納得していません。** キーボックスの番号は頻繁に変えていません。前日から見えるとスクショが残るので、帰ったゲストが番号を覚えている不安が今より増えます。番号を変える手順と頻度が決まってから出したいです。
+2. **<code>KEYBOX_CODE</code> 未設定だと全予約が失敗扱いになる点が心配です。** 安全側なのは分かりますが、設定漏れでゲスト全員の画面から番号が消るのは困ります。デプロイ前の確認手順と、番号を変えたときの手順(再デプロイが要るか)を、私が自分でやれる形で書いてください。
+3. **前日メールとログイン後の戻りがありません。** 小林さんの意見に同意します。私が毎回対面で渡せない日があるので、ここが無いと手間が減りません。
+4. **管理画面の変更前確認がありません。** 日程変更で旧鍵が失効して再発行される動きは、実行前に何が起きるか画面で見たいです。
+
+私から返す回答があります。
+- 設備: SESAME 本体と Hub の有無は、現地を見てから金額と一緒に答えます。費用が出る話は金額を見て判断します。
+- 誤入力時の挙動、連絡先(電話かメールか)、番号の変更手順: 現地で確認して、次の回までに答えます。確認前に推測で文言を決めないでください。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#21</span></div><div class="text">両者とも reject。1〜3 は T4・T5 で対応済み。4 の文言は中村さんの現地確認待ち。追加で出たのは、運用手順書、KEYBOX_CODE 未設定の検知、日程変更前の確認画面。前日 0:00 表示は、中村さんの納得がまだなので、設定値にして残す。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span><span class="turn">#21</span></div><div class="text">佐藤です。acceptance の結果です。両者とも reject で、理由は妥当だと受け取ります。
+- 小林さんの 1〜3 (前日メール、ログイン後の戻り、iPhone 幅の確認) は、次イテレーションの T4・T5 でそのまま対応します。
+- 小林さんの 4 と中村さんの回答 (誤入力時の挙動、連絡先、番号の変更手順) は、現地確認後に反映します。回答前は文言を推測で変えません。
+- 中村さんの 2 と 4 (デプロイ前の確認手順、日程変更前の確認画面) は、新しく T6・T7 として切ります。
+- 前日 0:00 表示は決定を維持します。ただし中村さんが納得していないので、表示開始時刻を設定値にして、変更手順が決まった後に再判断します。理由: 小林さんの「前の晩にスクショ」を守りつつ、オーナーのリスク判断を後から効かせるため。トレードオフ: 判断が決まるまで、番号が見える時間は延びたままです。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">TASK</span><span class="turn">#21</span></div><div class="text">T6 owner=eng-backend: KEYBOX_CODE の運用手順書と未設定の検知
+- <code>docs/</code> 配下に、中村さんが自分で実行できる手順書がある。内容は、デプロイ前の確認 (<code>KEYBOX_CODE</code> の設定、0021 と 0022 の適用)、番号を変えたときの手順 (再デプロイが要るか)、設定漏れに気づいたときの戻し方。コマンドと確認方法を具体的に書く。
+- 管理画面に、<code>KEYBOX_CODE</code> が未設定のときだけ警告が出る。値そのものは表示せず、設定の有無だけを出す (テストあり)。
+- ゲスト向け鍵ページの表示開始 (前日 0:00 JST) が 1 か所の設定値になっていて、変更しても境界値テストが追従する。
+- 番号の変更手順は中村さんの回答前なので、「要確認」と明記し、推測で書かない。
+- <code>pnpm test:run</code>、<code>npx tsc --noEmit</code>、<code>pnpm lint</code> が通る。tsc の <code>dist</code> 不在 1 件は既知として明記する。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">TASK</span><span class="turn">#21</span></div><div class="text">T7 owner=eng-frontend: 日程変更前の確認表示 (管理画面)
+- 管理画面の予約日程変更で、保存前に「旧鍵を失効し、新しい期間で再発行する」と、旧期間と新期間 (JST) が見える。
+- 日程が変わらない編集では、この表示は出ない。
+- 鍵の値は表示しない。中村さんがキャンセルして戻れる (テストあり)。
+- 鍵の発行に失敗しても日程変更は成功し、キーボックス対応になることを同じ画面に書く。
+- 既存の <code>status-badge</code>、<code>detail-table</code> を使い、新しい部品は増やさない。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#21</span></div><div class="text">acceptance 1 の結果: 小林さん・中村さん両者 reject。小林さんは前日メール、ログイン後の戻り、iPhone 幅の実機確認が入れば accept。誤入力時の案内は中村さんの回答を必ず反映する。中村さんは、(1) 前日 0:00 表示に未納得 (番号の変更手順と頻度が決まるまで)、(2) KEYBOX_CODE の運用手順書、(3) 前日メールとログイン後の戻り、(4) 日程変更前の確認画面を要求。中村さんは現地確認後に、設備と金額、誤入力時の挙動、連絡先、番号の変更手順を次回までに答える。確認前に推測で文言を決めない。次イテレーションは T4、T5、T6 (運用手順書)、T7 (日程変更の確認表示)。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">ADVANCE</span><span class="turn">#21</span></div><div class="text">End of phase &quot;acceptance&quot;.</div></li></ol></details>
+  <details open><summary>周 2 · planning <span class="muted">8</span></summary><ol><li class="sys" data-from="system"><p>Iteration 2 begins: 2/2 users rejected (user-guest, user-owner).</p></li><li class="sys" data-from="system"><p>Phase &quot;planning&quot; started (iteration 2) — PM turns findings into a small, shippable scope: [TASK] items with clear acceptance criteria, each assigned to an engineer. Engineers challenge feasibility, split or re-assign tasks, and agree on tech choices.</p></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#22</span></div><div class="text">T4〜T7 はすでに切ってある。この round はエンジンの実現可能性の確認と分担の合意を取る。重いのは T4(0022、cron、認証の戻り先)。T6 は手順書と警告と設定値化。T7 は小さい。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 田中 健, 鈴木 ひかり</span><span class="turn">#22</span></div><div class="text">佐藤です。今回の T4〜T7 は、バックログのとおりです。着手前に、次の4点を確認してください。
+1. 田中さん、T4 と T6 を両方持つと重いです。優先順は T4、T6 の順にします。理由: 小林さんの reject 理由 1〜3 は T4・T5 で解消するためです。T6 の表示開始の設定値化だけは小さいので、T4 と並行で先に出せるか教えてください。
+2. 田中さん、ログイン後の戻り先の受け渡しは、オープンリダイレクトにならない方式を選んでください。戻り先は <code>/mypage/reservations/:id/key</code> の形だけ許可します。外部 URL や別パスは <code>/mypage</code> に落とします。方式と理由を一言で共有してください。
+3. 鈴木さん、T5 は T4 の cron と送信記録に依存します。送信の呼び出し口(関数名と引数)を、田中さんと先に決めてください。決まれば並行で進められます。T7 は田中さんの T2 の再発行処理を呼ぶだけなので、独立して進めてください。
+4. 鈴木さん、iPhone 幅の確認は、ブラウザで 375px を実際に開けるか最初に確認してください。できない場合は、「未確認」と報告してください。「確認した」とは書かないでください。
+
+中村さんの回答待ちの4点は、回答が来るまで文言を変えません。設定値や差し替え箇所にして、回答後すぐ反映できる形にしてください。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#22</span></div><div class="text">planning 2 round 1: T4〜T7 の優先順は T4 → T5 → T6 → T7。表示開始の設定値化は T6 のうち小さいので先出し可。T4 の戻り先方式と、T4・T5 の送信呼び出し口は、エンジニア同士で決める。iPhone 幅は、開けなければ「未確認」と明記する。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">memo</span><span class="turn">#23</span></div><div class="text">Planning phase, no edits. Answer PM's points concisely: priority, T6 window config, redirect method, interface with 鈴木さん.</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 佐藤 美咲, 鈴木 ひかり</span><span class="turn">#23</span></div><div class="text">田中です。4点に答えます。
+
+1. **優先順は T4、T6 で了解です。** 表示開始(前日 0:00 JST)の設定値化は小さいので、T4 と並行で先に出します。<code>app/domain/key/validity.ts</code> に <code>GUEST_VISIBLE_LEAD_DAYS</code> のような定数を1つ置き、<code>key-page-window.ts</code> と境界値テストはそこから導きます。変更してもテストが追従する形にします。鈴木さんの <code>key-page-window.ts</code> に触れるので、差分は小さく、先に伝えます。
+
+2. **戻り先はサーバー側の検証つきクエリで渡します。** 方式は <code>/mypage/login?next=/mypage/reservations/:id/key</code> です。
+   - 許可するのは、正規表現 <code>^/mypage/reservations/[0-9A-Za-z_-]+/key$</code> に完全一致する場合だけです。
+   - 外部 URL、<code>//</code>、<code>\</code>、<code>..</code>、<code>%2f</code>、クエリ付き、別パスは、すべて <code>/mypage</code> に落とします。
+   - 理由: 戻り先を許可リストの形で固定すれば、検証が1関数に収まり、テストしやすいからです。Cookie やセッションに入れる案は、ログインメールの別端末での開封で戻り先が失われるので採りません。メールのログインリンク側には <code>next</code> を載せず、認証コード確認後の遷移で検証して使います。
+   - 認証に触れる差分なので、pii-review の観点で確認して spec に書きます。
+
+3. **送信の口は次の形にします。** 鈴木さんの <code>arrival-reminder-mail.ts</code> から呼べる形です。
+   - 対象の検索: <code>findArrivalReminderTargets(db, now: Date)</code> が <code>{ reservationId, email, checkIn }[]</code> を返します。翌日(JST)チェックインの確定済み予約だけで、送信済みとキャンセル済みは除きます。
+   - 送信の記録: <code>claimArrivalReminder(db, reservationId, now)</code> が <code>true</code>/<code>false</code> を返します。<code>false</code> なら送りません。
+   - 失敗時: <code>releaseArrivalReminder(db, reservationId)</code> で記録を消し、次回 cron で再試行できます。
+   - 流れは「claim → 送信 → 失敗なら release」です。鍵の状態には触れません。
+   - 鈴木さん、<code>arrival-reminder-mail.ts</code> の組み込み側の関数名が違えば、教えてください。
+
+4. **リスクを2点。**
+   - claim 後に Worker が落ちると、記録だけ残ってメールは送られません。重複より欠落を選んだ設計です。小林さんには「前日メールが来ない」可能性が残るので、spec に書きます。
+   - 既存の cron <code>0 1 * * *</code> は 10:00 JST です。前日メールの時刻として遅くないか、佐藤さんと中村さんに確認してください。変更が要るなら cron 式を変えるだけです。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">note</span><span class="turn">#23</span></div><div class="text">T4 の設計: ログイン後の戻り先は <code>?next=</code> のクエリでサーバー検証(許可リスト完全一致、<code>/mypage</code> に落とす)。前日メールは <code>findArrivalReminderTargets</code> / <code>claimArrivalReminder</code> / <code>releaseArrivalReminder</code> で、migration 0022。claim 後にクラッシュすると欠落する点は spec に書く。T6 の表示開始は <code>validity.ts</code> の定数 1 か所にする。cron は現状 <code>0 1 * * *</code> (10:00 JST)。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">memo</span><span class="turn">#24</span></div><div class="text">計画フェーズでファイル編集は不可。田中さんの口の形を受けて、T5 の呼び出し口と文言、iPhone 確認の可否を伝える。ブラウザ確認は未実施なので「未確認」前提で。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 田中 健, 佐藤 美咲</span><span class="turn">#24</span></div><div class="text">鈴木です。4点に答えます。
+
+1. **送信の口は田中さんの案で了解です。** 私は <code>arrival-reminder-mail.ts</code> に <code>sendArrivalReminder(env, db, target, now)</code> を足します。流れは「<code>findArrivalReminderTargets</code> → <code>claimArrivalReminder</code> → メール enqueue → 失敗なら <code>releaseArrivalReminder</code>」で、送信側は例外を投げず結果を返します。
+   - 確認が1点あります。既存のメール送信がキュー(email-outbox)経由なら、claim は enqueue 成功の直前に置いてください。enqueue 失敗時に release できる形にします。どちらになるかは、実装の最初に既存の仕組みを読んで共有します。
+   - 本文は鍵ページへのリンクのみです。番号や鍵の値は入れず、そのテストを足します。
+2. **戻り先の方式(<code>?next=</code> を許可リストで検証)は了解です。** ログイン画面側は、<code>next</code> が許可された形のときだけ文言を変えます。
+   - 文言は「鍵のご案内を見るには、ログインが必要です。予約時のメールアドレスに届くコードでログインすると、このページに戻ります」の方向で考えています。
+   - ログイン後に戻る先が見えるように、ボタンも「ログインして鍵のご案内を見る」にします。
+   - 検証関数は田中さんの1か所を使います。私は <code>next</code> を再検証せず、その結果だけを使います。
+3. **iPhone 幅の確認は、まだできるか分かりません。** 実装の最初に、ブラウザで 375px を開けるか確認します。できなければ「未確認」と報告し、「確認した」とは書きません。
+4. **T7 は独立して進めます。** 田中さんの <code>reissueKeyForReservation</code> を呼ぶ側は触らず、<code>update.tsx</code> に確認表示だけを足します。既存の <code>status-badge</code> と <code>detail-table</code> を使います。
+   - 旧期間と新期間は、田中さんの <code>validity.ts</code> の関数で JST を出します。
+   - 保存前の確認画面から「戻る」で編集に戻れる形にします。
+
+**お願い**
+- 田中さん、<code>GUEST_VISIBLE_LEAD_DAYS</code> を置いたら教えてください。私の <code>key-page-window.ts</code> は定数から導く形に合わせます。
+- cron の 10:00 JST は、前日メールとしては遅くないと思います。ただ、小林さんは「前の晩に手元に置きたい」と言っていたので、夕方の送信のほうが合うかもしれません。佐藤さん、小林さんと中村さんに聞いてください。
+- 中村さんの回答待ちの4点は、「番号が合わないとき」の文言と連絡先を <code>key-card.tsx</code> の定数に分けて、差し替え1か所で済む形にします。回答前は今の文言のままです。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">note</span><span class="turn">#24</span></div><div class="text">T5 の方針: 送信は claim → enqueue → 失敗なら release。既存メール基盤がキュー経由かを実装の最初に確認する。iPhone 375px は実際に開けるか最初に確認し、できなければ未確認と報告する。ログイン文言は田中さんの検証関数の結果だけを使う。cron 10:00 JST が前日メールとして遅くないかは、佐藤さんが小林さん・中村さんに確認中。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#25</span></div><div class="text">両エンジニアの方針は妥当。cron 時刻の論点に決める。前の晩に手元に置きたいという小林さんの希望を守るなら、夕方の送信が合う。ただし cron 変更は小さい。決めて、planning を終える。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 田中 健, 鈴木 ひかり</span><span class="turn">#25</span></div><div class="text">佐藤です。回答ありがとうございます。決めたことを共有します。
+- **戻り先方式、送信の口、定数化**: 田中さんの案で了解です。<code>GUEST_VISIBLE_LEAD_DAYS</code> を置いたら鈴木さんに知らせてください。
+- **前日メールの時刻**: 夕方(18:00 JST 前後)に変えます。理由: 小林さんは「前の晩に手元に置きたい」と言っていて、10:00 JST では当日朝に近いためです。トレードオフ: 既存の日次 cron とは別の cron 式が要ります。実装前に、既存 cron が他の用途で使われているか田中さんが確認してください。分けられない場合は、既存 cron のままにして、時刻を spec に書いてください。送信時刻は設定値にして、中村さんと小林さんの反応を見て変えられる形にします。
+- **claim 後に Worker が落ちる場合**: 重複より欠落を選ぶ設計で了解です。spec に書いてください。
+- **認証の差分**: <code>next</code> は検証関数 1 か所に集めます。鈴木さんは再検証せず、その結果だけを使ってください。
+- **iPhone 幅**: 開けなければ「未確認」と報告してください。
+- **中村さんの回答待ち**: 4 点とも、回答前は文言を変えません。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#25</span></div><div class="text">前日メールの送信時刻は 18:00 JST 前後を目標にし、設定値にする。既存 cron と分けられない場合は 10:00 JST のままにして、理由を spec に書く。理由: 小林さんの「前の晩に手元に置きたい」を守るため。トレードオフ: cron の追加が要る可能性がある。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">ADVANCE</span><span class="turn">#25</span></div><div class="text">End of phase &quot;planning&quot;.</div></li></ol></details>
+  <details open><summary>周 2 · build <span class="muted">13</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;build&quot; started (iteration 2) — Engineers implement their own tasks in the workspace (real files, runnable code, tests when sensible), coordinate interfaces with each other, and mark finished work with [TASK_DONE].</p></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">task</span><span class="turn">#26</span></div><div class="text">T4 → doing</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">task</span><span class="turn">#26</span></div><div class="text">T6 → doing</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">task</span><span class="turn">#26</span></div><div class="text">T4 → done: 前日メールの二重送信防止、ログイン後の戻り先、spec への PII 確認結果を実装しました。cron は日次 1 回では受け入れ条件を満たせなかったため、18〜20 時台の 3 回に変えています。理由は下の「cron」にあります。
+- **確認結果**
+  - <code>pnpm test:run</code> は 173 ファイル / 1632 件がすべて通りました。
+  - <code>pnpm lint</code> と <code>scripts/check-domain-imports.sh</code> も通りました。
+  - <code>npx tsc --noEmit</code> の指摘は、既知の <code>dist/.vite/manifest.json</code> 不在 1 件だけです。
+- **前日メールの送信記録**
+  - <code>migrations/0022_arrival_reminders.sql</code> に <code>arrival_reminders</code> を追加しました。<code>reservation_id</code> は UNIQUE で、持つのは予約 ID と時刻だけです。
+  - <code>db/schema.sql</code>、<code>db/er.md</code>、<code>db/README.md</code> も更新しました。
+  - 同じ予約に 2 回 claim しても、得られるのは 1 回だけです。release すると再 claim できます。実 SQLite のテスト(<code>app/db/repositories/arrival-reminder.test.ts</code>)で確認しました。
+- **対象の検索**
+  - <code>findArrivalReminderTargets(db, now)</code> は、JST の翌日にチェックインする確定済みで未送信の予約だけを返します。SQL は <code>reservationRepo.findConfirmedCheckingInWithoutArrivalReminder</code> です。
+  - キャンセル済み、キャンセル処理中、pending、別の日は拾いません。実 SQLite で確認しました。
+  - 復号に失敗して宛先がメールの形でない予約には送りません。
+- **送信の流れ**
+  - <code>processArrivalReminders(env, now, send?)</code>(<code>app/lib/arrival-reminder.ts</code>)が「claim → 送信 → 失敗なら release」を回します。
+  - 例外は投げず、予約と鍵の状態には触れません。
+  - 送信失敗は release して再試行できます。送信後に監査ログが失敗しても release しないので、再送されません。
+  - 監査ログの action は <code>arrival_reminder.sent</code> / <code>failed</code> / <code>release_failed</code> です。宛先とエラー本文は入れず、テストで確認しました。
+  - <code>app/server.ts</code> に cron の分岐を足しました。
+- **cron**
+  - 設定は <code>villaConfig.arrivalReminder.cron</code>(<code>app/config.ts</code>)で、<code>0 9-11 * * *</code>(18・19・20 時 JST)にしました。<code>wrangler.jsonc</code> も同じ文字列です。<code>app/config.test.ts</code> が一致を確認します。
+  - 日次 1 回では、失敗して release しても次の実行は翌日です。その時点で予約は「翌日チェックイン」の対象外なので、再試行になりません。
+- **ログイン後の戻り先**
+  - <code>/mypage?next=</code> → <code>/mypage/verify?next=</code> → <code>POST /api/auth/verify</code> の <code>next</code> → 応答の <code>redirect</code> の順で運びます。
+  - 検証は <code>app/lib/login-next.ts</code> の <code>parseLoginNext</code> 1 関数です。許可は <code>^/mypage/reservations/[0-9A-Za-z_-]{1,64}/key$</code> への完全一致だけです。
+  - 外部 URL、<code>//</code>、<code>\</code>、<code>..</code>、<code>%2f</code>、クエリ付き、別パス、文字列以外は拒否します。指定されたが不許可の <code>next</code> は <code>/mypage</code> に落とし、未指定は従来どおり <code>/mypage/reservations</code> です。
+  - <code>guestAuth</code> は、未ログインで鍵ページを開いたときだけ <code>next</code> を付けます。ほかのパスは従来どおり <code>/mypage</code> です。
+  - テストは <code>login-next.test.ts</code>、<code>guest-auth.test.ts</code>、<code>api/auth/verify.test.ts</code>、<code>mypage/index.test.tsx</code>、<code>mypage/verify.test.tsx</code> に足しました。
+- **PII レビュー**
+  - spec に結果を書きました。実装者本人による確認で、別セッションのレビューはまだ受けていません。
+  - 保存・認証・ログ・外部送信・退行の各観点で、問題は見つかりませんでした。
+  - <code>arrival_reminders</code> の行は予約の存続中は残します。送信済みの証拠で、消すと再送になるためです。予約の削除に合わせた掃除は未実装です。
+- **制約と未検証**
+  - メールのマジックリンクを押す経路は <code>next</code> を持たず、ログイン後は <code>/mypage/reservations</code> に着きます。認証コード入力の経路だけが鍵ページに戻ります。直すには <code>auth_codes</code> に列を足す必要があり、今回は入れていません。
+  - claim 後に Worker が落ちると、メールは欠落します(重複より欠落を選んだ設計)。
+  - 20 時までに送れなかった予約は、その日は届きません。
+  - 未検証は、Resend の実送信、<code>0 9-11</code> の範囲指定が Cloudflare で動くこと、本番への 0022 適用、実ブラウザでの <code>next</code> 通しログインです。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">task</span><span class="turn">#26</span></div><div class="text">T6 → done: <code>KEYBOX_CODE</code> の手順書と未設定の警告、表示開始の 1 か所化を入れました。
+- **手順書** <code>docs/runbooks/keybox-code.md</code>
+  - デプロイ前の確認、0021/0022 の適用、番号を変えたとき、設定漏れの戻し方、前日メールの時刻を、コマンドと確認方法つきで書きました。
+  - 設定漏れの戻し方は、<code>secret put</code> をやり直すだけで済みます。状態が <code>failed</code> の予約も、表示期間内なら番号が出るためです。
+  - 「要確認」と明記して、推測で書かなかった点は次の 4 つです。
+    - 現地での番号の変え方と頻度。
+    - 変更時にゲストへどう知らせるか。
+    - サイトと現地の更新順序。
+    - secret を更新すれば自動再デプロイになるか。README の <code>PII_KEY_ACTIVE</code> の記載はありますが、<code>KEYBOX_CODE</code> では本番で未確認です。
+  - コマンドの本番での実行結果は未確認です。
+- **管理画面の警告** <code>app/components/keybox-warning.tsx</code>
+  - <code>AdminLayout</code> の先頭に置きました。<code>isKeyboxCodeConfigured(env)</code> の真偽だけを渡し、値は画面に出ません。
+  - 未設定、空、空白のみで警告が出ます。設定済みなら何も出ません。
+  - テストは <code>keybox-warning.test.tsx</code> です。<code>AdminLayout</code> への差し込み自体のテストは書いていません。
+- **表示開始の 1 か所化**
+  - 前日 0:00 JST の表示開始は、<code>app/domain/key/validity.ts</code> の <code>KEY_DISPLAY_LEAD_DAYS</code> 1 か所です。
+  - <code>key-page-window.ts</code> が <code>computeKeyValidity</code> から導くようにしました。ハードコードしていた <code>MS_PER_DAY</code> は外しています。
+  - 境界値テストは定数から境界を計算するので、値を変えても追従します。
+  - 壊れた日付とチェックアウトがチェックイン以前の日付は、何も見せない側に倒れます。
+- 確認結果は T4 と同じです。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 鈴木 ひかり, 佐藤 美咲</span><span class="turn">#26</span></div><div class="text">田中です。T4 と T6 を実装し、T4 の結果を spec に書きました。鈴木さんの T5 への連絡です。
+- **送信の口** <code>app/lib/arrival-reminder.ts</code> に、検索と送信の流れを作りました。
+  - 既定の送信 <code>createArrivalReminderSender(env)</code> は、既存の <code>buildArrivalReminderEmail</code> と <code>sendMail</code> をそのままつなぎます。
+  - 引数は <code>{ reservationId, email, guestName, checkIn }</code> で、鍵の値は渡しません。
+  - 送信は email-outbox を通さず、post-stay と同じ直接送信です。claim は送信の直前に置いています。
+  - 鈴木さんが別の形にするなら、<code>processArrivalReminders</code> の第 3 引数の関数を差し替えるだけで済みます。
+  - <code>arrival-reminder-mail.ts</code> は触っていません。本文のテストと PII の確認は T5 側でお願いします。
+- **ログイン画面の文言**
+  - 戻り先は、ログイン画面 <code>mypage/index.tsx</code> が持つ <code>next</code>(検証済みなら文字列、不許可なら null)です。
+  - 鍵ページ宛てのときだけ文言を変えるなら、そこで分岐してください。検証関数は <code>parseLoginNext</code> です。
+  - 私の差分は script のみで、見た目の文言は触っていません。
+  - マジックリンク経由は鍵ページに戻らない制約があります。文言で「コードを入力すると戻ります」とするか、マジックリンクの案内を弱めるかを、鈴木さんの側で決めてください。
+- **cron(佐藤さん)**
+  - 送信時刻は 18:00 JST を目標にした設定値です。再試行のため <code>0 9-11 * * *</code>(18〜20 時)にしました。cron は 3 つになります。
+  - 「18:00 に届く」で小林さんの希望には合っています。
+  - 20 時までに送れなかった分は、その日は届きません。
+- **本番に出す前の条件**(手順は <code>docs/runbooks/keybox-code.md</code>)
+  - <code>KEYBOX_CODE</code> の設定。
+  - 0021 と 0022 の適用。
+- **中村さんの回答待ち**: 番号の変更手順・頻度は、手順書に「要確認」と書いて空けてあります。回答が来たら私が埋めます。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">note</span><span class="turn">#26</span></div><div class="text">T4・T6 完了(iteration 2 build)。<code>pnpm test:run</code> は 173 ファイル / 1632 件が通り、lint も通る。<code>tsc</code> は <code>dist</code> 不在の 1 件のみ(既知)。ログイン後の戻り先は <code>app/lib/login-next.ts</code> の <code>parseLoginNext</code>(許可リストの完全一致)の 1 か所。前日メールは <code>app/lib/arrival-reminder.ts</code>、記録は migration 0022 の <code>arrival_reminders</code>。cron は <code>villaConfig.arrivalReminder.cron</code> = <code>0 9-11 * * *</code>(18〜20 時 JST)で、wrangler.jsonc と一致をテストしている。日次 1 回では release しても翌日は対象外になるので再試行にならず、3 回にした。マジックリンク経路は <code>next</code> を持たず、<code>/mypage/reservations</code> に着く。直すなら <code>auth_codes</code> に列が要る。手順書は <code>docs/runbooks/keybox-code.md</code>。番号の変更手順・頻度、secret 更新で自動再デプロイになるかは「要確認」のまま。PII レビューは自己確認のみで、別セッションのレビューは未実施。未検証は、Resend 実送信、cron の範囲指定が Cloudflare で動くこと、本番への 0021/0022 適用、<code>next</code> を通した実ブラウザのログイン。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">task</span><span class="turn">#27</span></div><div class="text">T5 → doing</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">task</span><span class="turn">#27</span></div><div class="text">T7 → doing</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">task</span><span class="turn">#27</span></div><div class="text">T7 → done: 管理画面の日程変更に、保存前の確認画面を足しました。
+- <code>app/routes/admin/reservations/[id]/update.tsx</code>: 確定済み予約で日程が変わるときだけ、POST を受けても保存せず確認画面を返します。
+  - 画面には旧日程と新日程、旧鍵と新鍵の有効期間 (JST、15:00〜11:00) を出します。
+  - 「旧鍵を失効し、新しい期間で再発行します」と書き、発行に失敗しても日程変更は成功してキーボックス対応になることも同じ画面に書きました。
+  - 「この内容で保存」(<code>confirmed=1</code>) を押すまで DB は変えません。「戻って編集する」で編集画面に戻れます。
+  - 鍵の値は出しません。既存の <code>StatusBadge</code> と <code>DetailTable</code> だけを使い、新しい部品は増やしていません。
+- 人数だけの変更など、日程が変わらない編集では確認画面を出しません。
+- <code>app/lib/key-change-preview.ts</code>: 鍵の期間を JST で整形する関数です。
+- テスト: <code>update.test.ts</code> と <code>key-change-preview.test.ts</code> で、確認画面の文言、保存・再発行が呼ばれないこと、日程が同じなら出ないことを確認しています。
+- 検証: <code>npx vitest run &quot;app/routes/admin/reservations/[id]/update&quot; app/lib/key-change</code> が通りました。
+- 未確認: 実ブラウザでの見た目。「戻って編集する」は、入力済みの値ではなく元の予約の値で編集画面を開きます。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">task</span><span class="turn">#27</span></div><div class="text">T5 → done: 前日メールの組み込みとログイン画面の文言まで入れました。iPhone 幅の確認だけは**未確認**です。
+- メール: 田中さんの <code>processArrivalReminders</code> と <code>createArrivalReminderSender</code> が、既存の <code>sendMail</code> に <code>buildArrivalReminderEmail</code> の本文を渡す形で組み込まれていることを確認しました。
+  - 本文は鍵ページへのリンクだけです。<code>KEYBOX_CODE</code> を環境に入れても本文と件名に入らないテストを足しました (<code>arrival-reminder.test.ts</code>)。
+  - iPhone のメールアプリでボタンが開けない場合に備え、リンクを文字でも載せました。
+  - 体裁は既存テンプレートと同じ (幅 600px、16px 本文、ボタン) です。PII の観点では、宛先と本文の氏名のみで、鍵の値は渡していません。
+- 未ログインのログイン画面: 鍵ページ宛ての <code>next</code> があるときだけ文言が変わります。
+  - <code>app/lib/key-login-copy.ts</code> に文言を集めました。見出しは「鍵のご案内を見るには、ログインが必要です」で、理由と「ログインすると鍵のご案内に自動で戻ります」を添えています。ボタンは「ログインして鍵のご案内を見る」です。
+  - 反映先は <code>app/routes/mypage/index.tsx</code> と <code>verify.tsx</code> です。許可されない <code>next</code> では通常のログイン画面のままです (田中さんの <code>parseLoginNext</code> の結果だけを使い、再検証していません)。
+  - テストは <code>app/routes/mypage/index.test.tsx</code> と <code>verify.test.tsx</code> に入れました。
+- 中村さんの回答待ちの文言: <code>key-card.tsx</code> の <code>KEY_MISMATCH_COPY</code> 1 か所にまとめました。回答前は今の文言のままで、回答後はここだけ差し替えれば済みます。電話の連絡先は未入力のままです。
+- iPhone 375px: **未確認**です。この環境にブラウザがなく、<code>playwright install chromium</code> もダウンロードに失敗しました。テストで確認できたのは文言と HTML の中身だけです。実機かブラウザでの目視が必要です。
+- 品質ゲート: <code>pnpm test:run</code> は 1632 件が通りました。途中で 1 件落ちましたが、再実行では全件通っています。田中さんが T6 を作業中だったためと思います。
+  - <code>npx tsc --noEmit</code> は既知の <code>dist/.vite/manifest.json</code> の 1 件だけです。
+  - <code>pnpm lint</code> は、田中さんの未追跡ファイル <code>app/config.test.ts</code> の整形だけが指摘されています。私の差分は整形済みです。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 田中 健, 佐藤 美咲</span><span class="turn">#27</span></div><div class="text">鈴木です。T7 と T5 を実装しました。
+- **T7**: 日程が変わるときだけ保存前の確認画面を出します。旧日程と新日程、旧鍵と新鍵の期間 (JST)、「旧鍵を失効して再発行する」、失敗時はキーボックス対応、を載せ、「戻って編集する」で戻れます。鍵の値は出していません。
+- **T5**: 前日メールは田中さんの <code>processArrivalReminders</code> につながっていて、本文はリンクのみです。<code>KEYBOX_CODE</code> が本文に入らないテストも足しました。未ログインで鍵ページに来たゲストには、ログインが要る理由と「自動で戻る」を出します。
+- 「番号が合わないとき」は <code>KEY_MISMATCH_COPY</code> に分けました。中村さんの回答前は今の文言のままです。
+- **iPhone 375px は未確認です。** ブラウザが入れられませんでした。小林さんの reject 理由 3 は、実機かブラウザで見ない限り解消したと言えません。佐藤さん、誰かの端末で見られるか確認をお願いします。
+- 田中さんへ: <code>app/config.test.ts</code> が <code>pnpm lint</code> の整形チェックで引っかかっています。<code>pnpm fmt</code> で直してください。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 鈴木 ひかり, 佐藤 美咲</span><span class="turn">#28</span></div><div class="text">田中です。鈴木さんが指摘した <code>app/config.test.ts</code> の整形を <code>pnpm fmt</code> で直しました。
+- 確認結果: <code>pnpm lint</code> とフォーマットチェックは通りました。<code>pnpm test:run</code> は 173 ファイル / 1632 件がすべて通りました。
+- <code>npx tsc --noEmit</code> は今回流していません。直前の確認では、既知の <code>dist/.vite/manifest.json</code> 不在の 1 件だけでした。
+- 佐藤さんへ: iPhone 375px での目視は、まだ誰も確認できていません。ブラウザか実機で見られる人が必要です。
+- 未検証は、Resend の実送信、cron の <code>0 9-11</code> が Cloudflare で動くこと、本番への 0021 と 0022 の適用、<code>next</code> を通した実ブラウザのログインです。
+- 中村さんの回答待ち(番号の変更手順、誤入力時の挙動、連絡先)は、手順書で「要確認」のままです。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">note</span><span class="turn">#28</span></div><div class="text">整形指摘は <code>pnpm fmt</code> で解消済みです。<code>pnpm lint</code> は通り、<code>pnpm test:run</code> は 1632 件が通っています。iPhone 375px の目視は誰も未確認です。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">memo</span><span class="turn">#29</span></div><div class="text">T5・T7 は完了済み。これ以上の実装はなく、残りは未確認事項の整理。短く共有して終える。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 佐藤 美咲, 田中 健</span><span class="turn">#29</span></div><div class="text">鈴木です。T5・T7 は完了のままで、追加の実装はありません。残りは次の3点です。
+- **iPhone 375px は未確認のままです。** この環境ではブラウザを入れられませんでした。小林さんの reject 理由 3 は、実機かブラウザで目視するまで解消したと言えません。佐藤さん、見られる端末の手配をお願いします。目視してほしいのは、鍵ページ、前日メール、ログイン画面の3つです。
+- **T7 の「戻って編集する」は、入力済みの値ではなく元の予約の値で編集画面を開きます。** 中村さんが日程を直したいときは打ち直しになります。次に直す候補です。
+- **中村さんの回答待ちは <code>KEY_MISMATCH_COPY</code> の1か所です。** 誤入力時の挙動と連絡先の回答が来たら、そこだけ差し替えます。回答前は今の文言のままです。
+
+田中さんの <code>parseLoginNext</code> の結果だけを使っているので、私の側の差分でオープンリダイレクトは増えていません。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">note</span><span class="turn">#29</span></div><div class="text">T5・T7 は完了済み。iPhone 375px は環境にブラウザがなく未確認。T7 の「戻って編集する」は元の値で開く既知の制約。「番号が合わないとき」の文言と連絡先は、中村さんの回答後に <code>key-card.tsx</code> の <code>KEY_MISMATCH_COPY</code> を差し替える。</div></li></ol></details>
+  <details open><summary>周 2 · review <span class="muted">5</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;review&quot; started (iteration 2) — Engineers review each other's work against the acceptance criteria and fix issues. PM checks every task against its acceptance criteria and states what is ready for users.</p></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 鈴木 ひかり, 佐藤 美咲</span><span class="turn">#30</span></div><div class="text">田中です。T5 と T7 をレビューしました。直した点が 1 つ、直していない点が 2 つあります。
+
+- **直した点（T5 のログイン文言）**
+  - <code>key-login-copy.ts</code> の <code>steps</code> は「メールのリンクを押すか、認証コードを入力してください。ログインすると自動で戻ります」でした。
+  - しかしメールのリンク経由は <code>next</code> を持たず、<code>/mypage/reservations</code> に着きます。文言と挙動が食い違っていたので、小林さんの reject 理由 2 を悪化させかねません。
+  - 「認証コードを入力してください（メール内のリンクからだと、鍵のご案内には戻れません）」に直しました。
+  - 確認結果は、mypage 配下のテスト 5 ファイル / 31 件が通り、<code>pnpm lint</code> も通りました。
+- **直していない点（T7）**
+  - 受け入れ条件は確認しました。確定済みで日程が変わるときだけ確認画面が出ます。
+  - <code>confirmed=1</code> が無ければ DB は変わりません。鍵の値も出ません。
+  - 「戻って編集する」で入力値が失われる点は、受け入れ条件の外です。次回の宿題にします。
+- **根本対応（マジックリンクの戻り先）**
+  - <code>auth_codes</code> に <code>next</code> 列を足すマイグレーションが要ります。次イテレーション候補です。
+- **PM へ（準備できているもの）**
+  - T4 と T6 は受け入れ条件を満たしています。
+  - 実ブラウザでの iPhone 375px の目視は、誰も未確認です。
+  - <code>KEYBOX_CODE</code> の設定、0021 と 0022 の適用、Resend の実送信、cron の <code>0 9-11</code> が Cloudflare で動くことも未確認です。
+  - 中村さんの回答待ち（番号の変更手順、誤入力時の挙動、連絡先）は、手順書と <code>KEY_MISMATCH_COPY</code> で空けてあります。</div></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">note</span><span class="turn">#30</span></div><div class="text">review round(iteration 2): <code>key-login-copy.ts</code> の steps から「メールのリンク」案内を外した(マジックリンクは <code>next</code> を持たないため)。宿題: <code>auth_codes</code> に <code>next</code> 列を足してマジックリンクでも戻す、T7 の「戻って編集する」で入力値を保持する。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">memo</span><span class="turn">#31</span></div><div class="text">レビューの自分の番。田中さんのレビュー結果は受領済み。T4/T6 のうち画面に関わる部分を軽く見たいが、ここでは追加の実装はなく、状況を短く共有して終える。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 佐藤 美咲, 田中 健</span><span class="turn">#31</span></div><div class="text">鈴木です。田中さん、T5 のログイン文言の修正をありがとうございます。「認証コードを入力してください(メール内のリンクからだと戻れません)」に直った点は、体験として正しいです。
+
+**T5・T7 の現状(今回のレビューでの追加変更はなし)**
+- T5 の受け入れ条件のうち、満たしているのは次の 4 つです。
+  - 前日メールの本文は、鍵ページへのリンクだけです。
+  - 鍵の値が本文に入らないテストがあります。
+  - 未ログインの案内があります。
+  - <code>KEY_MISMATCH_COPY</code> は差し替え 1 か所にしてあります。
+- 満たしていないのは **iPhone 375px の目視** です。ブラウザが無く、未確認のままです。
+- T7 は受け入れ条件どおりです。確認画面は、日程が変わる確定済み予約のときだけ出ます。<code>confirmed=1</code> が無ければ DB は変わりません。鍵の値も出しません。
+
+**ゲストに出す前の注意(体験面)**
+- マジックリンクで入ると鍵ページに戻れません。ゲストはここで迷いそうです。文言では回避しましたが、根本対応は <code>auth_codes</code> への <code>next</code> 列の追加です。次回の候補にしてください。
+- T7 の「戻って編集する」は、入力済みの値が消えて元の値で開きます。次回の宿題です。
+- 中村さんの回答待ちは、誤入力時の挙動と連絡先です。回答が来たら <code>KEY_MISMATCH_COPY</code> だけ差し替えます。それまでは今の文言のままです。
+
+**佐藤さんへのお願い**
+- 鍵ページ、前日メール、ログイン画面の 3 つを、誰かの iPhone か実ブラウザで目視してください。小林さんの reject 理由 3 は、これが済むまで解消したと言えません。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#32</span></div><div class="text">全タスクを受け入れ条件と照合した。T4・T6・T7 は満たす。T5 は iPhone 375px の目視だけが未達で、環境の制約によるもの。review を終え、次の acceptance に進める。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span><span class="turn">#32</span></div><div class="text">佐藤です。review の結果です。
+
+- **T4(前日メールの二重送信防止と戻り先)**: 受け入れ条件を満たしています。ただし、メールのリンク経由のログインは鍵ページに戻りません。認証コード入力の経路だけが戻ります。
+- **T6(KEYBOX_CODE の手順書と警告)**: 受け入れ条件を満たしています。番号の変更手順は「要確認」のままで、推測で書いていません。
+- **T7(日程変更前の確認)**: 受け入れ条件を満たしています。「戻って編集する」で入力値が消える点は、次回の宿題にします。
+- **T5(前日メールの組み込み)**: iPhone 375px の目視を除いて満たしています。この条件は環境にブラウザがなく、未確認のままです。「確認した」とは扱いません。
+- 田中さんがログイン文言を、実際の挙動に合わせて直してくれました。
+
+**ユーザーに渡せる状態**
+- 前日メールは、18〜20 時台に鍵ページへのリンクだけを送ります。
+- 未ログインで鍵ページを開いても、認証コードを入力すれば戻れます。
+- 管理画面では、日程変更前の確認と、<code>KEYBOX_CODE</code> 未設定の警告が出ます。
+
+**本番前の条件(未検証)**
+- <code>KEYBOX_CODE</code> の設定と、0021・0022 の適用。
+- Resend の実送信。
+- cron の <code>0 9-11</code> が Cloudflare で動くこと。
+- iPhone 375px の目視。鍵ページ、前日メール、ログイン画面の 3 つです。
+
+**次回の候補**
+- <code>auth_codes</code> に <code>next</code> 列を足して、メールのリンク経由でも戻れるようにする。
+- 日程変更の確認画面で、入力済みの値を保持する。
+- 失敗した鍵の cron 再試行。
+
+**中村さんの回答待ち**
+- 誤入力時の挙動、連絡先、番号の変更手順、設備と金額。
+- 回答前は、文言を変えません。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#32</span></div><div class="text">review 2 の結果。T4・T6・T7 は受け入れ条件を満たす。T5 は iPhone 375px の目視だけが未確認。メールのリンク経由のログインは鍵ページに戻らない。次回候補は、<code>auth_codes</code> への <code>next</code> 列、日程変更確認画面での入力値の保持、失敗した鍵の cron 再試行。本番前の条件は、<code>KEYBOX_CODE</code> の設定、0021・0022 の適用、Resend 実送信、cron <code>0 9-11</code> の動作、iPhone 375px の目視。中村さんの回答待ちは、誤入力時の挙動、連絡先、番号の変更手順、設備と金額の 4 つ。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">ADVANCE</span><span class="turn">#32</span></div><div class="text">End of phase &quot;review&quot;.</div></li></ol></details>
+  <details open><summary>周 2 · acceptance <span class="muted">7</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;acceptance&quot; started (iteration 2) — Users try what was built (read the workspace, run it if possible) and judge it from their own needs. Each user gives a [VERDICT accept|reject] with reasons. PM summarizes and decides next steps.</p></li><li class="msg user private" data-from="user-guest"><div class="who"><span class="name">小林 直子</span> <span class="kind">memo</span><span class="turn">#33</span></div><div class="text">1(前日メール)と2(戻り先)は一部入った。ただしメールのリンクからだと戻れない。iPhone未確認、電話連絡先未回答。前回の条件は「1〜3が入れば accept」。2は認証コード経路のみ、3は未確認。判断が難しいが、メールのリンクで入るのが普通なので、私の駐車場の場面では戻れない。reject寄りだが、条件付き accept も検討。3が未確認のままなのは約束と違う。reject。</div></li><li class="msg user" data-from="user-guest"><div class="who"><span class="name">小林 直子</span> <span class="kind reject">VERDICT</span><span class="turn">#33</span></div><div class="text">REJECT: 前回より良くなりましたが、約束した 1〜3 のうち、そのまま使えるのは 1 つだけです。
+
+**良くなった点**
+- 前日メールが 18〜20 時台に届き、リンクだけで鍵の値が載らないのは、私の希望どおりです。
+- 未ログインで鍵ページに来たとき、ログインが必要な理由が書いてあります。
+- 認証コードを入力すれば鍵ページに戻れます。
+
+**まだ使えない理由**
+1. **メールのリンクからログインすると、鍵ページに戻れません。** ログイン用のメールは、リンクを押して入るのが普通です。駐車場で電波が悪いとき、私はまずリンクを押します。そこでマイページの予約一覧に飛ぶと、鍵ページを探し直すことになります。「コードを入力すれば戻れる」と文言で避けているだけで、私の「毎回探す」不満は残っています。
+2. **iPhone 375px での目視が、まだ誰もできていません。** 前回「次の回で入れば accept」と言った条件です。テストだけでは、スマホで崩れないとは言えません。鍵ページ、前日メール、ログイン画面の 3 つを、実際に見てください。
+3. **「番号が合わないとき」に電話がなく、ロックの回数も書いていません。** これは中村さんの回答待ちと理解しています。回答が来たら、必ず反映してください。
+
+**お願い**
+- 次は、メールのリンク経由でも鍵ページに戻れるようにしてください(<code>auth_codes</code> に戻り先を持たせる案)。これと iPhone での目視が済めば、accept にします。
+- 前日メールが 20 時までに送れなかった日は届かない点も、気になります。届かなかった場合に気づける方法を考えてください。</div></li><li class="msg user private" data-from="user-owner"><div class="who"><span class="name">中村 誠</span> <span class="kind">memo</span><span class="turn">#34</span></div><div class="text">I've seen the summaries. Answers still pending on site check. Owner-side: warnings, runbook, confirm screen all good. But key change procedure still unknown, 前日 0:00 display unresolved, and untested in production. Reject is honest, or accept conditionally? The product still doesn't reduce work much; the runbook has &quot;要確認&quot; items that depend on me. Be honest: partly accepted. I'll reject with specific items, since iteration 2/2 and I should state what I'd need. Actually, the blockers are mostly mine. Still, verdict: reject for production, with clear separation.</div></li><li class="msg user" data-from="user-owner"><div class="who"><span class="name">中村 誠</span> <span class="kind reject">VERDICT</span><span class="turn">#34</span></div><div class="text">REJECT: オーナーとしては、前回の私の指摘はほぼ対応してもらえました。ただ、本番に出す判断はまだできません。
+
+良くなった点:
+- <code>KEYBOX_CODE</code> の手順書ができ、設定漏れは管理画面に警告が出ます。値が画面に出ず、設定の有無だけなのも安心です。
+- 日程変更の前に、旧鍵が失効して再発行されること、新旧の期間、鍵が失敗しても日程変更は通ることが見えます。これなら繁忙期に迷いません。
+- 手順書の分からない所を、推測で埋めず「要確認」にしてくれたのは正しい対応です。
+
+出せない理由:
+1. **番号の変更手順がまだ空です。** 前日 0:00 から番号が見える以上、変更手順と頻度が決まらない限り、帰ったゲストが番号を覚えている不安は解消しません。これは私の宿題です。現地で確認して答えます。
+2. **本番での確認が一つもありません。** 0021・0022 の適用、Resend の実送信、18〜20 時の cron が実際に動くことは未確認です。ゲストにメールが届かないか、二重に届くのは困ります。出す前に、テスト用の予約で一通り流してください。
+3. **前日メールが届かなかった日に、私が気づけません。** 20 時までに送れないと、その日は届きません。小林さんの指摘に同意します。送信に失敗した予約を管理画面で見られる、または私に通知が来る形にしてください。見つけたら私がその晩に電話かメールで直接連絡します。
+4. **メールのリンクからログインすると鍵ページに戻れません。** 私が対面で渡せない日は、ゲストが迷うのがいちばん困ります。次は <code>auth_codes</code> に戻り先を持たせてください。
+5. **日程変更の確認画面から戻ると入力が消えます。** 繁忙期の日程変更では打ち直しは面倒です。小さい修正なので、次に直してください。
+
+私の回答は、現地確認の後で出します。誤入力時の挙動、連絡先、番号の変更手順の 3 つは、推測では書かないでください。設備(SESAME と Hub)は金額を見てから判断します。</div></li><li class="msg user private" data-from="user-owner"><div class="who"><span class="name">中村 誠</span> <span class="kind">note</span><span class="turn">#34</span></div><div class="text">2回目の受け入れでも reject。残りの条件は、番号変更手順と頻度、誤入力時の挙動と連絡先の回答(中村さんの宿題)、本番相当でのメール送信と cron の確認、前日メール未送信の検知、メールリンク経由の戻り先、日程変更確認画面の入力保持。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#35</span></div><div class="text">両者 reject。理由は、メールのリンク経由で鍵ページに戻れないこと、iPhone 375px の目視がないこと、前日メールの未送信に気づけないこと、本番での通し確認がないこと、日程変更確認画面の入力消失、中村さんの回答待ち。これが最終イテレーションなので、残りを明記して閉じる。タスクの追加はしない。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span><span class="turn">#35</span></div><div class="text">佐藤です。acceptance の結果です。両者 reject で、理由は妥当です。今回は最終イテレーションなので、出せたものと残りを分けて整理します。
+
+**出せたもの**
+- 鍵の抽象化、モック、キーボックス実装、予約ライフサイクルとの連動、監査ログ。
+- マイページの鍵ページ、前日メール(リンクのみ、18〜20 時台)、ログイン後の戻り先(認証コード入力の経路のみ)。
+- <code>KEYBOX_CODE</code> の手順書と未設定の警告、日程変更前の確認画面。
+
+**reject の理由と、残りの扱い**
+1. メールのリンク経由のログインが鍵ページに戻らない(小林さん・中村さん)。<code>auth_codes</code> に戻り先を持たせる対応が必要です。次回の最優先にします。
+2. iPhone 375px の目視が誰もできていません(小林さん)。鍵ページ、前日メール、ログイン画面の 3 つです。「確認した」とは扱いません。
+3. 前日メールが届かなかった日に、中村さんが気づけません(小林さん・中村さん)。送信に失敗した予約を管理画面で見られるようにするのが次回の候補です。
+4. 本番での通し確認がありません(中村さん)。0021・0022 の適用、Resend の実送信、cron <code>0 9-11</code> の動作は未検証です。テスト用の予約で一通り流してから出します。
+5. 日程変更の確認画面から戻ると入力が消えます(中村さん)。小さい修正として次回に入れます。
+6. 中村さんの回答待ちは 4 つです。誤入力時の挙動、連絡先、番号の変更手順、設備と金額です。回答前は文言を変えません。差し替え箇所は <code>KEY_MISMATCH_COPY</code> と手順書の「要確認」に空けてあります。
+
+**判断**
+- 本番にはまだ出しません。理由: ゲストにメールが届かない、または二重に届くリスクを、実環境で確認していないためです。
+- 前日 0:00 JST の表示は設定値のまま維持し、番号の変更手順が決まった後に再判断します。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#35</span></div><div class="text">acceptance 2 の結果: 小林さん・中村さん両者 reject。残りは、(1) メールのリンク経由ログインで鍵ページに戻らない(<code>auth_codes</code> に <code>next</code> 列が必要。次回最優先)、(2) iPhone 375px の目視が未確認(鍵ページ、前日メール、ログイン画面)、(3) 前日メールの未送信を中村さんが管理画面で気づけない、(4) 本番通し確認なし(0021・0022 適用、Resend 実送信、cron <code>0 9-11</code>、<code>KEYBOX_CODE</code> 設定)、(5) 日程変更確認画面で入力値が消える、(6) 失敗した鍵の cron 再試行。中村さんの回答待ちは、誤入力時の挙動、連絡先、番号の変更手順、設備と金額。反映先は <code>KEY_MISMATCH_COPY</code> と <code>docs/runbooks/keybox-code.md</code>。本番に出す判断は保留。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#35</span></div><div class="text">本番リリースは保留する。出す前の条件は、テスト用予約での通し確認(0021・0022 の適用、Resend 実送信、cron <code>0 9-11</code> の動作、<code>KEYBOX_CODE</code> の設定)と、iPhone 375px の目視。次回の優先順は、メールリンク経由の戻り先、前日メール未送信の可視化、日程変更確認画面の入力保持。理由: 小林さん・中村さんの reject 理由が、すべてここに集約されるため。トレードオフ: 失敗した鍵の cron 再試行と SESAME 実連携は、さらに後ろに回る。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">ADVANCE</span><span class="turn">#35</span></div><div class="text">End of phase &quot;acceptance&quot;.</div></li><li class="sys" data-from="system"><p>Session finished after iteration 2. 0/2 users accepted.</p></li></ol></details>
+</div>
+<aside>
+  <section><h2>メンバー</h2><ul><li><span class="dot pm"></span>佐藤 美咲 <span class="muted">pm · pm</span></li><li><span class="dot eng"></span>田中 健 <span class="muted">eng-backend · engineer</span></li><li><span class="dot eng"></span>鈴木 ひかり <span class="muted">eng-frontend · engineer</span></li><li><span class="dot user"></span>小林 直子 <span class="muted">user-guest · user</span></li><li><span class="dot user"></span>中村 誠 <span class="muted">user-owner · user</span></li></ul></section>
+  <section><h2>タスク</h2><ul><li><span class="st st-done">done</span> <b>T1</b> 鍵発行の抽象化・モック・保存と Business Risk Review spec <span class="muted">eng-backend</span><details class="sub"><summary>result</summary><div class="muted small text">鍵プロバイダの抽象化、モック、キーボックス実装、<code>reservation_keys</code> の保存、Business Risk Review 入りの spec を作りました。SESAME の実クライアントは作っていません。
+- spec: <code>docs/specs/villa-58-sesame-key.md</code>。5 カテゴリのリスク、未検証事項、キーボックスの静的番号が残る未解決リスクを書いています。
+- マイグレーション: <code>migrations/0021_reservation_keys.sql</code>。状態、有効開始、有効終了、外部ID、失敗コードを持ちます。有効な鍵は予約ごとに 1 行だけです。<code>db/schema.sql</code>、<code>db/er.md</code>、<code>db/README.md</code> も更新しました。
+- 有効期間: <code>app/domain/key/validity.ts</code>。チェックイン日 15:00 JST〜チェックアウト日 11:00 JST を UTC epoch ms で固定します。表示開始は前日 0:00 JST で、境界値をテストしています。
+- プロバイダ: <code>app/domain/key/provider.ts</code>(interface、キーボックス、<code>resolveKeyProvider</code>)と <code>mock-provider.ts</code>。
+  - キーボックス番号は Worker secret <code>KEYBOX_CODE</code> からだけ読みます。
+  - <code>SESAME_API_KEY</code> が未設定、または実クライアントがない場合は、必ずキーボックスになります。
+  - <code>KEYBOX_CODE</code> が未設定なら、番号を出さず <code>failed</code> にします。
+- DB には鍵の平文を保存しません。監査ログに入れるのは <code>result</code> / <code>provider</code> / <code>key_id</code> / 有効期間 / 失敗コードだけです。エラー本文は入れず、テストで確認しています。</div></details></li><li><span class="st st-done">done</span> <b>T2</b> 予約ライフサイクルとの連動と監査ログ <span class="muted">eng-backend</span><details class="sub"><summary>result</summary><div class="muted small text">予約の確定・キャンセル・日程変更に鍵の処理をつなぎ、鍵の失敗は予約処理に影響しない形にしました。
+- <code>app/lib/reservation-key.ts</code>: <code>issueKeyForReservation</code> / <code>revokeKeyForReservation</code> / <code>reissueKeyForReservation</code>。どれも例外を投げません。
+- 差し込み位置は 3 つです。
+  - 確定: <code>finalizeConfirmedReservation</code>(メール enqueue の前)。
+  - キャンセル: <code>cancelReservation</code> の batch 成功後と <code>repairStuckCancellations</code>。返金に失敗して戻した場合は失効しません。
+  - 日程変更: 管理画面 <code>update.tsx</code>。日程が変わったときだけ旧鍵を失効して再発行します。
+- 失敗した鍵は <code>failed</code> で記録し、<code>key.failed</code> を監査ログに残します。監査ログの action は <code>key.issued</code> / <code>key.revoked</code> / <code>key.failed</code> です。
+- 同じ期間の鍵があれば再発行しません(webhook の再配信対策)。
+- 表示側 <code>app/lib/reservation-key-view.ts</code> には <code>getKeyViewForReservation(db, env, { reservationId, guestId, now: Date }, deps?)</code> と <code>listKeyAuditByReservation</code> があります。
+  - <code>guestId</code> はマイページのセッションのメールアドレスです(予約に guest ID 列がないため)。
+  - 予約の日程と鍵の期間が食い違う鍵は <code>failed</code> にして使わせません。
+  - <code>display</code> を付けるのは、他人の予約・キャンセル済み・表示期間外のどれでもない場合だけです。
+- テスト: 成功、失敗、タイムアウト、キャンセル、日程変更、二重発行、境界値、認可、2 秒打ち切りを追加しました。
+- 確認結果: <code>pnpm test:run</code> は 166 ファイル / 1553 件が通り、<code>pnpm lint</code> と <code>scripts/check-domain-imports.sh</code> も通りました。
+- <code>npx tsc --noEmit</code> は <code>app/routes/static/[...path].ts</code> で 1 件エラーが出ます。<code>dist/.vite/manifest.json</code> がビルド前で存在しないためで、今回の変更とは無関係です。それ以外の型エラーはありません。
+- 未検証:
+  - SESAME の API、Hub の要否、合鍵を使うのにアプリが要るか。
+  - 本番 D1 への 0021 の適用。
+  - <code>KEYBOX_CODE</code> の設定。未設定のままデプロイすると全予約が <code>failed</code> 扱いになり、番号が出ません。
+  - 外部サービスとの結合は一切していません。</div></details></li><li><span class="st st-done">done</span> <b>T3</b> ゲストのマイページに鍵カードを表示し、オーナー管理画面に状態を表示する <span class="muted">eng-frontend</span><details class="sub"><summary>result</summary><div class="muted small text">画面側を実装した。メール送信とログイン後の戻り先は未実装で、次イテレーションに回す。
+- 実装: <code>app/routes/mypage/reservations/[id]/key.tsx</code>、<code>app/components/key-card.tsx</code>、<code>app/components/key-admin-panel.tsx</code>、<code>app/lib/key-page-window.ts</code>、<code>app/lib/arrival-reminder-mail.ts</code>、予約詳細 (マイページ・管理画面) への差し込み。
+- 確認: <code>npx vitest run app/components/key app/lib/key-page app/lib/arrival app/routes/mypage</code>、<code>pnpm lint</code>。
+- 未実装: 前日メールの送信、ログイン後の戻り先。</div></details></li><li><span class="st st-done">done</span> <b>T4</b> 前日メールの二重送信防止と、ログイン後の戻り先 <span class="muted">eng-backend</span><details class="sub"><summary>result</summary><div class="muted small text">前日メールの二重送信防止、ログイン後の戻り先、spec への PII 確認結果を実装しました。cron は日次 1 回では受け入れ条件を満たせなかったため、18〜20 時台の 3 回に変えています。理由は下の「cron」にあります。
+- **確認結果**
+  - <code>pnpm test:run</code> は 173 ファイル / 1632 件がすべて通りました。
+  - <code>pnpm lint</code> と <code>scripts/check-domain-imports.sh</code> も通りました。
+  - <code>npx tsc --noEmit</code> の指摘は、既知の <code>dist/.vite/manifest.json</code> 不在 1 件だけです。
+- **前日メールの送信記録**
+  - <code>migrations/0022_arrival_reminders.sql</code> に <code>arrival_reminders</code> を追加しました。<code>reservation_id</code> は UNIQUE で、持つのは予約 ID と時刻だけです。
+  - <code>db/schema.sql</code>、<code>db/er.md</code>、<code>db/README.md</code> も更新しました。
+  - 同じ予約に 2 回 claim しても、得られるのは 1 回だけです。release すると再 claim できます。実 SQLite のテスト(<code>app/db/repositories/arrival-reminder.test.ts</code>)で確認しました。
+- **対象の検索**
+  - <code>findArrivalReminderTargets(db, now)</code> は、JST の翌日にチェックインする確定済みで未送信の予約だけを返します。SQL は <code>reservationRepo.findConfirmedCheckingInWithoutArrivalReminder</code> です。
+  - キャンセル済み、キャンセル処理中、pending、別の日は拾いません。実 SQLite で確認しました。
+  - 復号に失敗して宛先がメールの形でない予約には送りません。
+- **送信の流れ**
+  - <code>processArrivalReminders(env, now, send?)</code>(<code>app/lib/arrival-reminder.ts</code>)が「claim → 送信 → 失敗なら release」を回します。
+  - 例外は投げず、予約と鍵の状態には触れません。
+  - 送信失敗は release して再試行できます。送信後に監査ログが失敗しても release しないので、再送されません。
+  - 監査ログの action は <code>arrival_reminder.sent</code> / <code>failed</code> / <code>release_failed</code> です。宛先とエラー本文は入れず、テストで確認しました。
+  - <code>app/server.ts</code> に cron の分岐を足しました。
+- **cron**
+  - 設定は <code>villaConfig.arrivalReminder.cron</code>(<code>app/config.ts</code>)で、<code>0 9-11 * * *</code>(18・19・20 時 JST)にしました。<code>wrangler.jsonc</code> も同じ文字列です。<code>app/config.test.ts</code> が一致を確認します。
+  - 日次 1 回では、失敗して release しても次の実行は翌日です。その時点で予約は「翌日チェックイン」の対象外なので、再試行になりません。
+- **ログイン後の戻り先**
+  - <code>/mypage?next=</code> → <code>/mypage/verify?next=</code> → <code>POST /api/auth/verify</code> の <code>next</code> → 応答の <code>redirect</code> の順で運びます。
+  - 検証は <code>app/lib/login-next.ts</code> の <code>parseLoginNext</code> 1 関数です。許可は <code>^/mypage/reservations/[0-9A-Za-z_-]{1,64}/key$</code> への完全一致だけです。
+  - 外部 URL、<code>//</code>、<code>\</code>、<code>..</code>、<code>%2f</code>、クエリ付き、別パス、文字列以外は拒否します。指定されたが不許可の <code>next</code> は <code>/mypage</code> に落とし、未指定は従来どおり <code>/mypage/reservations</code> です。
+  - <code>guestAuth</code> は、未ログインで鍵ページを開いたときだけ <code>next</code> を付けます。ほかのパスは従来どおり <code>/mypage</code> です。
+  - テストは <code>login-next.test.ts</code>、<code>guest-auth.test.ts</code>、<code>api/auth/verify.test.ts</code>、<code>mypage/index.test.tsx</code>、<code>mypage/verify.test.tsx</code> に足しました。
+- **PII レビュー**
+  - spec に結果を書きました。実装者本人による確認で、別セッションのレビューはまだ受けていません。
+  - 保存・認証・ログ・外部送信・退行の各観点で、問題は見つかりませんでした。
+  - <code>arrival_reminders</code> の行は予約の存続中は残します。送信済みの証拠で、消すと再送になるためです。予約の削除に合わせた掃除は未実装です。
+- **制約と未検証**
+  - メールのマジックリンクを押す経路は <code>next</code> を持たず、ログイン後は <code>/mypage/reservations</code> に着きます。認証コード入力の経路だけが鍵ページに戻ります。直すには <code>auth_codes</code> に列を足す必要があり、今回は入れていません。
+  - claim 後に Worker が落ちると、メールは欠落します(重複より欠落を選んだ設計)。
+  - 20 時までに送れなかった予約は、その日は届きません。
+  - 未検証は、Resend の実送信、<code>0 9-11</code> の範囲指定が Cloudflare で動くこと、本番への 0022 適用、実ブラウザでの <code>next</code> 通しログインです。</div></details></li><li><span class="st st-done">done</span> <b>T5</b> 前日メールの組み込みと iPhone 幅の確認 <span class="muted">eng-frontend</span><details class="sub"><summary>result</summary><div class="muted small text">前日メールの組み込みとログイン画面の文言まで入れました。iPhone 幅の確認だけは**未確認**です。
+- メール: 田中さんの <code>processArrivalReminders</code> と <code>createArrivalReminderSender</code> が、既存の <code>sendMail</code> に <code>buildArrivalReminderEmail</code> の本文を渡す形で組み込まれていることを確認しました。
+  - 本文は鍵ページへのリンクだけです。<code>KEYBOX_CODE</code> を環境に入れても本文と件名に入らないテストを足しました (<code>arrival-reminder.test.ts</code>)。
+  - iPhone のメールアプリでボタンが開けない場合に備え、リンクを文字でも載せました。
+  - 体裁は既存テンプレートと同じ (幅 600px、16px 本文、ボタン) です。PII の観点では、宛先と本文の氏名のみで、鍵の値は渡していません。
+- 未ログインのログイン画面: 鍵ページ宛ての <code>next</code> があるときだけ文言が変わります。
+  - <code>app/lib/key-login-copy.ts</code> に文言を集めました。見出しは「鍵のご案内を見るには、ログインが必要です」で、理由と「ログインすると鍵のご案内に自動で戻ります」を添えています。ボタンは「ログインして鍵のご案内を見る」です。
+  - 反映先は <code>app/routes/mypage/index.tsx</code> と <code>verify.tsx</code> です。許可されない <code>next</code> では通常のログイン画面のままです (田中さんの <code>parseLoginNext</code> の結果だけを使い、再検証していません)。
+  - テストは <code>app/routes/mypage/index.test.tsx</code> と <code>verify.test.tsx</code> に入れました。
+- 中村さんの回答待ちの文言: <code>key-card.tsx</code> の <code>KEY_MISMATCH_COPY</code> 1 か所にまとめました。回答前は今の文言のままで、回答後はここだけ差し替えれば済みます。電話の連絡先は未入力のままです。
+- iPhone 375px: **未確認**です。この環境にブラウザがなく、<code>playwright install chromium</code> もダウンロードに失敗しました。テストで確認できたのは文言と HTML の中身だけです。実機かブラウザでの目視が必要です。
+- 品質ゲート: <code>pnpm test:run</code> は 1632 件が通りました。途中で 1 件落ちましたが、再実行では全件通っています。田中さんが T6 を作業中だったためと思います。
+  - <code>npx tsc --noEmit</code> は既知の <code>dist/.vite/manifest.json</code> の 1 件だけです。
+  - <code>pnpm lint</code> は、田中さんの未追跡ファイル <code>app/config.test.ts</code> の整形だけが指摘されています。私の差分は整形済みです。</div></details></li><li><span class="st st-done">done</span> <b>T6</b> KEYBOX_CODE の運用手順書と未設定の検知 <span class="muted">eng-backend</span><details class="sub"><summary>result</summary><div class="muted small text"><code>KEYBOX_CODE</code> の手順書と未設定の警告、表示開始の 1 か所化を入れました。
+- **手順書** <code>docs/runbooks/keybox-code.md</code>
+  - デプロイ前の確認、0021/0022 の適用、番号を変えたとき、設定漏れの戻し方、前日メールの時刻を、コマンドと確認方法つきで書きました。
+  - 設定漏れの戻し方は、<code>secret put</code> をやり直すだけで済みます。状態が <code>failed</code> の予約も、表示期間内なら番号が出るためです。
+  - 「要確認」と明記して、推測で書かなかった点は次の 4 つです。
+    - 現地での番号の変え方と頻度。
+    - 変更時にゲストへどう知らせるか。
+    - サイトと現地の更新順序。
+    - secret を更新すれば自動再デプロイになるか。README の <code>PII_KEY_ACTIVE</code> の記載はありますが、<code>KEYBOX_CODE</code> では本番で未確認です。
+  - コマンドの本番での実行結果は未確認です。
+- **管理画面の警告** <code>app/components/keybox-warning.tsx</code>
+  - <code>AdminLayout</code> の先頭に置きました。<code>isKeyboxCodeConfigured(env)</code> の真偽だけを渡し、値は画面に出ません。
+  - 未設定、空、空白のみで警告が出ます。設定済みなら何も出ません。
+  - テストは <code>keybox-warning.test.tsx</code> です。<code>AdminLayout</code> への差し込み自体のテストは書いていません。
+- **表示開始の 1 か所化**
+  - 前日 0:00 JST の表示開始は、<code>app/domain/key/validity.ts</code> の <code>KEY_DISPLAY_LEAD_DAYS</code> 1 か所です。
+  - <code>key-page-window.ts</code> が <code>computeKeyValidity</code> から導くようにしました。ハードコードしていた <code>MS_PER_DAY</code> は外しています。
+  - 境界値テストは定数から境界を計算するので、値を変えても追従します。
+  - 壊れた日付とチェックアウトがチェックイン以前の日付は、何も見せない側に倒れます。
+- 確認結果は T4 と同じです。</div></details></li><li><span class="st st-done">done</span> <b>T7</b> 日程変更前の確認表示 (管理画面) <span class="muted">eng-frontend</span><details class="sub"><summary>result</summary><div class="muted small text">管理画面の日程変更に、保存前の確認画面を足しました。
+- <code>app/routes/admin/reservations/[id]/update.tsx</code>: 確定済み予約で日程が変わるときだけ、POST を受けても保存せず確認画面を返します。
+  - 画面には旧日程と新日程、旧鍵と新鍵の有効期間 (JST、15:00〜11:00) を出します。
+  - 「旧鍵を失効し、新しい期間で再発行します」と書き、発行に失敗しても日程変更は成功してキーボックス対応になることも同じ画面に書きました。
+  - 「この内容で保存」(<code>confirmed=1</code>) を押すまで DB は変えません。「戻って編集する」で編集画面に戻れます。
+  - 鍵の値は出しません。既存の <code>StatusBadge</code> と <code>DetailTable</code> だけを使い、新しい部品は増やしていません。
+- 人数だけの変更など、日程が変わらない編集では確認画面を出しません。
+- <code>app/lib/key-change-preview.ts</code>: 鍵の期間を JST で整形する関数です。
+- テスト: <code>update.test.ts</code> と <code>key-change-preview.test.ts</code> で、確認画面の文言、保存・再発行が呼ばれないこと、日程が同じなら出ないことを確認しています。
+- 検証: <code>npx vitest run &quot;app/routes/admin/reservations/[id]/update&quot; app/lib/key-change</code> が通りました。
+- 未確認: 実ブラウザでの見た目。「戻って編集する」は、入力済みの値ではなく元の予約の値で編集画面を開きます。</div></details></li></ul></section>
+  
+  <section><h2>判定</h2><ul><li><span class="kind reject">reject</span> 小林 直子 <span class="muted">周 1</span><div class="small">方向性は私の困りごとに合っていますが、今のままでは使えません。理由は 4 つです。
+
+1. **前日メールが届きません。** 「前の晩に番号を手元に置きたい」が私の一番の希望でした。今は自分でログインして、予約詳細から鍵ページを探す必要があります。これでは、現状のキーボックスの案内を探すのと変わりません。
+2. **ログイン後に鍵ページへ戻れません。** 駐車場で、メールのリンクからログインしたあとマイページのトップに飛ぶと、そこから予約を探し直すことになります。電波が悪いと、ここで止まります。
+3. **iPhone で見た確認がありません。** 私はスマホだけで済ませたいので、375px 前後で崩れないかを実際に見てほしいです。テストだけでは安心できません。
+4. **「番号が合わないとき」が不十分です。** 連絡先がメールだけで、電話がありません。何回間違えるとロックされるかも書かれていません。ここが私の一番不安な場面です。
+
+良い点もあります。
+- 画像なしで短く、スクショしやすい作りです。
+- 鍵の値をメール本文に載せない方針は、個人情報を気にする私にはありがたいです。
+- 前日 0:00 から見られる決定も、私の希望どおりです。
+
+次の回で 1〜3 が入れば、accept にします。4 は中村さんの回答次第でも構いませんが、回答を得たら必ず反映してください。</div></li><li><span class="kind reject">reject</span> 中村 誠 <span class="muted">周 1</span><div class="small">オーナーとしては、方向は良いですが、まだ出せません。
+
+良い点:
+- 鍵の発行や失敗で予約が止まらない作りは安心です。繁忙期の金曜に鍵のせいで予約が止まるのが一番困ります。
+- 管理画面で状態(発行済み・失効・失敗)と履歴が見えるのは助かります。
+- 鍵の値が DB・ログ・メールに残らないのも、個人情報を気にする私には大事な点です。
+
+出せない理由:
+1. **番号を前日 0:00 から見せる件は、まだ納得していません。** キーボックスの番号は頻繁に変えていません。前日から見えるとスクショが残るので、帰ったゲストが番号を覚えている不安が今より増えます。番号を変える手順と頻度が決まってから出したいです。
+2. **<code>KEYBOX_CODE</code> 未設定だと全予約が失敗扱いになる点が心配です。** 安全側なのは分かりますが、設定漏れでゲスト全員の画面から番号が消るのは困ります。デプロイ前の確認手順と、番号を変えたときの手順(再デプロイが要るか)を、私が自分でやれる形で書いてください。
+3. **前日メールとログイン後の戻りがありません。** 小林さんの意見に同意します。私が毎回対面で渡せない日があるので、ここが無いと手間が減りません。
+4. **管理画面の変更前確認がありません。** 日程変更で旧鍵が失効して再発行される動きは、実行前に何が起きるか画面で見たいです。
+
+私から返す回答があります。
+- 設備: SESAME 本体と Hub の有無は、現地を見てから金額と一緒に答えます。費用が出る話は金額を見て判断します。
+- 誤入力時の挙動、連絡先(電話かメールか)、番号の変更手順: 現地で確認して、次の回までに答えます。確認前に推測で文言を決めないでください。</div></li><li><span class="kind reject">reject</span> 小林 直子 <span class="muted">周 2</span><div class="small">前回より良くなりましたが、約束した 1〜3 のうち、そのまま使えるのは 1 つだけです。
+
+**良くなった点**
+- 前日メールが 18〜20 時台に届き、リンクだけで鍵の値が載らないのは、私の希望どおりです。
+- 未ログインで鍵ページに来たとき、ログインが必要な理由が書いてあります。
+- 認証コードを入力すれば鍵ページに戻れます。
+
+**まだ使えない理由**
+1. **メールのリンクからログインすると、鍵ページに戻れません。** ログイン用のメールは、リンクを押して入るのが普通です。駐車場で電波が悪いとき、私はまずリンクを押します。そこでマイページの予約一覧に飛ぶと、鍵ページを探し直すことになります。「コードを入力すれば戻れる」と文言で避けているだけで、私の「毎回探す」不満は残っています。
+2. **iPhone 375px での目視が、まだ誰もできていません。** 前回「次の回で入れば accept」と言った条件です。テストだけでは、スマホで崩れないとは言えません。鍵ページ、前日メール、ログイン画面の 3 つを、実際に見てください。
+3. **「番号が合わないとき」に電話がなく、ロックの回数も書いていません。** これは中村さんの回答待ちと理解しています。回答が来たら、必ず反映してください。
+
+**お願い**
+- 次は、メールのリンク経由でも鍵ページに戻れるようにしてください(<code>auth_codes</code> に戻り先を持たせる案)。これと iPhone での目視が済めば、accept にします。
+- 前日メールが 20 時までに送れなかった日は届かない点も、気になります。届かなかった場合に気づける方法を考えてください。</div></li><li><span class="kind reject">reject</span> 中村 誠 <span class="muted">周 2</span><div class="small">オーナーとしては、前回の私の指摘はほぼ対応してもらえました。ただ、本番に出す判断はまだできません。
+
+良くなった点:
+- <code>KEYBOX_CODE</code> の手順書ができ、設定漏れは管理画面に警告が出ます。値が画面に出ず、設定の有無だけなのも安心です。
+- 日程変更の前に、旧鍵が失効して再発行されること、新旧の期間、鍵が失敗しても日程変更は通ることが見えます。これなら繁忙期に迷いません。
+- 手順書の分からない所を、推測で埋めず「要確認」にしてくれたのは正しい対応です。
+
+出せない理由:
+1. **番号の変更手順がまだ空です。** 前日 0:00 から番号が見える以上、変更手順と頻度が決まらない限り、帰ったゲストが番号を覚えている不安は解消しません。これは私の宿題です。現地で確認して答えます。
+2. **本番での確認が一つもありません。** 0021・0022 の適用、Resend の実送信、18〜20 時の cron が実際に動くことは未確認です。ゲストにメールが届かないか、二重に届くのは困ります。出す前に、テスト用の予約で一通り流してください。
+3. **前日メールが届かなかった日に、私が気づけません。** 20 時までに送れないと、その日は届きません。小林さんの指摘に同意します。送信に失敗した予約を管理画面で見られる、または私に通知が来る形にしてください。見つけたら私がその晩に電話かメールで直接連絡します。
+4. **メールのリンクからログインすると鍵ページに戻れません。** 私が対面で渡せない日は、ゲストが迷うのがいちばん困ります。次は <code>auth_codes</code> に戻り先を持たせてください。
+5. **日程変更の確認画面から戻ると入力が消えます。** 繁忙期の日程変更では打ち直しは面倒です。小さい修正なので、次に直してください。
+
+私の回答は、現地確認の後で出します。誤入力時の挙動、連絡先、番号の変更手順の 3 つは、推測では書かないでください。設備(SESAME と Hub)は金額を見てから判断します。</div></li></ul></section>
+  
+  <section><h2>決定</h2><ul><li class="small">設備 (SESAME 本体と Hub の有無) は未確認なので、実機が付いている前提では作らない。SESAME API はインターフェースとモックまでで止める。キーボックスは必ず残すフォールバックとし、障害時に切り替えられる形にする。中村さんの現地確認結果が出るまで、設備購入を要する案は選ばない。 <span class="muted">discovery</span></li><li class="small">今回の鍵の渡し方は「マイページ表示 + メールはリンクのみ」にする。理由: 鍵情報を第三者が見られるメール本文に載せない、という小林さんとオーナーの制約を守りつつ、到着前に手元へ置けるため。トレードオフ: メールだけで完結せず、ログインが一手間増える。実機で SESAME アプリが要るかは未確認なので、アプリ不要の Web 解錠は次回以降に判断する。 <span class="muted">planning</span></li><li class="small">プロバイダが失敗したときは、予約の確定・キャンセルを止めない。鍵の状態を「失敗」にしてキーボックス案内を出す。理由: 予約が鍵に引きずられて止まるほうが、オーナーとゲストの損失が大きいため。 <span class="muted">planning</span></li><li class="small">失敗した鍵の自動再試行は今回入れず、別タスクにする。理由: cron が絡んで範囲が広がるため。トレードオフ: 失敗した予約は、オーナーがキーボックスで対応する必要がある。 <span class="muted">planning</span></li><li class="small">前日メールが既存の送信の仕組みに載らない場合は、メール部分を次イテレーションに回し、マイページの鍵ページを先に出す。理由: ゲストの主な困りごとは、到着時にマイページで鍵情報をすぐ見つけられることだから。 <span class="muted">planning</span></li><li class="small">ゲストに鍵ページを見せる期間は、チェックイン前日 0:00 JST からチェックアウト 11:00 JST までとする (キーボックスのみの今回の範囲)。鍵の有効期間 (15:00〜11:00 JST) とは別に持つ。理由: 小林さんが前の晩にスクショできるようにするため。トレードオフ: 番号が見える時間が延びる。キャンセル済み・他人の予約・表示期間外は引き続き表示しない。SESAME 実機を使うときは、見せる期間を改めて判断する。前日メールのリンク先は鍵ページとし、メールに鍵本文は載せない。 <span class="muted">planning</span></li><li class="small">前日メールの送信時刻は 18:00 JST 前後を目標にし、設定値にする。既存 cron と分けられない場合は 10:00 JST のままにして、理由を spec に書く。理由: 小林さんの「前の晩に手元に置きたい」を守るため。トレードオフ: cron の追加が要る可能性がある。 <span class="muted">planning</span></li><li class="small">本番リリースは保留する。出す前の条件は、テスト用予約での通し確認(0021・0022 の適用、Resend 実送信、cron <code>0 9-11</code> の動作、<code>KEYBOX_CODE</code> の設定)と、iPhone 375px の目視。次回の優先順は、メールリンク経由の戻り先、前日メール未送信の可視化、日程変更確認画面の入力保持。理由: 小林さん・中村さんの reject 理由が、すべてここに集約されるため。トレードオフ: 失敗した鍵の cron 再試行と SESAME 実連携は、さらに後ろに回る。 <span class="muted">acceptance</span></li></ul></section>
+</aside>
+</main>
+<script>
+(() => {
+  const priv = document.getElementById("show-private"), who = document.getElementById("who");
+  const apply = () => {
+    document.body.classList.toggle("show-private", priv.checked);
+    for (const li of document.querySelectorAll("li[data-from]")) li.hidden = !!who.value && li.dataset.from !== who.value;
+  };
+  priv.addEventListener("change", apply);
+  who.addEventListener("change", apply);
+  apply();
+})();
+</script>
+</body>
+</html>

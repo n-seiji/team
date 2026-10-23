@@ -1,0 +1,421 @@
+{
+  "version": 1,
+  "name": "villa-76",
+  "brief": "既存プロダクト「Villa Karuizawa」(軽井沢の 1 棟貸し別荘の招待制予約サイト。HonoX + Cloudflare Workers + D1 + Stripe + Resend) に対する GitHub issue をチームで解決する。\n\n- ワークスペースは villa リポジトリの作業コピー (git worktree) そのもの。ゼロから作らず、既存コードを読んで変更する。README.md は既存のものを保ち、新規 README は作らない。\n- villa の CLAUDE.md と .claude/rules/ に従う。機能追加は実装前に Business Risk Review (.claude/rules/business-risk-review.md の 5 カテゴリ) を spec に書く (例: docs/specs/ 配下)。個人情報・認証・メールに触れる変更は .claude/skills/pii-review/SKILL.md の観点で差分を確認する。\n- 品質ゲート: `pnpm test:run` (ユニット)、`npx tsc --noEmit`、`pnpm lint` 相当。依存の追加は避ける (pnpm の 7 日ルールあり)。外部 API キーは無いので、外部サービスはモックかインターフェースまでで止め、何が未検証かを明記する。\n- git の commit / push はしない (ファシリテーターが最後にまとめる)。\n- ユーザー役: 小林さん (リピーターのゲスト) と中村さん (オーナー兼運営者)。\n- issue の「検討事項」で決まっていない点は、チームで決めて理由を残す。スコープが大きければ 1 イテレーションで出せる最小の価値に絞り、残りは明記する。\n\n以下が issue 本文。\n# villa#76 開発環境からメールをサクッと送って文言を確認できるようにする\n\n## 要望\nゲストに送っているメールの文言を、開発環境から手軽に確認したい。ローカル (Mailpit) でも Resend 経由でもよいが、少なくとも「開発環境から 1 コマンド (または 1 画面) で、実際のテンプレートのメールを送って見られる」状態にする。\n\n## 現状\n- 送っているメールは 5 種類: 予約確定、キャンセル、ログイン用 OTP、予約前メール確認の OTP、宿泊後 (アンケート依頼)。テンプレートはすべて `app/lib/mail.ts`\n- 送信の仕組みはある: `mise run send-mail` (`scripts/send-template-mail.ts`) が gum で種類と宛先を選び、`.dev.vars` の `MAILPIT_URL` があれば Mailpit、なければ Resend で送る\n- **ただしこのタスクは今動かない**。`node scripts/send-template-mail.ts` が、`mail.ts` の拡張子なし import (`./format` など) を解決できず `ERR_MODULE_NOT_FOUND` で落ちる (#75 のレビューで判明。Node v25.6.1)\n- スクリプトが送れるのは 4 種類で、予約前メール確認の OTP (`buildOtpEmail(code, undefined, 'reservation')`) が選べない\n- サンプルデータが 1 パターン固定 (`res-sample-001`)。次の出し分けを確認できない\n  - 料金内訳 (`price_breakdown`) あり / なし、無料招待 (0 円)\n  - キャンセルの返金率 100% / 50% / 0% と、返金あり / なしの文言\n  - 宿泊後メールの招待リンクあり / なし (`villaConfig.invitation.postStayEnabled`、#72)\n- 文言を守るテストは `app/lib/mail-golden.test.ts` (予約確定・キャンセルの HTML を 1 パターンずつ完全一致) と `mail.test.ts`。OTP と宿泊後メールには golden が無い\n- 管理画面 `/admin/emails` は送信履歴 (outbox) の一覧と再送だけで、本文のプレビューは無い\n\n## やること (案)\n1. `mise run send-mail` を直す。実行方法を変える (バンドルして実行する / `vite-node` などで走らせる) か、import を解決できる形にする\n2. 5 種類すべてを送れるようにする\n3. サンプルを「シナリオ」として複数持つ (通常料金 2 泊、無料招待、返金 100% / 50% / 0%、招待リンクあり / なし)。gum で選べ、全シナリオを一括送信もできる\n4. 送らずに見るだけの経路も用意する: 全シナリオの HTML をファイルに書き出してブラウザで開く、またはローカル限定の管理画面プレビュー\n5. 文言のテスト: シナリオを golden テストと共有し、全メール種別 × 主要シナリオの件名と本文を固定する。文言を変えたら差分がレビューで見える状態にする\n\n## 検討事項\n- 既定の送り先は Mailpit か Resend か。Resend 無料枠は 1 日 100 通・月 3,000 通で本番の自動メールと共有している (`docs/mail.md`)。一括送信を Resend に流すと枠を食う\n- 実機 (Gmail / iPhone のメールアプリ) での見え方まで確認したいなら Resend 経由が要る。その場合の宛先の安全策 (自分のアドレス以外に送れないようにする等)\n- golden を HTML 完全一致のままにするか、スナップショットファイル (`toMatchFileSnapshot`) にして差分を読みやすくするか\n- プレビューを管理画面に置く場合、本番で出すか (運営が文言を確認できる利点 / 画面が増える)\n\n## 関連\n- #73 (送信元と問い合わせ先の分離)、#72 (宿泊後メールの招待リンク停止)、#75 (送信元の組み立てを `formatMailFrom` に集約)\n- `docs/mail.md`",
+  "language": "ja",
+  "workspace": "workspace/villa-76",
+  "createdAt": "2026-10-16T07:02:48.655Z",
+  "status": "done",
+  "members": [
+    {
+      "id": "pm",
+      "role": "pm",
+      "persona": {
+        "name": "佐藤 美咲",
+        "age": 36,
+        "occupation": {
+          "title": "Product Manager",
+          "organization": "小さなSaaSスタートアップ",
+          "description": "ユーザーインタビューから課題を言語化し、最小のスコープで価値を届けることに責任を持つ。"
+        },
+        "long_term_goals": [
+          "ユーザーが本当に使い続けるプロダクトを作る",
+          "チームが迷わず動ける判断を素早く下す"
+        ],
+        "style": "質問が具体的で短い。『最後にそれが起きたのはいつですか？』のように事実を掘る。決めるときは理由とトレードオフを一言添える。",
+        "personality": {
+          "traits": [
+            "好奇心が強い",
+            "スコープを削るのが得意",
+            "ユーザーの言葉をそのまま引用する"
+          ],
+          "big_five": {
+            "openness": "高",
+            "conscientiousness": "高",
+            "extraversion": "中",
+            "agreeableness": "中",
+            "neuroticism": "低"
+          }
+        },
+        "skills": [
+          "ユーザーインタビュー (The Mom Test)",
+          "ジョブ理論",
+          "受け入れ基準の記述",
+          "優先順位付け"
+        ],
+        "beliefs": [
+          "ユーザーが言う解決策より、ユーザーの過去の行動を信じる",
+          "最初のリリースは恥ずかしいくらい小さくていい"
+        ]
+      }
+    },
+    {
+      "id": "eng-backend",
+      "role": "engineer",
+      "persona": {
+        "name": "田中 健",
+        "age": 41,
+        "occupation": {
+          "title": "Senior Backend Engineer",
+          "description": "データモデル、API、CLI、テストを担当。シンプルで壊れにくい設計を好む。"
+        },
+        "style": "結論から話す。リスクは数字や具体例で示す。不明点はその場で確認する。",
+        "personality": {
+          "traits": [
+            "慎重",
+            "テストを先に書く",
+            "依存を増やすのが嫌い"
+          ],
+          "big_five": {
+            "openness": "中",
+            "conscientiousness": "高",
+            "extraversion": "低",
+            "agreeableness": "中",
+            "neuroticism": "低"
+          }
+        },
+        "skills": [
+          "TypeScript",
+          "Go",
+          "SQL",
+          "API設計",
+          "自動テスト"
+        ],
+        "preferences": {
+          "likes": [
+            "標準ライブラリ",
+            "小さな関数",
+            "README に動かし方を書くこと"
+          ],
+          "dislikes": [
+            "根拠のない見積もり",
+            "巨大なフレームワーク"
+          ]
+        }
+      }
+    },
+    {
+      "id": "eng-frontend",
+      "role": "engineer",
+      "persona": {
+        "name": "鈴木 ひかり",
+        "age": 29,
+        "occupation": {
+          "title": "Frontend / UX Engineer",
+          "description": "画面・CLI の使い勝手、アクセシビリティ、初回体験を担当。ユーザー視点で仕様に意見を言う。"
+        },
+        "style": "フレンドリーで提案型。『ユーザーはここで迷いそう』と体験ベースで話す。",
+        "personality": {
+          "traits": [
+            "共感力が高い",
+            "手を動かして試作するのが早い",
+            "細部にこだわる"
+          ],
+          "big_five": {
+            "openness": "高",
+            "conscientiousness": "中",
+            "extraversion": "高",
+            "agreeableness": "高",
+            "neuroticism": "中"
+          }
+        },
+        "skills": [
+          "TypeScript",
+          "HTML/CSS",
+          "React",
+          "アクセシビリティ",
+          "プロトタイピング"
+        ],
+        "preferences": {
+          "likes": [
+            "空状態やエラー時の丁寧なメッセージ",
+            "キーボードだけで操作できるUI"
+          ],
+          "dislikes": [
+            "説明が必要なUI"
+          ]
+        }
+      }
+    },
+    {
+      "id": "user-guest",
+      "role": "user",
+      "persona": {
+        "name": "小林 直子",
+        "age": 44,
+        "nationality": "日本",
+        "residence": "東京都世田谷区",
+        "occupation": {
+          "title": "IT 企業の経理マネージャー",
+          "description": "夫と小学生 2 人の 4 人家族。知人の紹介 (招待コード) で軽井沢の貸別荘に 2 回泊まったリピーター。"
+        },
+        "long_term_goals": [
+          "家族の長期休みを手間なく良い場所で過ごす",
+          "気に入った宿を友人にも紹介したい"
+        ],
+        "style": "要点をはっきり言う。予約や支払いで不安になった具体的な場面を例に話す。お金の表示には細かい。",
+        "personality": {
+          "traits": [
+            "段取り重視",
+            "スマホで完結させたい",
+            "個人情報の扱いには敏感"
+          ],
+          "big_five": {
+            "openness": "中",
+            "conscientiousness": "高",
+            "extraversion": "中",
+            "agreeableness": "中",
+            "neuroticism": "中"
+          }
+        },
+        "preferences": {
+          "likes": [
+            "iPhone だけで予約から鍵の受け取りまで済むこと",
+            "合計金額が最初から分かること",
+            "メールに必要な情報がまとまっていること"
+          ],
+          "dislikes": [
+            "毎回招待コードやパスワードを探すこと",
+            "直前に金額が変わること",
+            "アプリのインストールを強いられること"
+          ]
+        },
+        "tech_literacy": "スマホ・Web サービスは日常的に使う。アプリのインストールはできるが、宿のためだけに入れるのは嫌。ターミナルは使わない。"
+      }
+    },
+    {
+      "id": "user-owner",
+      "role": "user",
+      "persona": {
+        "name": "中村 誠",
+        "age": 58,
+        "nationality": "日本",
+        "residence": "長野県軽井沢町 (別荘の近く)",
+        "occupation": {
+          "title": "貸別荘のオーナー兼運営者",
+          "description": "1 棟貸しの別荘を招待制で貸している。予約サイトの管理画面 (/admin) で料金・予約・メールを見ている。清掃と鍵の受け渡しも自分でやることが多い。"
+        },
+        "long_term_goals": [
+          "稼働率と単価を上げつつ、運営の手間を減らす",
+          "トラブル (返金・苦情・個人情報) を起こさない"
+        ],
+        "style": "現場の経験で話す。『繁忙期の金曜はこう』『この前こんなゲストがいた』と具体的。数字の根拠を気にする。",
+        "personality": {
+          "traits": [
+            "慎重",
+            "お金と法律のリスクに敏感",
+            "仕組みで楽をしたい"
+          ],
+          "big_five": {
+            "openness": "中",
+            "conscientiousness": "高",
+            "extraversion": "中",
+            "agreeableness": "中",
+            "neuroticism": "中"
+          }
+        },
+        "preferences": {
+          "likes": [
+            "管理画面で変更前に結果を確認できること",
+            "毎年の手作業が減ること",
+            "監査ログで後から追えること"
+          ],
+          "dislikes": [
+            "ゲストに誤った金額が出ること",
+            "設定を間違えると取り返しがつかない操作",
+            "外部サービスへの依存が増えること"
+          ]
+        },
+        "tech_literacy": "管理画面とスマホは使える。コードは読まないが、開発者 (オーナーの家族) に GitHub の issue で要望を出している。"
+      }
+    }
+  ],
+  "phases": [
+    {
+      "id": "discovery",
+      "goal": "PM interviews the users to uncover their real situation, pains and jobs-to-be-done. Users answer strictly in character, with concrete episodes. No solutions yet.",
+      "speakers": [
+        "pm",
+        "user"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 2
+    },
+    {
+      "id": "planning",
+      "goal": "PM turns findings into a small, shippable scope: [TASK] items with clear acceptance criteria, each assigned to an engineer. Engineers challenge feasibility, split or re-assign tasks, and agree on tech choices.",
+      "speakers": [
+        "pm",
+        "engineer"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 2,
+      "iterationStart": true
+    },
+    {
+      "id": "build",
+      "goal": "Engineers implement their own tasks in the workspace (real files, runnable code, tests when sensible), coordinate interfaces with each other, and mark finished work with [TASK_DONE].",
+      "speakers": [
+        "engineer"
+      ],
+      "mode": "parallel",
+      "maxRounds": 3,
+      "untilTasksDone": true,
+      "editors": [
+        "engineer"
+      ]
+    },
+    {
+      "id": "review",
+      "goal": "Engineers review each other's work against the acceptance criteria and fix issues. PM checks every task against its acceptance criteria and states what is ready for users.",
+      "speakers": [
+        "engineer",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1,
+      "editors": [
+        "engineer"
+      ]
+    },
+    {
+      "id": "acceptance",
+      "goal": "Users try what was built (read the workspace, run it if possible) and judge it from their own needs. Each user gives a [VERDICT accept|reject] with reasons. PM summarizes and decides next steps.",
+      "speakers": [
+        "user",
+        "pm"
+      ],
+      "mode": "round-robin",
+      "maxRounds": 1
+    }
+  ],
+  "phaseIndex": 4,
+  "iteration": 1,
+  "maxIterations": 2,
+  "round": 0,
+  "turn": 21,
+  "queue": [],
+  "pending": [],
+  "insertions": 0,
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "メールシナリオを1か所に定義し、5種類すべてを網羅する",
+      "acceptance": "- `app/lib/` 配下に、メール種別・シナリオ名・入力データ・期待する件名を持つ定義ファイルを1つ置く。スクリプト・プレビュー・テストはすべてここを参照する。\n- 5種類 (予約確定、キャンセル、ログイン OTP、予約前メール確認 OTP、宿泊後) を含む。\n- 予約確定: 通常料金2泊(内訳あり)、内訳なし、無料招待(0円)。\n- キャンセル: 返金100%、返金50%、返金0%(返金なし)。\n- 宿泊後: 招待リンクあり、なし(`postStayEnabled` の切替)。\n- 各シナリオは `buildXxx` を呼んで件名と HTML/テキスト本文を返せる。\n- サンプルに実在のゲスト情報を使わない。\n- `pnpm test:run` と `npx tsc --noEmit` が通る。\n- 実装前に spec (`docs/specs/`) へ Business Risk Review 5カテゴリを書く。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "シナリオを 1 か所に定義した。spec は `docs/specs/2026-10-16-mail-preview-design.md` に Business Risk Review 5 カテゴリで書いた。\n- 定義は `app/lib/mail-scenarios.ts`。5 種類で計 11 シナリオ。\n  - 予約確定: breakdown / no-breakdown / free-invitation\n  - キャンセル: refund-100 / refund-50 / refund-0\n  - ログイン OTP: magic-link / code-only\n  - 予約前メール確認 OTP: code\n  - 宿泊後: with-invitations / without-invitations\n- 各シナリオは `kind`、`scenario`、`label` (日本語名)、`expectedSubject`、`build()` を持つ。`buildMailScenario(s)` が `{ kind, scenario, label, subject, html, text }` を返す。\n- 宿泊後の招待あり/なしは `buildPostStayEmail` の引数で切り替える。`villaConfig` は書き換えない。\n- サンプルは架空値に固定した (山田花子、`example.com`、OTP は `000000`)。テストで、HTML 内の URL が `example.com` と `share.google` 以外にならないことも確認している。\n- 鈴木さんへ: `MAIL_SCENARIOS`、`buildMailScenario`、`formatHtmlForSnapshot`、`scenarioId` を使ってください。HTML の整形は golden と同じ `formatHtmlForSnapshot` です。ただし、プレビューの本文 iframe には整形前の生 HTML (`html`) を入れてください。ローダーは `loadMailModules()` で `{ mail, scenarios, mailFrom, close }` を返します。使い終わったら `close()` が必要です。\n- `text` は HTML から機械的に作った確認用です。`mail.ts` に text 版はありません。"
+    },
+    {
+      "id": "T2",
+      "title": "`mise run send-mail` を動くようにし、5種類・シナリオ指定・一括送信に対応する",
+      "acceptance": "- `mise run send-mail` が `ERR_MODULE_NOT_FOUND` で落ちずに起動する。依存追加はしない。\n- gum で種類とシナリオを選べる。「全シナリオ一括」も選べる。\n- 既定の送信先は Mailpit(`MAILPIT_URL`)。\n- Resend で送るのは明示的に選んだときだけ。宛先は環境変数で指定した自分のアドレス1件に限り、それ以外は送信前にエラーで止まる。\n- 一括送信で Resend は使えない。\n- 実 API キーがないため Resend 経路は未検証。モックのユニットテストで宛先制限だけ確認し、未検証である旨を `docs/mail.md` に書く。\n- 個人情報・メールに触れるので pii-review の観点で差分を確認する。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "`send-mail` を直し、5 種類・シナリオ指定・一括送信に対応した。\n- 原因は、素の `node` では `mail.ts` の拡張子なし import と `~` エイリアスを解決できないこと。`scripts/lib/load-mail.ts` で、vite の `createServer` + `ssrLoadModule` に統一した。`vite.config.ts` は使わず (honox などで重い)、alias だけを渡す。依存は追加していない。`vite build --ssr` への切り替えは不要だった。\n- 実行確認は Node v22.22 まで。issue の v25.6.1 では未実行。\n- 使い方は、`mise run send-mail`、または `node scripts/send-template-mail.ts <all|種類-シナリオ> [宛先] [--resend]`。`--list` で一覧を出す。\n- gum は「Mailpit: 全シナリオ一括」「Mailpit: シナリオを選ぶ」「Resend: シナリオを選ぶ」の 3 択。\n- 既定は Mailpit。`MAILPIT_URL` が無いときは、Resend に切り替えずエラーで止まる。\n- Resend は `--resend` を明示したときだけ。宛先は `.dev.vars` の `MAIL_PREVIEW_TO` 1 件に限る。次のどれも API を呼ぶ前に止まる。\n  - 宛先の不一致\n  - カンマ区切り\n  - `Name <addr>` 形式\n  - `all` との組み合わせ\n  - 例外メッセージに宛先は含めない。\n- `.dev.vars` の `MAGIC_LINK_BASE_URL` が本番の値でも、スクリプト側でローカル判定に固定する。`sendMail` 既存の歯止めを迂回できないようにするため。\n- テストは `scripts/lib/send.test.ts` に 10 件以上。fetch をモックし、宛先制限、一括×Resend 拒否、Mailpit にフォールバックしないこと、全件が Mailpit に届くことを確認した。\n- 疑似 Mailpit (127.0.0.1:8025) に対して `all` を実行し、11 通が届くことを確認した。誤宛先、`all --resend`、`MAILPIT_URL` なしは、すべて exit 1 で止まる。\n- `docs/mail.md` に「文言の確認」と「未検証」の節を追加した。\n- pii-review の観点で自己確認した。実在のゲスト情報や宛先をエラー・ログ・snapshot に出していない。本番コードの `mail.ts` ほかは無変更。独立したレビューはまだ受けていない。\n- **未検証**\n  - Resend 経路は実キーが無く、実際には送っていない。\n  - gum の対話部分は実行していない。mise の bash は構文チェックのみで、中で呼ぶ `node` コマンドは実行した。\n  - Gmail / iPhone での見え方も未確認。"
+    },
+    {
+      "id": "T3",
+      "title": "全シナリオを送らずに並べて見られる HTML を書き出す (`mise run preview-mail`)",
+      "acceptance": "- 1コマンドで全シナリオの HTML を1つの一覧ページに書き出し、ブラウザで開ける。送信は一切しない。\n- 各シナリオに、種類、シナリオ名、件名を表示する。\n- 本文は幅375pxの枠(iPhone 想定)で並べて表示し、表の横はみ出しがあればその場で分かる。\n- キャンセルの返金100% / 50% / 0%、内訳なし、無料招待、OTP 2種が同じ画面で見比べられる。\n- 出力先は git 管理外のディレクトリにする。\n- 書き出した本文のうち、金額・返金額・OTP の用途と有効時間が読める位置にあるか、エンジニアが目視確認する。確認結果を完了報告に書く。",
+      "owner": "eng-frontend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "`mise run preview-mail` で全 11 シナリオを `.preview/mail/index.html` に書き出せます。送信処理は一切呼びません。ただし、ブラウザで開いての確認とはみ出しバッジの動作は未確認です。この環境にはブラウザの実体が無く、playwright は実行できませんでした。\n\n**ファイル**\n- `scripts/preview-mail.ts`(新規): `loadMailModules()` で `MAIL_SCENARIOS` を読み、`buildMailScenario` の結果を渡します。\n  - iframe には整形前の生 HTML を入れています。\n  - 生成日時と `git rev-parse --short HEAD` のハッシュを一覧に出します。ハッシュが取れなければ `unknown` です。\n- `scripts/lib/render-preview.ts`: 種類の日本語名(`MAIL_KIND_LABELS`)を出すため `kindLabel` を追加しました。\n- `.gitignore` に `.preview/`、`mise.toml` に `preview-mail` を追加しました。\n- 実行は `mise run preview-mail` か `node scripts/preview-mail.ts` です。\n- `pnpm exec vitest run scripts/lib` は 15 件通りました。このコマンドは `scripts/lib` 配下のテスト全体を対象にしているため、`render-preview.test.ts` と、田中さんの `send.test.ts` の両方を含みます。\n- `kindLabel` 追加後の `pnpm test:run` 全体、`pnpm lint` は実行していません。\n\n**目視確認(`.text.txt` snapshot と HTML のスタイルを読んだ結果)**\n- 金額: 予約確定は合計金額が内訳なしで `¥123,456`、無料招待で「無料」と読めます。\n  - キャンセルは「お支払い金額」「返金金額」「適用返金率」が上から並びます。\n  - 50% は `¥61,728` と `50%`、0% は `¥0` と `0%` です。\n- 返金の説明: 50% は「返金はお支払い時のカードに対して行われます」、0% は「キャンセルポリシーに基づき、返金はございません」が出ます。\n  - 気づいた点が 1 つあります。0% の「返金はございません」は、キャンセルポリシー表の下にあります。小林さんは返金の有無をすぐ知りたいので、表の上に出す案を次の回で PM に相談したいです。今回は文言を変えていません。\n- OTP: 2 種とも見出しの直下に用途と「10分間有効」があり、コードの前に読めます。\n  - ログイン用は「以下の認証コードを入力してください。このコードは10分間有効です。」です。\n  - 予約前確認用は「ご予約の確認メールをお送りするため、…メールアドレスをご確認ください。」と、有効時間が同じ段落に入っています。\n  - コードは 36px、letter-spacing 8px の 6 桁です。幅は約 180px で、375px に収まる計算です。\n- 横はみ出し: 全 table が `width:100%` で、固定幅と `nowrap` はありません。本文は `max-width:600px` です。静的には、はみ出す要因は見当たりません。\n  - 実際の `mypage` URL は長くなります。サンプルの `example.com` では再現しないので、実機で確認が必要です。\n\n**未検証**\n- ブラウザでの表示、`scrollWidth` による「横はみ出しあり」バッジの動作、本文高さの自動調整は未確認です。生成された HTML とテストまでしか確認できていません。ブラウザのある環境で開いて確認してください。\n- iframe はブラウザの描画なので、Gmail や iPhone 標準メールの見え方は保証しません。実機確認は Resend 経由が必要です。\n- Resend 経路は、田中さんの報告どおり実キーが無く未検証です。"
+    },
+    {
+      "id": "T4",
+      "title": "全メール種別 × 主要シナリオを golden テストで固定する (シナリオ共有)",
+      "acceptance": "- 上記シナリオ定義を使い、全シナリオの件名と本文を固定する。OTP 2種と宿泊後メールの golden も新規に追加する。\n- 既存の `mail-golden.test.ts` の2パターンは、新しい仕組みに移して内容が変わらないことを確認する。\n- 形式は `toMatchFileSnapshot` を推奨する。文言を変えると差分がファイル単位で PR に見える。理由: HTML 完全一致の文字列より、レビューで読みやすい。反対意見があれば教えてください。\n- 文言をわざと1語変えるとテストが落ち、スナップショット更新で差分が出ることを確認する。\n- `pnpm test:run` が通る。",
+      "owner": "eng-backend",
+      "status": "done",
+      "createdBy": "pm",
+      "summary": "全シナリオを `toMatchFileSnapshot` で固定した。\n- テストは `app/lib/mail-scenarios.test.ts`。snapshot は `app/lib/__snapshots__/mail/<種別>-<シナリオ>.{subject.txt,html,text.txt}` で、計 33 ファイル。OTP 2 種と宿泊後の golden も新規に入った。\n- **旧 golden との一致**: 旧 `mail-golden.test.ts` の予約確定 (内訳なし) とキャンセル (50%) の期待文字列を、一時テストで新シナリオの HTML と `toBe` 比較し、バイト一致を確認した。確認後に旧テストを削除した。旧の「内訳あり」テストは breakdown シナリオの snapshot に置き換わった。\n- **文言変更の検知**: `mail.ts` の「ご予約が確定しました」を 1 語変えると、予約確定の 3 シナリオが落ちた。`-u` で 6 ファイル (html と text) が更新された。確認後に文言を戻し、snapshot も戻した。\n- 補足の文言テストも追加した。\n  - 返金 50% の金額と率が表示されること\n  - 返金 0% で「返金はございません」が出ること\n  - OTP の用途と「10分間有効」が出ること\n  - 招待なしの宿泊後メールに「招待」が出ないこと\n- `.oxfmtrc.json` の ignore に `app/lib/__snapshots__` を追加した。これを入れないと `pnpm lint` が snapshot を整形しようとして落ちる。\n- 品質ゲートの結果\n  - `pnpm test:run`: 160 ファイル / 1518 テスト通過 (最終変更前に実行)\n  - `pnpm lint`: 通過\n  - `npx tsc --noEmit`: 上記の既存エラー以外なし\n- 雑に `-u` で承認すると文言変更を見逃す。レビューでは snapshot の差分を必ず読んでください。"
+    }
+  ],
+  "decisions": [
+    {
+      "by": "pm",
+      "text": "解決の中心は「送る」ではなく「送らずに全シナリオの本文を並べて見られる」ことに置く。送信は Mailpit を既定にし、Resend は実機確認用に宛先を自分のアドレスに限って明示的に選んだときだけ使う。理由: ゲストへの誤送信と Resend 無料枠の消費を避けるため。トレードオフは、実機確認に一手間かかること。",
+      "phase": "discovery",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "今回のイテレーションは (1) シナリオ定義 (2) send-mail 修復と5種類対応 (3) 送らず並べて見る HTML 書き出し (4) golden をシナリオ共有で固定、の4つに絞る。管理画面プレビュー、誰が何を確認したかの記録、中村さんが自分のスマホで見る導線は次イテレーションに回す。理由: 先に文言を安全に確認できる土台を作るため。トレードオフは、中村さんが直接見られるのは次回以降になること。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "golden は `toMatchFileSnapshot` を採用する。ファイルは `app/lib/__snapshots__/mail/<種別>-<シナリオ>.html` と `.subject.txt`、`.text.txt` に分ける。HTML の整形関数は golden と preview で共有する。理由: 文言変更の差分を PR で読めるようにするため。トレードオフは、スナップショット更新を雑に承認すると文言変更を見逃すこと。レビューでは差分を必ず読む。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "メールの読み込みは、直接の devDependency である vite の `ssrLoadModule` を使った共通ローダー `scripts/lib/load-mail.ts` に統一する。send-mail と preview-mail はこれを使う。依存は追加しない。プレビューの出力先は `.preview/mail/` で、git 管理外とする。理由: 依存を増やさず、拡張子なし import の問題を直すため。トレードオフは、vite の内部 API に依存すること。",
+      "phase": "planning",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "返金 0% の「返金はございません」をキャンセルポリシー表の上に出すかどうかは、次イテレーションで扱う。今回は文言を動かさない。理由: 小林さんは返金の有無を先に知りたいが、これは文言変更であり、golden の差分をレビューする作業が要る。トレードオフは、次回まで現状の位置が残ること。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "次イテレーションの先頭に、ブラウザのある環境での確認を置く。確認するのは、はみ出しバッジの動作、長い URL でのはみ出し、Node v25 での `send-mail` の実行の 3 つ。理由: 今回の「完了」にはこれらの未検証が残っているため。その後に、中村さんがスマホで見る導線を決める(ローカル限定の管理画面プレビューか、自分宛て Resend か)。",
+      "phase": "review",
+      "iteration": 1
+    },
+    {
+      "by": "pm",
+      "text": "次イテレーションの優先順位は、(1) ブラウザ環境での未検証 3 点の確認 (2) 返金 0% 文言を表の上へ移す。変更前後を並べて見せ、golden 差分をレビューする (3) 中村さんのスマホ導線 (4) 確認の記録、とする。スマホ導線は自分宛て Resend を第一候補とし、管理画面に置く場合は本番で出ない作りを条件にする。理由: 両ユーザーの要望が一致し、最も誤りが高くつく場面を先に解消するため。トレードオフは、スマホ導線と記録が 3 番目以降になること。",
+      "phase": "acceptance",
+      "iteration": 1
+    }
+  ],
+  "verdicts": [
+    {
+      "by": "user-guest",
+      "verdict": "accept",
+      "reason": "私が直接触れるものではありませんが、「直したあとに誰も確認していない」という私の不安には、土台として答えてくれていると思います。\n\n- 返金100% / 50% / 0%、内訳なし、無料招待、ログインコードのメールを、ゲストに送らず全部並べて見られるようになりました。\n- 金額や返金額が上から読める位置にあること、ログインコードの用途と「10分間有効」がコードより前にあることを、確認した結果として報告してもらえました。\n- 文言を変えるとテストが落ち、差分がレビューで見えます。金額の書き方が黙って変わる心配は、かなり減りました。\n- 実際に送るのは Mailpit が既定で、Resend は自分宛て1件に限られています。個人情報に敏感な私は、ここは安心できます。\n\nまだ満足はしていません。次回、次の点をお願いします。\n\n1. **返金0%の「返金はございません」の位置。** 今はキャンセルポリシー表の下にあります。私が一番知りたいのは、返金があるかないかです。表の上に出してください。次回に回すという判断は理解しますが、優先度は高いです。\n2. **スマホでの崩れの確認。** ブラウザでの表示、実際の長い URL でのはみ出し、iPhone 標準メールでの見え方が、まだ確認されていません。私は iPhone の標準メールで読むので、ここが崩れていたら使えません。「確認済み」と言えるのは、実機で見てからにしてください。\n3. **「確認済み」という表現。** 今回確認できたのは文言と位置までで、見た目はまだです。そこを区別して書いてください。",
+      "iteration": 1
+    },
+    {
+      "by": "user-owner",
+      "verdict": "accept",
+      "reason": "土台として受け入れます。ゲストに送らず、珍しいパターンも含めて全部並べて見られる点は、去年の半日の原因に効きます。誤送信を防ぐ歯止めも納得できます。ただし、私の3つの安心条件のうち満たされたのは「全パターンを並べて見られる」だけです。しかも、見るのはまだエンジニア経由です。スマホで見る手段、確認の記録、実機での確認は、次回の必須条件です。",
+      "iteration": 1
+    }
+  ],
+  "notes": {
+    "pm": [
+      "Discovery 1回目: 中村さんには文言修正の頻度・確認方法・実機確認の要否・Resendの枠の心配を、小林さんにはメールで迷った実例と閲覧環境を聞いた。",
+      "中村さんはコードを読めず、文言修正は家族の開発者に issue で依頼する。確認者は実質エンジニア。中村さんの懸念は金額表示の誤り(去年繁忙期に内訳確認で半日)、返金あり/なし、無料招待、返金50%などの稀ケース、iPhone の Gmail と標準メールでの崩れ。小林さんは経理職で iPhone 標準メール、内訳の有無、返金額の即時把握、OTP の用途と有効時間の目立ち方、表の横はみ出しを気にする。",
+      "discovery 2回目の結果。中村さんの安心条件は、(1) ゲストに送らず自分のスマホで見られる (2) 返金なし・返金50%・無料招待・内訳なしを含め全パターンを並べて見られる (3) 誰が何を確認したか後から分かる。去年の半日の原因は、ゲストに届いた本文を自分で見られなかったこと。以前の「返金あり」確認は、家族の開発者が転送した1通だけだった。小林さんの条件は、内訳と返金額が一目で分かる、OTPの用途と有効時間が目立つ、iPhone標準メールで表が横にはみ出さない。確認者は実質エンジニアで、確認は仕組み化されていない。",
+      "iteration 1 の範囲は、シナリオ定義、send-mail 修復と5種類対応、HTML 書き出しプレビュー、golden のシナリオ共有。Mailpit 既定で、Resend は宛先を自分1件に限定する。未着手で次に回すのは、管理画面プレビュー(本番に出すか未決)、中村さんがスマホで見る導線、誰が何を確認したかの記録。",
+      "planning round 2 で技術選択が確定した。ローダーは vite の `ssrLoadModule`(失敗時は `vite build --ssr`)。golden は `toMatchFileSnapshot` で、件名・html・text を別ファイルにする。プレビューの出力先は `.preview/mail/index.html` で、生成日時・コミットのハッシュ・横はみ出しバッジを付ける。iframe の描画は実機のメールクライアントと同じではない。Resend 経路は実キーがなく未検証。次イテレーションに回すのは、管理画面プレビュー(本番に出すか未決)、中村さんがスマホで見る導線、誰が何を確認したかの記録。",
+      "iteration 1 のレビュー結果: T1〜T4 は受け入れ済みで、未検証が残る。\n- 未検証: ブラウザ表示とはみ出しバッジ、長い mypage URL、Resend 経路、gum の対話部分、Node v25.6.1 での実行、Gmail と iPhone 標準メール。\n- 次イテレーションの候補: 返金 0% の文言位置(golden 差分あり)、中村さんがスマホで見る導線(管理画面プレビューを本番に出すかは未決)、誰が何を確認したかの記録(生成日時とコミットのハッシュが土台)。",
+      "iteration 1 の acceptance: 小林さん・中村さんとも ACCEPT(土台として)。次回の必須条件は、(1) 実機・ブラウザでの確認と、確認済みと見た目未確認の区別 (2) 返金 0% 文言を表の上へ(変更前後を並べて提示) (3) 中村さんのスマホ導線(自分宛て Resend 優先、管理画面なら本番で出さない) (4) 確認の記録。「確認済み」は実機確認後にのみ使う。"
+    ],
+    "user-owner": [
+      "中村さんの安心条件: 本番ゲストに送らない / 自分のスマホで見られる / 珍しいケース(返金50%・0%、無料招待、内訳なし)を全パターン並べて見られる / 確認した記録が残る。過去の成功体験は「家族がテスト予約のメールをスマホに転送してくれた」(返金ありの1パターンのみ)。去年の半日は「ゲストに実際に届いた本文を自分で見る手段がなかった」ため。",
+      "中村さんのスマホ導線の好みは、自分宛て Resend（宛先は自分1件に限定）。管理画面に置くなら、本番で出ない保証が必須。確認記録（誰が・いつ・何を）も必須。返金0%の「返金はございません」は表の上に出すよう要望済み。変更時は変更前後を並べて見たい。"
+    ],
+    "eng-backend": [
+      "実行方法の方針: vite-node は package.json に無く vitest 4 も同梱しない。scripts は vite の createServer + ssrLoadModule で mail.ts を読む案 (依存追加なし、未検証)。Resend は宛先を環境変数1件に限定し、一括送信×Resend はコードで拒否する。golden は toMatchFileSnapshot で件名とHTMLを別ファイルにする。",
+      "T1・T2・T4 完了。シナリオ定義は `app/lib/mail-scenarios.ts`、ローダーは `scripts/lib/load-mail.ts`。Resend 経路は実キーが無く未検証で、モックの宛先制限テストのみ。`npx tsc --noEmit` の `dist/.vite/manifest.json` 不在エラーは今回の変更とは無関係の既存エラー (build 前のため)。"
+    ],
+    "eng-frontend": [
+      "T3 の進捗: `scripts/lib/render-preview.ts` とそのテスト、`.gitignore` の `.preview/`、`mise.toml` の `preview-mail` は作成済み。残りは `scripts/preview-mail.ts`(T1 のシナリオ定義と `scripts/lib/load-mail.ts` が前提)、実データでの生成、目視確認、完了報告。完了報告には、Resend 経路が未検証であることと、iframe は Gmail / iPhone 標準メールの見え方を保証しないことを必ず書く。",
+      "T3 は `scripts/preview-mail.ts` まで実装し、`.preview/mail/index.html` の生成は確認済み。ブラウザが無く、はみ出しバッジの動作と iframe 表示は未確認。返金 0% の「返金はございません」はポリシー表の下にある。次回、表の上に出すかを PM と相談する。",
+      "レビュー(iteration 1)で、T1・T2・T4 に修正依頼は出なかった。次回に回すもの: 返金 0% の文言位置、確認記録、中村さんのスマホ導線。ブラウザ表示・長い URL でのはみ出し・実機・Resend・gum 対話は未検証のまま残る。"
+    ]
+  },
+  "historyWindow": 40
+}

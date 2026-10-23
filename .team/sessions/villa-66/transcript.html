@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>villa-66</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+JP:wght@400;600;700&display=swap">
+<style>
+/* Layout: a reading column for the conversation, with the session's records in a side column on wide screens. */
+:root {
+  --bg: #f6f7f8; --panel: #ffffff; --fg: #1d2329; --muted: #5d6873; --line: #dfe3e7;
+  --accent: #1f6f78; --pm: #7a4dbf; --eng: #1f6f78; --user: #b25a1d; --human: #b0324a;
+  --ok: #2c7a3f; --bad: #b0324a; --code: #eef1f3;
+  --body: "IBM Plex Sans JP", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12161a; --panel: #1a2026; --fg: #e3e8ec; --muted: #9aa6b1; --line: #2c343c;
+  --accent: #5fb7bf; --pm: #b796ec; --eng: #5fb7bf; --user: #e59a62; --human: #ec7d92;
+  --ok: #6cc785; --bad: #ec7d92; --code: #232b33; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12161a; --panel: #1a2026; --fg: #e3e8ec; --muted: #9aa6b1; --line: #2c343c;
+  --accent: #5fb7bf; --pm: #b796ec; --eng: #5fb7bf; --user: #e59a62; --human: #ec7d92;
+  --ok: #6cc785; --bad: #ec7d92; --code: #232b33; color-scheme: dark }
+* { box-sizing: border-box }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.65 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header, main { max-width: 1180px; margin: 0 auto }
+header { padding-block: 28px 12px; display: grid; gap: 8px }
+h1 { font-size: 1.6rem; line-height: 1.25; margin: 0; text-wrap: balance }
+h2 { font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px }
+.brief { max-width: 72ch; margin: 0; white-space: pre-wrap }
+.chips { display: flex; flex-wrap: wrap; gap: 6px }
+.chip { font: 12px var(--mono); padding: 2px 8px; border: 1px solid var(--line); border-radius: 99px; background: var(--panel) }
+main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; padding-block: 8px 48px; align-items: start }
+@media (max-width: 860px) { main { grid-template-columns: minmax(0, 1fr) } }
+aside { display: grid; gap: 20px; min-width: 0 }
+aside section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; min-width: 0 }
+aside ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px }
+.controls { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 2; background: var(--bg);
+  display: flex; flex-wrap: wrap; gap: 16px; align-items: center; padding-block: 10px; border-bottom: 1px solid var(--line) }
+.controls label { display: inline-flex; gap: 6px; align-items: center; font-size: .9rem }
+select { font: inherit; padding: 2px 6px }
+details { border-bottom: 1px solid var(--line) }
+summary { cursor: pointer; padding-block: 12px; font-weight: 600; display: flex; gap: 10px; align-items: baseline }
+summary .muted { font-weight: 400; font-size: .85rem }
+summary:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+ol { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 10px }
+.msg { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--c, var(--line)); border-radius: 6px; padding: 10px 14px; min-width: 0 }
+.msg.pm { --c: var(--pm) } .msg.eng { --c: var(--eng) } .msg.user { --c: var(--user) } .msg.human { --c: var(--human) }
+.msg.private { background: transparent; border-style: dashed; color: var(--muted) }
+.who { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; font-size: .85rem }
+.name { font-weight: 700; color: var(--c, var(--fg)) }
+.to, .turn, .muted { color: var(--muted) }
+.turn { margin-left: auto; font: 11px var(--mono) }
+.kind { font: 11px var(--mono); letter-spacing: .04em; padding: 0 6px; border-radius: 4px; background: var(--code) }
+.kind.accept { color: var(--ok) } .kind.reject { color: var(--bad) }
+.text { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 4px }
+.sys { color: var(--muted); font-size: .85rem; padding-inline: 4px }
+.sys p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere }
+pre { background: var(--code); padding: 10px 12px; border-radius: 6px; overflow-x: auto; font: 12.5px/1.5 var(--mono); white-space: pre; margin: 6px 0 }
+code { font: .9em var(--mono); background: var(--code); padding: 0 4px; border-radius: 3px }
+.small { font-size: .85rem }
+details.sub { border: 0 } details.sub summary { padding-block: 2px; font-weight: 400; font-size: .8rem; color: var(--muted) }
+.st { font: 11px var(--mono); padding: 0 6px; border-radius: 4px; background: var(--code) }
+.st-done { color: var(--ok) } .st-blocked { color: var(--human) } .st-dropped { color: var(--muted); text-decoration: line-through }
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; background: var(--muted) }
+.dot.pm { background: var(--pm) } .dot.eng { background: var(--eng) } .dot.user { background: var(--user) }
+body:not(.show-private) .private { display: none }
+</style>
+</head>
+<body>
+<header>
+  <h1>villa-66</h1>
+  <p class="brief"><b>お題:</b> 既存プロダクト「Villa Karuizawa」(軽井沢の 1 棟貸し別荘の招待制予約サイト。HonoX + Cloudflare Workers + D1 + Stripe + Resend) に対する GitHub issue をチームで解決する。
+
+- ワークスペースは villa リポジトリの作業コピー (git worktree) そのもの。ゼロから作らず、既存コードを読んで変更する。README.md は既存のものを保ち、新規 README は作らない。
+- villa の CLAUDE.md と .claude/rules/ に従う。機能追加は実装前に Business Risk Review (.claude/rules/business-risk-review.md の 5 カテゴリ) を spec に書く (例: docs/specs/ 配下)。個人情報・認証・メールに触れる変更は .claude/skills/pii-review/SKILL.md の観点で差分を確認する。
+- 品質ゲート: `pnpm test:run` (ユニット)、`npx tsc --noEmit`、`pnpm lint` 相当。依存の追加は避ける (pnpm の 7 日ルールあり)。外部 API キーは無いので、外部サービスはモックかインターフェースまでで止め、何が未検証かを明記する。
+- git の commit / push はしない (ファシリテーターが最後にまとめる)。
+- ユーザー役: 小林さん (リピーターのゲスト) と中村さん (オーナー兼運営者)。
+- issue の「検討事項」で決まっていない点は、チームで決めて理由を残す。スコープが大きければ 1 イテレーションで出せる最小の価値に絞り、残りは明記する。
+
+以下が issue 本文。
+# villa#66 LP の導線文言を「ご予約済みの方、過去ご宿泊したことがある方はこちら」にする
+
+## 要望
+LP の予約セクションにあるマイページ導線の文言を、
+
+- 現在: 「ご予約済みの方はこちら（マイページ）」
+- 変更後: 「ご予約済みの方、過去ご宿泊したことがある方はこちら」
+
+にしたい。
+
+## 前提（依存）
+文言だけ先に変えると、過去に宿泊した人がリンク先で何もできない。**#57 の「2 回目以降の予約はメールアドレスでできる」が入ってから**この文言にする。
+
+#57 の該当部分:
+&gt; 宿泊経験者は招待コードなしで、確認済みメールアドレスだけで予約に入れる
+
+## 補足
+- 「宿泊経験者」の定義（confirmed かつチェックアウト済み）、招待コードなしの予約は通常料金、といった判断は #57 側で決める
+- マイページ側は現在 OTP ログインのみ。過去ゲストがログインした先に「新しく予約する」導線が要る
+- 導線そのものは #62 / PR #65 で追加済み
+
+Part of #57
+
+## このワークスペースの状態
+このワークスペースは #57 の実装 (draft PR villa#128、ブランチ claude/team-villa-57) の上にある。#57 では「宿泊済みの人がメール確認だけで招待コードなしで予約できる」部分 (予約入口の「前に泊まった方はこちら(メールで予約)」導線、app/lib/revisit.ts など) が入っている。メール変更とゲストの招待発行は入っていない。spec は docs/specs/2026-10-16-revisit-guest-reservation.md。</p>
+  <div class="chips">
+    <span class="chip">終了</span>
+    <span class="chip">周 1/2</span>
+    <span class="chip">フェーズ: acceptance</span>
+    <span class="chip">64 件</span>
+  </div>
+</header>
+<main>
+<div style="min-width:0">
+  <div class="controls">
+    <label><input type="checkbox" id="show-private"> 本人だけのメモも表示</label>
+    <label>表示する人 <select id="who"><option value="">全員</option><option value="pm">佐藤 美咲</option><option value="eng-backend">田中 健</option><option value="eng-frontend">鈴木 ひかり</option><option value="user-guest">小林 直子</option><option value="user-owner">中村 誠</option></select></label>
+  </div>
+  <h2 style="margin-top:16px">会話</h2>
+  <details open><summary>周 1 · discovery <span class="muted">10</span></summary><ol><li class="sys" data-from="system"><p>Session &quot;villa-66&quot; started. Brief: 既存プロダクト「Villa Karuizawa」(軽井沢の 1 棟貸し別荘の招待制予約サイト。HonoX + Cloudflare Workers + D1 + Stripe + Resend) に対する GitHub issue をチームで解決する。
+
+- ワークスペースは villa リポジトリの作業コピー (git worktree) そのもの。ゼロから作らず、既存コードを読んで変更する。README.md は既存のものを保ち、新規 README は作らない。
+- villa の CLAUDE.md と .claude/rules/ に従う。機能追加は実装前に Business Risk Review (.claude/rules/business-risk-review.md の 5 カテゴリ) を spec に書く (例: docs/specs/ 配下)。個人情報・認証・メールに触れる変更は .claude/skills/pii-review/SKILL.md の観点で差分を確認する。
+- 品質ゲート: <code>pnpm test:run</code> (ユニット)、<code>npx tsc --noEmit</code>、<code>pnpm lint</code> 相当。依存の追加は避ける (pnpm の 7 日ルールあり)。外部 API キーは無いので、外部サービスはモックかインターフェースまでで止め、何が未検証かを明記する。
+- git の commit / push はしない (ファシリテーターが最後にまとめる)。
+- ユーザー役: 小林さん (リピーターのゲスト) と中村さん (オーナー兼運営者)。
+- issue の「検討事項」で決まっていない点は、チームで決めて理由を残す。スコープが大きければ 1 イテレーションで出せる最小の価値に絞り、残りは明記する。
+
+以下が issue 本文。
+# villa#66 LP の導線文言を「ご予約済みの方、過去ご宿泊したことがある方はこちら」にする
+
+## 要望
+LP の予約セクションにあるマイページ導線の文言を、
+
+- 現在: 「ご予約済みの方はこちら（マイページ）」
+- 変更後: 「ご予約済みの方、過去ご宿泊したことがある方はこちら」
+
+にしたい。
+
+## 前提（依存）
+文言だけ先に変えると、過去に宿泊した人がリンク先で何もできない。**#57 の「2 回目以降の予約はメールアドレスでできる」が入ってから**この文言にする。
+
+#57 の該当部分:
+&gt; 宿泊経験者は招待コードなしで、確認済みメールアドレスだけで予約に入れる
+
+## 補足
+- 「宿泊経験者」の定義（confirmed かつチェックアウト済み）、招待コードなしの予約は通常料金、といった判断は #57 側で決める
+- マイページ側は現在 OTP ログインのみ。過去ゲストがログインした先に「新しく予約する」導線が要る
+- 導線そのものは #62 / PR #65 で追加済み
+
+Part of #57
+
+## このワークスペースの状態
+このワークスペースは #57 の実装 (draft PR villa#128、ブランチ claude/team-villa-57) の上にある。#57 では「宿泊済みの人がメール確認だけで招待コードなしで予約できる」部分 (予約入口の「前に泊まった方はこちら(メールで予約)」導線、app/lib/revisit.ts など) が入っている。メール変更とゲストの招待発行は入っていない。spec は docs/specs/2026-10-16-revisit-guest-reservation.md。</p></li><li class="sys" data-from="system"><p>Phase &quot;discovery&quot; started (iteration 1) — PM interviews the users to uncover their real situation, pains and jobs-to-be-done. Users answer strictly in character, with concrete episodes. No solutions yet.</p></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#1</span></div><div class="text">発見フェーズ。解決策は出さず、過去の行動を事実で掘る。小林さん(ゲスト)と中村さん(オーナー)に短く具体的に質問する。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 小林 直子</span><span class="turn">#1</span></div><div class="text">小林さん、2回目以降に泊まろうと思ったとき、最後にそれをしたのはいつですか？そのとき最初に開いたのは何でしたか（LP、前回のメール、ブックマークなど）？そこで迷ったり、手が止まったところがあれば、そのまま教えてください。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 中村 誠</span><span class="turn">#1</span></div><div class="text">中村さん、リピーターの方から「もう一度泊まりたいけど、どこから入ればいいか」と問い合わせが来たのは、最後にいつですか？そのとき相手は何と言っていて、中村さんは何をしましたか？招待コードを新しく発行した件数も、覚えている範囲で教えてください。</div></li><li class="msg user private" data-from="user-owner"><div class="who"><span class="name">中村 誠</span> <span class="kind">memo</span><span class="turn">#2</span></div><div class="text">ペルソナとして具体的な経験を話す。数字は断定しすぎず、記憶の範囲で。</div></li><li class="msg user" data-from="user-owner"><div class="who"><span class="name">中村 誠</span> <span class="to">→ 中村 誠, 佐藤 美咲</span><span class="turn">#2</span></div><div class="text">佐藤さん、中村です。最後に聞かれたのは今年の夏前、5月か6月だったと思います。去年の秋に泊まったご夫婦から家族経由で「また泊まりたいんだけど、どこから入るの?」と。招待制なので、前に泊まった人でも新しいコードがないと予約に入れない。それで私がコードを一つ発行して、LINEで送り直しました。
+
+こういう発行は年に数件、多くても1桁です。ただ、正確な件数は管理画面の履歴を見ないと言えません。数字は後で確認します。
+
+手間なのは件数より、毎回「誰に出したか」「前に泊まった人か」を自分で確認することです。繁忙期の金曜前に連絡が重なると、ここが一番面倒です。
+
+もう一つ気になるのは、コードを使い回されて、知らない人が予約に入ることです。これは返金や苦情に直結します。ですから「前に泊まった人だけ」が本当に確認できる仕組みなら歓迎です。逆に、確認が甘いと困ります。
+
+あと、料金です。紹介の人と同じ通常料金でいいのか。そこは私が一番気にしています。ゲストに誤った金額が出るのが、いちばん嫌なので。</div></li><li class="msg user private" data-from="user-guest"><div class="who"><span class="name">小林 直子</span> <span class="kind">memo</span><span class="turn">#3</span></div><div class="text">Answer in character with concrete episodes. No need for tools.</div></li><li class="msg user" data-from="user-guest"><div class="who"><span class="name">小林 直子</span> <span class="to">→ 佐藤 美咲</span><span class="turn">#3</span></div><div class="text">小林です。最後に使ったのは今年の春休み前、3月の中ごろです。軽井沢は2回泊まっていて、2回目の予約のときの話をします。
+
+最初に開いたのは、前回の予約確認メールでした。でもそこにはリンクがなくて、LPを検索して開きました。LPの予約の欄には「ご予約済みの方はこちら（マイページ）」しかなくて、私は「予約済み」ではなく「前に泊まった人」なので、押していいのか分からず手が止まりました。
+
+結局、紹介してくれた知人に LINE で「招待コードもう一回送って」と頼みました。コードはスマホのメモにも残していなくて、探すのに半日かかりました。その間、春休みの空き日がどんどん埋まるのではと不安でした。
+
+コードが届いてから予約に進んだら、料金の確認が出るまで合計が分かりにくかったです。大人2人と子ども2人で、清掃費や税が後から足される形だと、直前に金額が変わった気がして嫌でした。経理の人間なので、ここは細かく見ます。
+
+もう一つ、メールアドレスを入れるのも「また個人情報を入れるのか」と少し身構えます。ただ、すでに宿泊しているので、同じメールアドレスで確認できるなら、それが一番ラクです。iPhone だけで、アプリなしで終わらせたいです。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#4</span></div><div class="text">文言が「予約済み」だけで手が止まった事実と、オーナーの「確認が甘いと困る」「料金が気になる」は取れた。まだ分からないのは、小林さんが前回の予約で使ったメールアドレスを今も覚えているか、そのメールが本人のものか。リンク先でメール確認が通るかはここで決まるので、1問だけ追加で聞く。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#4</span></div><div class="text">小林さん: 3月に2回目の予約で、LPの「ご予約済みの方はこちら（マイページ）」を「前に泊まった人」の自分が押していいか分からず手が止まった。結局、知人にLINEで招待コードを頼み、届くまで半日かかった。iPhoneだけで、アプリなしで完結させたい。メール入力には少し身構えるが、宿泊済みなら同じメールで確認できるのが一番ラク。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#4</span></div><div class="text">中村さん: 再訪の人への招待コード再発行は年に数件（1桁）。件数は管理画面の履歴で要確認。手間は件数より「誰に出したか」「前に泊まった人か」の確認。コードの使い回しで知らない人が予約に入るのが一番の懸念（返金・苦情に直結）。再訪の料金を通常料金にしてよいかは、誤った金額をゲストに見せたくないので最も気にしている。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#4</span></div><div class="text">小林さんの料金に関する指摘: 清掃費や税が後から足されて、合計が分かりにくい。これは #66 の文言変更とは別の論点で、今回のスコープ外の候補。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 小林 直子</span><span class="turn">#4</span></div><div class="text">小林さん、ありがとうございます。「予約済みではなく前に泊まった人なので押していいか分からなかった」というお話、よく分かりました。もう1点だけ教えてください。2回目の予約のとき、最初の予約で使ったメールアドレスは、思い出せましたか？そのメールは、小林さんご自身が普段使っているものでしたか？それとも、紹介してくれた方経由で入力したものでしたか？</div></li><li class="msg user private" data-from="user-guest"><div class="who"><span class="name">小林 直子</span> <span class="kind">memo</span><span class="turn">#5</span></div><div class="text">美咲さんの質問に、2回目の予約時のメールアドレスについて具体的に答える。</div></li><li class="msg user" data-from="user-guest"><div class="who"><span class="name">小林 直子</span> <span class="to">→ 佐藤 美咲</span><span class="turn">#5</span></div><div class="text">最初の予約で使ったのは、私自身がいつも使っている個人のメールアドレスです。紹介してくれた知人経由で入力したものではありません。予約確認メールも、そのアドレスに届いていました。
+
+ただ、アドレスは覚えていたというより、「たぶんこれ」と思って入れた、という感じです。仕事用と個人用とで2つあるので、2回目の予約前に、前回の確認メールを検索して確かめました。
+
+もし違うアドレスを入れてしまったとき、「そのアドレスでは見つかりません」と出るだけだと困ります。宿泊済みの人なのか、入力ミスなのかが分からないからです。しかも、そのメッセージで、メールアドレスが登録されているかどうかが他人に分かってしまうのも、個人情報の面で少し気になります。</div></li><li class="msg user private" data-from="user-guest"><div class="who"><span class="name">小林 直子</span> <span class="kind">note</span><span class="turn">#5</span></div><div class="text">小林さんは個人用と仕事用のメールアドレスを2つ持っており、予約には個人用を使った。2回目の予約前に前回の確認メールを検索してアドレスを確かめた。「このアドレスでは見つかりません」のような表示で登録の有無が他人に分かることを気にしている。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#6</span></div><div class="text">事実は十分に取れた。①文言が「予約済み」だけで手が止まった。②招待コードの再依頼に半日かかった。③オーナーの懸念は「前に泊まった人だけ」の確認と通常料金。④メール不一致時の案内とメール存在の漏えい。解決策は次フェーズで扱う。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#6</span></div><div class="text">小林さん: 個人用と仕事用の2つのメールがあり、前回のアドレスは「たぶんこれ」で入れた。違うアドレスのとき「見つかりません」だけだと、入力ミスか未宿泊か分からず困る。メールの登録有無が他人に分かるのも気になる。つまり、結果表示は存在有無を漏らさない形にしたい。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#6</span></div><div class="text">#66 の本質: 文言変更そのものより、「前に泊まった人」が押していいと分かること、押した先で完結できること。#57 の再訪導線(予約入口の「前に泊まった方はこちら」)が前提で、LP の文言とリンク先を整合させる。料金の見え方(清掃費・税の後足し)は #66 のスコープ外。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span><span class="turn">#6</span></div><div class="text">小林さん、中村さん、ありがとうございます。整理します。
+- 小林さん: 「予約済みの方」だけだと、前に泊まった自分が押していいか分からず手が止まった。結果、LINEで招待コードを頼んで半日待った。
+- 中村さん: 再訪の発行は年1桁。負担は件数より「前に泊まった人か」の確認。使い回しは避けたい。
+- 共通: 「前に泊まった人だけ」が確認できて、押した先で完結することが大事。
+- 料金の見え方(清掃費・税の後足し)は別論点なので、今回は扱いません。
+次のフェーズで、最小のスコープに絞って決めます。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">ADVANCE</span><span class="turn">#6</span></div><div class="text">End of phase &quot;discovery&quot;.</div></li></ol></details>
+  <details open><summary>周 1 · planning <span class="muted">14</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;planning&quot; started (iteration 1) — PM turns findings into a small, shippable scope: [TASK] items with clear acceptance criteria, each assigned to an engineer. Engineers challenge feasibility, split or re-assign tasks, and agree on tech choices.</p></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#7</span></div><div class="text">LP の文言は reservation-section.tsx:36 で、リンク先は /mypage。#57 の再訪導線 (/foret-noire/reservation/revisit) は既にある。最小は、文言変更と、マイページのログイン画面からの再訪導線、それに合わせたテストと e2e の更新。ログイン後の「新しく予約する」は次に回す。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 鈴木 ひかり, 田中 健</span><span class="turn">#7</span></div><div class="text">佐藤です。#66 は小さく切ります。ひかりさんは LP の文言とマイページ側の導線を担当してください。田中さんは「見つかりません」でメールの存在有無が漏れないかの確認を担当してください。
+決めたこと:
+- LP のリンク先は /mypage のまま。文言だけ「ご予約済みの方、過去ご宿泊したことがある方はこちら」にします。予約済みの方の入口を壊さないためです。
+- 過去ゲスト向けには、マイページのログイン画面に「新しく予約する（前に泊まった方）」を足し、/foret-noire/reservation/revisit に誘導します。
+- ログイン後の画面の導線と料金表示は今回やりません。
+先に聞きたい点です。reservation-section.tsx:36 と lp-navigation.e2e.ts:14 のほかに、旧文言を参照している箇所はありますか？マイページのログイン画面は、リンクを足すだけで済みそうですか？</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">TASK</span><span class="turn">#7</span></div><div class="text">T1 owner=eng-frontend: LP の導線文言を変更し、マイページのログイン画面に再訪の予約導線を足す
+- LP の予約セクションのリンク文言が「ご予約済みの方、過去ご宿泊したことがある方はこちら」になる。リンク先は /mypage のまま。
+- 旧文言「ご予約済みの方はこちら（マイページ）」がコード、テスト、e2e (lp-navigation.e2e.ts) に残っていない。
+- マイページのログイン画面に「前に泊まった方で新しく予約する」リンクがあり、/foret-noire/reservation/revisit に遷移する。iPhone 幅でボタンとして押せる (min-h-12)。
+- reservation-section.test.tsx と、マイページ側のテストを更新または追加する。pnpm test:run、tsc、lint が通る。
+- 実装前に、docs/specs/ の既存 spec に Business Risk Review (5 カテゴリ) を追記する。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">TASK</span><span class="turn">#7</span></div><div class="text">T2 owner=eng-backend: 再訪の確認と、マイページログインの結果表示がメールの存在有無を漏らさないことの確認
+- 前に泊まったメールでも、泊まっていないメールでも、入力ミスのメールでも、再訪フォームとマイページログインの応答が同じ文面になる（例:「入力されたアドレスが確認できる場合、確認コードを送りました」）。
+- この点をテストで固定する。ユニットで足りなければ reservation.revisit.sqlite.test.ts に追加する。
+- 現状で漏れているなら修正し、pii-review の観点で差分を確認して結果を書く。
+- 宿泊歴なしの人が OTP を通っても、招待コードなしでは予約に進めないことを確認する（中村さんの「使い回しで知らない人が入る」懸念）。
+- 料金は触らない。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#7</span></div><div class="text">#66 の範囲は、LP の文言変更、マイページのログイン画面からの再訪導線、メール存在有無の非漏えい確認の 3 点。LP のリンク先は /mypage のまま。理由は、予約済みの方の入口を残しつつ最小の変更で済むため。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#7</span></div><div class="text">先送りするもの: ログイン後のマイページに「新しく予約する」を出すこと、料金の見え方（清掃費・税の後足し）、違うメールを入れた人向けの案内の強化。理由は、1 イテレーションで出す価値に絞るため。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#7</span></div><div class="text">#66 のスコープ: LP の文言 (reservation-section.tsx:36) と e2e (lp-navigation.e2e.ts:14) を変更。マイページのログイン画面に再訪導線を追加。メール存在有無が漏れないことを田中さんが確認。ログイン後の導線と料金の見え方は先送り。</div></li><li class="msg eng private" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">memo</span><span class="turn">#8</span></div><div class="text">旧文言は3箇所のみ(reservation-section.tsx:36、そのテスト、e2e)。マイページのログイン画面は mypage/index.tsx で、リンクを足せば済む。ここはフェーズ上ファイルを編集しない。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="to">→ 佐藤 美咲, 田中 健</span><span class="turn">#8</span></div><div class="text">ひかりです。旧文言を grep しました。
+- 旧文言「ご予約済みの方はこちら（マイページ）」は3か所だけです。reservation-section.tsx:36、reservation-section.test.tsx:9-10、e2e/tester-army/public/lp-navigation.e2e.ts:14。ほかにはありません。
+- マイページのログイン画面は app/routes/mypage/index.tsx です。フォームの下に <code>&lt;a&gt;</code> を足すだけで済みます。DB もAPIも触りません。
+- リンクの形は、フォームの下に区切りを入れ、「前に泊まったことがある方で、新しく予約する」を <code>min-h-12</code> の枠線ボタン風リンクにして /foret-noire/reservation/revisit に飛ばします。文面は PM さんの案から少しだけ変えます。ログイン画面は「予約済みの方」の入口でもあるので、「前に泊まった方」とだけ書くと小林さんのように迷うからです。リンク先の画面が何をする所かを、説明なしで分かるようにします。
+- テストは次のとおりです。reservation-section.test.tsx は新文言と /mypage への href を確認します。マイページ側には index.test.tsx を新規に追加します（今は無いです）。ここで再訪リンクの href とボタンサイズ用クラスを固定します。e2e は文言だけ差し替えます。
+- 田中さんへのお願いです。ログイン画面は「入力されたアドレスが確認できる場合、確認コードを送りました」と同じ文面にしたいです。今の index.tsx は <code>data.error</code> をそのまま出しています。/api/auth/send-otp が存在有無でエラーを変えていないか、確認してください。変えているなら、画面側は汎用文言に寄せます。結果を教えてください。
+- 先に決めたいことがあります。spec の Business Risk Review は、docs/specs/2026-10-16-revisit-guest-reservation.md に「#66 追記」節として足します。私が実装前に書きます。田中さんの pii-review の結果は、同じ節に書き足してください。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">task</span><span class="turn">#8</span></div><div class="text">T1 → doing</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 鈴木 ひかり, 佐藤 美咲</span><span class="turn">#9</span></div><div class="text">田中です。結論から言うと、<code>/api/auth/send-otp</code> と <code>/api/revisit/send-otp</code> は、メールの存在や宿泊歴で応答を変えていません。コードを読んだ範囲です。
+- 両方とも、判定は <code>isValidEmail</code> の形式チェックだけです。通れば <code>issueOtp</code> を呼び、メールを送って <code>{success:true}</code> を返します。宿泊歴も予約の有無も見ていません。
+- 異なる応答は 400（形式不正）と 429（レート制限）の2種類だけです。どちらもメールの存在とは無関係です。レート制限もメール単位とIP単位で、存在有無では変わりません。
+- 再訪側には「宿泊歴はここでは見ない」という趣旨のコメントがすでにあります。
+- 宿泊歴の判定は <code>/api/revisit/verify</code> の OTP 検証後だけです。ここで 403 <code>revisit_not_available</code> を返します。確認コードを入力できた人は、そのアドレスのメールを受け取れる人です。そのため、本人以外に存在有無は漏れません。
+- 宿泊歴なしの人は、OTP を通っても 403 で止まり、予約に進めません。中村さんの懸念はここで塞がっています。後でテストで固定します。
+
+ひかりさんの画面について。
+- <code>data.error</code> をそのまま出しても漏れません。ただし、成功時の文面は「入力されたアドレスが確認できる場合、確認コードを送りました」より、実際の挙動に合わせた「確認コードを送りました。メールをご確認ください」の方が正確です。コードは必ず送っているからです。確認できる場合だけ送る、という文面は事実と違います。
+- 画面側の変更は、この成功文言の統一だけで足ります。
+
+私がやること。
+1. 先にテストを書きます。
+   - <code>reservation.revisit.sqlite.test.ts</code> か <code>api/revisit/send-otp.test.ts</code> と <code>api/auth/send-otp.test.ts</code> に、宿泊済み・未宿泊・存在しないアドレスの3つで、status と body が一致するケースを追加します。
+   - 宿泊歴なしで OTP 検証済みの場合、<code>/api/revisit/verify</code> が 403 になり、予約セッションが作られないことも確認します。
+2. 漏れが見つかれば直します。今のところ見つかっていません。
+3. pii-review の結果は、ひかりさんの「#66 追記」節に書き足します。節ができたら教えてください。
+
+未検証の点は、メール送信が実際に届くかどうかです。Resend のキーがないので、モックまでです。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">task</span><span class="turn">#9</span></div><div class="text">T2 → doing</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#10</span></div><div class="text">田中さんの指摘は正しい。コードは常に送っているので、「確認できる場合」という文面は事実と合わない。同じ文面にする目的は存在有無を漏らさないことで、これは「確認コードを送りました。メールをご確認ください」でも満たせる。ひかりさんのリンク文面も、理由が筋が通っているので採用する。両タスクとも着手済みで、スコープは固まった。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="to">→ 鈴木 ひかり, 田中 健</span><span class="turn">#10</span></div><div class="text">ひかりさん、田中さん、ありがとうございます。2点決めます。
+- 成功時の文面は田中さんの案にします。「確認コードを送りました。メールをご確認ください」です。コードは常に送っているので、「確認できる場合」は事実と違います。大事なのは、どのメールでも同じ文面になることです。
+- 再訪リンクの文面はひかりさんの案「前に泊まったことがある方で、新しく予約する」にします。小林さんのように迷う人が、説明なしで分かるからです。
+進め方です。
+- spec の「#66 追記」節は、ひかりさんが実装前に書きます。田中さんはそこに pii-review の結果を足してください。
+- 田中さんのテストは、宿泊済み・未宿泊・存在しないアドレスで、send-otp の status と body が一致することを固定します。加えて、宿泊歴なしだと /api/revisit/verify が 403 になり、予約セッションが作られないことも固定します。
+- メールが実際に届くかは Resend のキーがなく未検証です。完了報告に「未検証」と明記してください。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#10</span></div><div class="text">マイページログインと再訪フォームの OTP 送信後の文面は、どのメールでも「確認コードを送りました。メールをご確認ください」に統一する。理由は、コードを常に送っているので、「確認できる場合」は事実と違うため。メールの存在有無を漏らさないという目的は、同じ文面で満たせる。T2 の「入力されたアドレスが確認できる場合…」の例示はこれに置き換える。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#10</span></div><div class="text">マイページのログイン画面の再訪リンク文面は「前に泊まったことがある方で、新しく予約する」とする（min-h-12、遷移先は /foret-noire/reservation/revisit）。理由は、ログイン画面は予約済みの方の入口でもあり、「前に泊まった方」だけだと迷うため。T1 の該当文面はこれに置き換える。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#10</span></div><div class="text">#66 の追加決定: OTP 送信後の文面は「確認コードを送りました。メールをご確認ください」で統一。再訪リンクは「前に泊まったことがある方で、新しく予約する」。Resend 経由のメール到達は未検証（モックまで）。完了報告で確認すること。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">ADVANCE</span><span class="turn">#10</span></div><div class="text">計画フェーズの目的は達成。範囲は決まり、T1・T2 は着手済みで、実装フェーズに進める。</div></li></ol></details>
+  <details open><summary>周 1 · build <span class="muted">4</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;build&quot; started (iteration 1) — Engineers implement their own tasks in the workspace (real files, runnable code, tests when sensible), coordinate interfaces with each other, and mark finished work with [TASK_DONE].</p></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 佐藤 美咲, 鈴木 ひかり</span><span class="turn">#11</span></div><div class="text">田中です。T2 は終わりました。漏れは見つからず、修正は文言1か所だけです。
+- <code>/api/auth/send-otp</code> と <code>/api/revisit/send-otp</code> は、メールの存在や宿泊歴で応答を変えていませんでした。
+- 変更は1か所です。<code>app/lib/revisit-ui.ts</code> の再訪フォームの送信後文面を「確認コードを送りました。メールをご確認ください。」に統一しました。以前は入力したメールの宛先を出していました。
+- マイページログインは送信後に <code>/mypage/verify</code> へ移るだけで、文面の差はありません。ひかりさん、画面側で追加の変更は要りません。
+- テストを3つ足しました。
+  - <code>api/auth/send-otp.test.ts</code>: 宿泊済み・未宿泊・入力ミスの3アドレスで status と本文が一致し、3通送信されます。
+  - <code>reservation.revisit.sqlite.test.ts</code>: 実 SQLite で、予約なし・pending のみ・cancelled のみは宿泊済みになりません。
+  - <code>revisit-ui.test.ts</code>: 文面を固定しました。
+- 宿泊歴なしの人が OTP を通った場合は、<code>/api/revisit/verify</code> が 403 を返し、予約セッションは作られません。この点を固定するテストは既存でした。再訪側 send-otp の同一応答テストも既存です。
+- pii-review の結果は、ひかりさんの「#66 追記」節に「PII Review (eng-backend)」として書き足しました。
+- 品質ゲート
+  - <code>pnpm test:run</code> は 170 ファイル、1524 件が通りました。
+  - <code>pnpm lint</code> も通りました。
+  - <code>npx tsc --noEmit</code> は <code>app/routes/static/[...path].ts</code> の <code>dist/.vite/manifest.json</code> が見つからないというエラーが1件出ました。ビルド成果物がないための既存の問題で、今回の変更とは無関係です。
+- 未検証の点は2つです。メールが実際に届くかは Resend のキーがなくモックまでです。応答時間の差(タイミング)も計測していません。
+- 料金には触れていません。</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">task</span><span class="turn">#11</span></div><div class="text">T2 → done: 漏れなしを確認し、再訪フォームの送信後文面を統一しました。変更ファイルは <code>app/lib/revisit-ui.ts</code>、テストは <code>api/auth/send-otp.test.ts</code>、<code>reservation.revisit.sqlite.test.ts</code>、<code>revisit-ui.test.ts</code> です。pii-review は <code>docs/specs/2026-10-16-revisit-guest-reservation.md</code> に追記しました。確認は <code>pnpm test:run &amp;&amp; pnpm lint</code> で行えます。メール到達は未検証です。</div></li><li class="msg eng" data-from="eng-frontend"><div class="who"><span class="name">鈴木 ひかり</span> <span class="kind">task</span><span class="turn">#12</span></div><div class="text">T1 → done: LP の文言変更と、マイページのログイン画面の再訪リンクを入れました。<code>pnpm test:run</code> は全件通っています（170 ファイル、1524 テスト）。<code>tsc</code> と <code>lint</code> に残っている失敗は、いずれも私の変更ではありません。
+
+- **LP の文言**: <code>reservation-section.tsx</code> のリンクを「ご予約済みの方、過去ご宿泊したことがある方はこちら」にしました。リンク先は <code>/mypage</code> のままです。
+- **旧文言の削除**: <code>reservation-section.test.tsx</code> と <code>e2e/tester-army/public/lp-navigation.e2e.ts</code> も新文言に差し替えました。旧文言をリポジトリ全体で grep し、0 件を確認しています。
+- **ログイン画面のリンク**: <code>app/routes/mypage/index.tsx</code> のフォームの下に、区切り線付きで「前に泊まったことがある方で、新しく予約する」を足しました。<code>&lt;a&gt;</code> を <code>min-h-12</code> の枠線ボタン風にしてあり、遷移先は <code>/foret-noire/reservation/revisit</code> です。
+- **テスト**: マイページ側は <code>app/routes/mypage/index.test.tsx</code> を新規に追加しました。再訪リンクの href・文面・<code>min-h-12</code> と、メールフォームが残っていることを確認します。LP 側のテストは <code>/mypage</code> への href と新文言を確認します。
+- **spec**: <code>docs/specs/2026-10-16-revisit-guest-reservation.md</code> の末尾に「#66 追記」節を足しました。スコープ、先送りするもの、Business Risk Review（5 カテゴリ）、「PII Review（eng-backend が実装後に追記）」の見出しが入っています。
+
+**品質ゲート**
+- **tsc**: 失敗は <code>app/routes/static/[...path].ts</code> の <code>dist/.vite/manifest.json</code> 未解決だけです。これは未ビルドによる既存のものです。
+- **lint**: 失敗は 1 件で、format チェックが田中さんの <code>app/routes/api/auth/send-otp.test.ts</code> を指しています。私のファイルは指摘されていません。
+
+**田中さんへ**
+- 上の format 指摘は、<code>send-otp.test.ts</code> の整形で直るはずです。
+- 「確認コードを送りました。メールをご確認ください」の文面は、画面側では出していません。ログイン画面は送信成功後にそのまま <code>/mypage/verify</code> へ移動し、メッセージを出さないためです。成功文言の表示は、この移動の仕様を変えるので今回は足していません。エラー時は <code>data.error</code> を出しますが、固定文言なので漏れません。
+
+**未検証**
+- 実ブラウザでの表示とタップは確認していません。e2e は文言の差し替えだけで、実行はしていません。
+
+**ひとこと**
+- 小林さんの手が止まった点は、リンクの文面で解消できると思います。ただ、泊まっていない人が OTP を通ったあとに 403 で止まる画面の案内は、今回は強化していません。問い合わせが増えるようなら次のイテレーションで見直したいです。</div></li></ol></details>
+  <details open><summary>周 1 · review <span class="muted">5</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;review&quot; started (iteration 1) — Engineers review each other's work against the acceptance criteria and fix issues. PM checks every task against its acceptance criteria and states what is ready for users.</p></li><li class="msg eng private" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="kind">memo</span><span class="turn">#13</span></div><div class="text">lint now passes. Review of T1 is OK. Remaining caveats noted.</div></li><li class="msg eng" data-from="eng-backend"><div class="who"><span class="name">田中 健</span> <span class="to">→ 佐藤 美咲, 鈴木 ひかり</span><span class="turn">#13</span></div><div class="text">田中です。T1 をレビューしました。受け入れ条件は満たしています。
+- 旧文言は、リポジトリ全体の grep で 0 件でした。
+- <code>app/routes/mypage/index.tsx</code> の再訪リンクは <code>/foret-noire/reservation/revisit</code> に遷移します。<code>min-h-12</code> が付いていて、ボタンとして押せます。
+- ひかりさんが指摘した lint の format 失敗は、<code>send-otp.test.ts</code>、<code>mypage/index.tsx</code>、<code>mypage/index.test.tsx</code> の 3 ファイルが対象でした。<code>oxfmt --write</code> で整形し、直しました。私の変更ファイルも含みます。
+- 今の品質ゲートは次のとおりです。
+  - <code>pnpm lint</code> は通ります。
+  - <code>pnpm test:run</code> は 170 ファイル、1524 件が通ります。
+  - <code>tsc</code> は <code>dist/.vite/manifest.json</code> 未ビルドの 1 件だけです。今回の変更とは無関係です。
+- 指摘が 1 点あります。マイページのログイン画面は、送信成功後に <code>/mypage/verify</code> へ移るだけで、「確認コードを送りました」の文面を出しません。そのため、決定した統一文面が出るのは再訪フォーム側だけです。メールの存在有無は漏れていません。ただ、PM さんの決定とは範囲がずれます。次のイテレーションで verify 画面に出すかどうかは、PM さんが判断してください。
+- 未検証の点は 3 つです。メールが実際に届くか、実ブラウザでの表示とタップ、e2e の実行です。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#14</span></div><div class="text">T1 と T2 を受け入れ条件で見る。マイページ側は送信後に /mypage/verify へ移るだけで文面を出さない。ただ、どのメールでも同じ動きなので存在有無は漏れない。文面を足すより、最小スコープを優先する。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span><span class="turn">#14</span></div><div class="text">佐藤です。レビューの結果を伝えます。
+
+**T1（LP 文言とマイページの再訪リンク）: 受け入れ条件を満たしています。**
+- LP のリンクは新文言で、リンク先は /mypage のままです。
+- 旧文言は、コード、テスト、e2e のどこにも残っていません。
+- ログイン画面の再訪リンクは min-h-12 で、/foret-noire/reservation/revisit に遷移します。
+- spec に Business Risk Review を追記しています。
+
+**T2（メール存在有無の非漏えい確認）: 条件を満たしています。**
+- 宿泊済み、未宿泊、入力ミスの 3 つで、応答の status と本文が一致することをテストで固定しています。
+- 宿泊歴なしの人は、OTP を通っても /api/revisit/verify で 403 になり、予約に進めません。中村さんの使い回しの懸念は塞がっています。
+- 再訪フォームの送信後文面は、決定どおりに統一されました。
+- pii-review の結果は spec に書かれています。
+
+**田中さんの指摘への判断:** マイページのログインは、送信後に verify 画面へ移るだけで、統一文面を出しません。今回は足しません。どのメールでも同じ動きなので、目的の「存在有無を漏らさない」は満たせています。verify 画面への文面追加は、次に回します。
+
+**ユーザーに出してよいもの:**
+- 小林さんが押していいか迷っていた、LP の「過去ご宿泊したことがある方」の導線。
+- ログイン画面から再訪の予約に入れる導線。
+- 宿泊歴のない人は予約に進めない、という保証。
+
+**ユーザーに出すときの注意（未検証）:**
+- メールが実際に届くか。Resend のキーがなく、モックまでです。
+- 実 iPhone でのタップと表示。
+- e2e の実行。
+- 応答時間の差（タイミング）。
+
+**先送りするもの（変更なし）:**
+- ログイン後のマイページに「新しく予約する」を出すこと。
+- 料金の見え方（清掃費・税の後足し）。
+- 泊まっていない人が 403 で止まる画面の案内の強化。
+- verify 画面に「確認コードを送りました」を出すこと。
+
+tsc の dist/manifest.json の 1 件は、未ビルドによる既存のものです。lint とテストは通っています。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#14</span></div><div class="text">#66 レビュー結果: T1・T2 とも受け入れ条件を満たした。マイページのログインは送信後に /mypage/verify へ移るだけで統一文面は出さない。存在有無は漏れないので今回は許容し、verify 画面への文面追加は次回に回す。未検証は、Resend 経由のメール到達、実 iPhone での表示とタップ、e2e の実行、応答時間の差。完了報告で明記する。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#14</span></div><div class="text">マイページのログイン後の verify 画面に統一文面を出すことは、今回は見送る。理由は、どのメールでも同じ遷移なので存在有無が漏れず、最小スコープを優先するため。問い合わせが増えるか、実機で迷いが出たら次のイテレーションで扱う。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">ADVANCE</span><span class="turn">#14</span></div><div class="text">レビューの目的は達成。T1・T2 は受け入れ条件を満たし、未検証の点も明記した。</div></li></ol></details>
+  <details open><summary>周 1 · acceptance <span class="muted">7</span></summary><ol><li class="sys" data-from="system"><p>Phase &quot;acceptance&quot; started (iteration 1) — Users try what was built (read the workspace, run it if possible) and judge it from their own needs. Each user gives a [VERDICT accept|reject] with reasons. PM summarizes and decides next steps.</p></li><li class="msg user private" data-from="user-guest"><div class="who"><span class="name">小林 直子</span> <span class="kind">memo</span><span class="turn">#15</span></div><div class="text">私の手が止まった点は文言で解消される。料金は先送りで、これは前に PM が別論点と言っていた。メールの扱いも納得できる。</div></li><li class="msg user" data-from="user-guest"><div class="who"><span class="name">小林 直子</span> <span class="kind accept">VERDICT</span><span class="turn">#15</span></div><div class="text">ACCEPT: LP の「ご予約済みの方、過去ご宿泊したことがある方はこちら」なら、3月の私は迷わず押せました。押した先のログイン画面にも「前に泊まったことがある方で、新しく予約する」があります。これなら知人に LINE で招待コードを頼まずに済みます。ボタンも大きく、iPhone で押しやすそうです。
+
+もう一つ、メールアドレスの扱いも納得しています。泊まった人でも泊まっていない人でも入力ミスでも、同じ文面になると聞きました。「見つかりません」と出るより安心です。泊まっていない人は確認コードを通っても予約に進めない、という点も安心材料です。
+
+ただ、次のイテレーションで見てほしいことが3つあります。
+- 料金の見え方です。清掃費や税が後から足される点は、経理の人間として今でも一番気になります。今回は範囲外と理解していますが、次はここを直してほしいです。
+- ログイン画面は、確認コードを送った後に何も表示せず次の画面へ移ります。メールが本当に送られたのか不安になる人がいると思います。
+- 個人用と仕事用でメールを間違えた人へのひと言の案内も、あると助かります。
+
+メールが実際に届くことと、実機での表示は未検証と聞いています。そこは出す前に確認してください。</div></li><li class="msg user private" data-from="user-owner"><div class="who"><span class="name">中村 誠</span> <span class="kind">memo</span><span class="turn">#16</span></div><div class="text">報告内容から判断する。招待コードの手間が減り、使い回しも塞がれている。料金は未対応だが範囲外と了解済み。受け入れる。</div></li><li class="msg user" data-from="user-owner"><div class="who"><span class="name">中村 誠</span> <span class="kind accept">VERDICT</span><span class="turn">#16</span></div><div class="text">ACCEPT: ACCEPT: 年に数件の再訪対応で一番面倒だった「前に泊まった人か自分で確認して、コードを発行して、LINEで送り直す」作業が、この仕組みで減ると思います。
+
+良い点は3つあります。
+- LP の文言が「ご予約済みの方、過去ご宿泊したことがある方はこちら」になり、押した先のログイン画面から再訪の予約に入れます。今年5月か6月にご夫婦から「どこから入るの?」と聞かれた件は、これで防げるはずです。
+- 泊まっていない人は、確認コードを通っても予約に進めません。私が一番心配していた、使い回しで知らない人が入る件はここで止まっています。
+- 泊まった人でも、泊まっていない人でも、入力ミスでも、応答が同じです。存在有無が漏れないので、個人情報の面でも安心です。
+- 料金には触っておらず、ゲストに誤った金額が出る心配は増えていません。
+
+出す前と次回にお願いしたいことがあります。
+1. 出す前に、実際に確認コードのメールが届くことと、iPhone の実機での表示を確認してください。ここは未検証と聞いています。
+2. 再訪で入った人が、通常料金で出ることは、実際の画面で金額を見て確かめたいです。予約が入る前に、管理画面で結果を確認できると安心です。
+3. 再訪で入った予約が、誰がいつ入ったか、後から監査ログで追えるか確認してください。トラブルのときに困ります。
+4. 次回は、ログイン画面で確認コードを送った後に何も出ない点と、料金の後足しを扱ってください。小林さんの指摘に私も賛成です。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">memo</span><span class="turn">#17</span></div><div class="text">両ユーザーとも ACCEPT。依頼事項は、出す前の未検証確認と次回の課題。中村さんの監査ログ確認は新しい指摘なので次回候補に入れる。料金の通常料金表示確認も同様。フェーズを終了できる。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span><span class="turn">#17</span></div><div class="text">佐藤です。小林さん、中村さん、ACCEPT ありがとうございます。まとめます。
+
+**受け入れ結果: 2人とも ACCEPT。#66 の今回分は出せる状態です。**
+- LP の文言で、前に泊まった人が押していいと分かる。
+- ログイン画面から再訪の予約に入れる。
+- 宿泊歴のない人は、確認コードを通っても予約に進めない。
+- 泊まった人、泊まっていない人、入力ミスで、応答が同じ。
+
+**出す前に確認すること(未検証)**
+- Resend 経由で確認コードのメールが実際に届くか。
+- iPhone 実機での表示とタップ。
+- e2e の実行。
+- 応答時間の差。
+
+**次のイテレーションの候補(優先順)**
+1. ログイン画面で確認コードを送った後に、何も出ない点。verify 画面に「確認コードを送りました。メールをご確認ください」を出す。お二人から出た指摘で、問い合わせの原因になりやすいため最優先です。
+2. 再訪で入った予約の通常料金の見え方を、管理画面で確認できるか。加えて、誰がいつ入ったかを監査ログで追えるか。中村さんの指摘です。まず現状を田中さんに調べてもらいます。
+3. メールを間違えた人へのひと言の案内。
+4. 料金の後足し(清掃費・税)。別論点なので、独立した issue として切ります。</div></li><li class="msg pm private" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">note</span><span class="turn">#17</span></div><div class="text">#66 acceptance 結果: 小林さん・中村さんとも ACCEPT。次回候補は、(1) verify 画面に「確認コードを送りました」を出す、(2) 再訪予約の通常料金の見え方と監査ログで追えるかの調査(中村さん)、(3) メール間違いへの案内、(4) 料金の後足しは別 issue。出す前に、Resend 経由のメール到達、実 iPhone、e2e、応答時間を確認する。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">DECISION</span><span class="turn">#17</span></div><div class="text">次のイテレーションの優先順は、(1) verify 画面の送信済み文面、(2) 再訪予約の料金表示と監査ログの調査、(3) メール間違いの案内、(4) 料金の後足しは別 issue に切り出す。理由は、お二人が挙げた順に、不安や問い合わせに直結するものを先に扱うため。</div></li><li class="msg pm" data-from="pm"><div class="who"><span class="name">佐藤 美咲</span> <span class="kind">ADVANCE</span><span class="turn">#17</span></div><div class="text">受け入れの目的は達成。両ユーザーが ACCEPT し、未検証の点と次回の課題を整理した。</div></li><li class="sys" data-from="system"><p>Session finished after iteration 1. 2/2 users accepted.</p></li></ol></details>
+</div>
+<aside>
+  <section><h2>メンバー</h2><ul><li><span class="dot pm"></span>佐藤 美咲 <span class="muted">pm · pm</span></li><li><span class="dot eng"></span>田中 健 <span class="muted">eng-backend · engineer</span></li><li><span class="dot eng"></span>鈴木 ひかり <span class="muted">eng-frontend · engineer</span></li><li><span class="dot user"></span>小林 直子 <span class="muted">user-guest · user</span></li><li><span class="dot user"></span>中村 誠 <span class="muted">user-owner · user</span></li></ul></section>
+  <section><h2>タスク</h2><ul><li><span class="st st-done">done</span> <b>T1</b> LP の導線文言を変更し、マイページのログイン画面に再訪の予約導線を足す <span class="muted">eng-frontend</span><details class="sub"><summary>result</summary><div class="muted small text">LP の文言変更と、マイページのログイン画面の再訪リンクを入れました。<code>pnpm test:run</code> は全件通っています（170 ファイル、1524 テスト）。<code>tsc</code> と <code>lint</code> に残っている失敗は、いずれも私の変更ではありません。
+
+- **LP の文言**: <code>reservation-section.tsx</code> のリンクを「ご予約済みの方、過去ご宿泊したことがある方はこちら」にしました。リンク先は <code>/mypage</code> のままです。
+- **旧文言の削除**: <code>reservation-section.test.tsx</code> と <code>e2e/tester-army/public/lp-navigation.e2e.ts</code> も新文言に差し替えました。旧文言をリポジトリ全体で grep し、0 件を確認しています。
+- **ログイン画面のリンク**: <code>app/routes/mypage/index.tsx</code> のフォームの下に、区切り線付きで「前に泊まったことがある方で、新しく予約する」を足しました。<code>&lt;a&gt;</code> を <code>min-h-12</code> の枠線ボタン風にしてあり、遷移先は <code>/foret-noire/reservation/revisit</code> です。
+- **テスト**: マイページ側は <code>app/routes/mypage/index.test.tsx</code> を新規に追加しました。再訪リンクの href・文面・<code>min-h-12</code> と、メールフォームが残っていることを確認します。LP 側のテストは <code>/mypage</code> への href と新文言を確認します。
+- **spec**: <code>docs/specs/2026-10-16-revisit-guest-reservation.md</code> の末尾に「#66 追記」節を足しました。スコープ、先送りするもの、Business Risk Review（5 カテゴリ）、「PII Review（eng-backend が実装後に追記）」の見出しが入っています。
+
+**品質ゲート**
+- **tsc**: 失敗は <code>app/routes/static/[...path].ts</code> の <code>dist/.vite/manifest.json</code> 未解決だけです。これは未ビルドによる既存のものです。
+- **lint**: 失敗は 1 件で、format チェックが田中さんの <code>app/routes/api/auth/send-otp.test.ts</code> を指しています。私のファイルは指摘されていません。
+
+**田中さんへ**
+- 上の format 指摘は、<code>send-otp.test.ts</code> の整形で直るはずです。
+- 「確認コードを送りました。メールをご確認ください」の文面は、画面側では出していません。ログイン画面は送信成功後にそのまま <code>/mypage/verify</code> へ移動し、メッセージを出さないためです。成功文言の表示は、この移動の仕様を変えるので今回は足していません。エラー時は <code>data.error</code> を出しますが、固定文言なので漏れません。
+
+**未検証**
+- 実ブラウザでの表示とタップは確認していません。e2e は文言の差し替えだけで、実行はしていません。
+
+**ひとこと**
+- 小林さんの手が止まった点は、リンクの文面で解消できると思います。ただ、泊まっていない人が OTP を通ったあとに 403 で止まる画面の案内は、今回は強化していません。問い合わせが増えるようなら次のイテレーションで見直したいです。</div></details></li><li><span class="st st-done">done</span> <b>T2</b> 再訪の確認と、マイページログインの結果表示がメールの存在有無を漏らさないことの確認 <span class="muted">eng-backend</span><details class="sub"><summary>result</summary><div class="muted small text">漏れなしを確認し、再訪フォームの送信後文面を統一しました。変更ファイルは <code>app/lib/revisit-ui.ts</code>、テストは <code>api/auth/send-otp.test.ts</code>、<code>reservation.revisit.sqlite.test.ts</code>、<code>revisit-ui.test.ts</code> です。pii-review は <code>docs/specs/2026-10-16-revisit-guest-reservation.md</code> に追記しました。確認は <code>pnpm test:run &amp;&amp; pnpm lint</code> で行えます。メール到達は未検証です。</div></details></li></ul></section>
+  
+  <section><h2>判定</h2><ul><li><span class="kind accept">accept</span> 小林 直子 <span class="muted">周 1</span><div class="small">LP の「ご予約済みの方、過去ご宿泊したことがある方はこちら」なら、3月の私は迷わず押せました。押した先のログイン画面にも「前に泊まったことがある方で、新しく予約する」があります。これなら知人に LINE で招待コードを頼まずに済みます。ボタンも大きく、iPhone で押しやすそうです。
+
+もう一つ、メールアドレスの扱いも納得しています。泊まった人でも泊まっていない人でも入力ミスでも、同じ文面になると聞きました。「見つかりません」と出るより安心です。泊まっていない人は確認コードを通っても予約に進めない、という点も安心材料です。
+
+ただ、次のイテレーションで見てほしいことが3つあります。
+- 料金の見え方です。清掃費や税が後から足される点は、経理の人間として今でも一番気になります。今回は範囲外と理解していますが、次はここを直してほしいです。
+- ログイン画面は、確認コードを送った後に何も表示せず次の画面へ移ります。メールが本当に送られたのか不安になる人がいると思います。
+- 個人用と仕事用でメールを間違えた人へのひと言の案内も、あると助かります。
+
+メールが実際に届くことと、実機での表示は未検証と聞いています。そこは出す前に確認してください。</div></li><li><span class="kind accept">accept</span> 中村 誠 <span class="muted">周 1</span><div class="small">ACCEPT: 年に数件の再訪対応で一番面倒だった「前に泊まった人か自分で確認して、コードを発行して、LINEで送り直す」作業が、この仕組みで減ると思います。
+
+良い点は3つあります。
+- LP の文言が「ご予約済みの方、過去ご宿泊したことがある方はこちら」になり、押した先のログイン画面から再訪の予約に入れます。今年5月か6月にご夫婦から「どこから入るの?」と聞かれた件は、これで防げるはずです。
+- 泊まっていない人は、確認コードを通っても予約に進めません。私が一番心配していた、使い回しで知らない人が入る件はここで止まっています。
+- 泊まった人でも、泊まっていない人でも、入力ミスでも、応答が同じです。存在有無が漏れないので、個人情報の面でも安心です。
+- 料金には触っておらず、ゲストに誤った金額が出る心配は増えていません。
+
+出す前と次回にお願いしたいことがあります。
+1. 出す前に、実際に確認コードのメールが届くことと、iPhone の実機での表示を確認してください。ここは未検証と聞いています。
+2. 再訪で入った人が、通常料金で出ることは、実際の画面で金額を見て確かめたいです。予約が入る前に、管理画面で結果を確認できると安心です。
+3. 再訪で入った予約が、誰がいつ入ったか、後から監査ログで追えるか確認してください。トラブルのときに困ります。
+4. 次回は、ログイン画面で確認コードを送った後に何も出ない点と、料金の後足しを扱ってください。小林さんの指摘に私も賛成です。</div></li></ul></section>
+  
+  <section><h2>決定</h2><ul><li class="small">#66 の範囲は、LP の文言変更、マイページのログイン画面からの再訪導線、メール存在有無の非漏えい確認の 3 点。LP のリンク先は /mypage のまま。理由は、予約済みの方の入口を残しつつ最小の変更で済むため。 <span class="muted">planning</span></li><li class="small">先送りするもの: ログイン後のマイページに「新しく予約する」を出すこと、料金の見え方（清掃費・税の後足し）、違うメールを入れた人向けの案内の強化。理由は、1 イテレーションで出す価値に絞るため。 <span class="muted">planning</span></li><li class="small">マイページログインと再訪フォームの OTP 送信後の文面は、どのメールでも「確認コードを送りました。メールをご確認ください」に統一する。理由は、コードを常に送っているので、「確認できる場合」は事実と違うため。メールの存在有無を漏らさないという目的は、同じ文面で満たせる。T2 の「入力されたアドレスが確認できる場合…」の例示はこれに置き換える。 <span class="muted">planning</span></li><li class="small">マイページのログイン画面の再訪リンク文面は「前に泊まったことがある方で、新しく予約する」とする（min-h-12、遷移先は /foret-noire/reservation/revisit）。理由は、ログイン画面は予約済みの方の入口でもあり、「前に泊まった方」だけだと迷うため。T1 の該当文面はこれに置き換える。 <span class="muted">planning</span></li><li class="small">マイページのログイン後の verify 画面に統一文面を出すことは、今回は見送る。理由は、どのメールでも同じ遷移なので存在有無が漏れず、最小スコープを優先するため。問い合わせが増えるか、実機で迷いが出たら次のイテレーションで扱う。 <span class="muted">review</span></li><li class="small">次のイテレーションの優先順は、(1) verify 画面の送信済み文面、(2) 再訪予約の料金表示と監査ログの調査、(3) メール間違いの案内、(4) 料金の後足しは別 issue に切り出す。理由は、お二人が挙げた順に、不安や問い合わせに直結するものを先に扱うため。 <span class="muted">acceptance</span></li></ul></section>
+</aside>
+</main>
+<script>
+(() => {
+  const priv = document.getElementById("show-private"), who = document.getElementById("who");
+  const apply = () => {
+    document.body.classList.toggle("show-private", priv.checked);
+    for (const li of document.querySelectorAll("li[data-from]")) li.hidden = !!who.value && li.dataset.from !== who.value;
+  };
+  priv.addEventListener("change", apply);
+  who.addEventListener("change", apply);
+  apply();
+})();
+</script>
+</body>
+</html>

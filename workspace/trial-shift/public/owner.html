@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>シフトを組む(オーナー用)</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="owner">
+<dialog id="keydlg">
+  <form method="dialog" id="keyform">
+    <label class="field">合言葉
+      <input id="keyinput" type="password" autocomplete="current-password" required>
+    </label>
+    <p id="keyerr" class="err" role="alert"></p>
+    <button class="primary" type="submit">開く</button>
+  </form>
+</dialog>
+
+<header class="top" id="top">
+  <div class="controls">
+    <label>対象の月 <input id="month" type="month"></label>
+    <label>売上見込み(円) <input id="revenue" type="text" inputmode="numeric" placeholder="例: 1,500,000"></label>
+    <label>人件費の目標(%) <input id="target" type="text" inputmode="decimal" value="30"></label>
+  </div>
+  <div class="summary" id="summary" aria-live="polite">
+    <div><span class="k">人件費の合計</span><b id="sCost">-</b></div>
+    <div><span class="k">売上に対する率</span><b id="sRate">-</b></div>
+    <div><span class="k">目標との差</span><b id="sDiff">-</b></div>
+  </div>
+  <p class="hint small">月初の週は前月分を含みません。<span id="calcState"></span></p>
+  <ul id="warns" class="warns" aria-live="polite"></ul>
+</header>
+
+<main class="tablewrap">
+  <p id="loadErr" class="err" role="alert"></p>
+  <table id="grid" aria-label="日付とスタッフのシフト表">
+    <thead></thead><tbody></tbody>
+  </table>
+</main>
+
+<footer class="foot">
+  <button id="makeText" class="primary" type="button">LINE用テキストを作る</button>
+  <button id="copyText" type="button" hidden>コピー</button>
+  <textarea id="lineOut" rows="8" readonly hidden aria-label="LINEに貼るテキスト"></textarea>
+</footer>
+<script type="module" src="owner.js"></script>
+</body>
+</html>

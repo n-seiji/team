@@ -1,10 +1,11 @@
-// File-based persistence: .team/sessions/<name>/{state.json,transcript.jsonl,transcript.md}
+// File-based persistence: .team/sessions/<name>/{state.json,transcript.jsonl,transcript.md,transcript.html}
 // Plain files keep sessions inspectable, diffable and portable across OSes.
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Entry, PersonaSpec, SessionState, TeamConfig } from "./types.ts";
 import { World, assertPersona } from "./world.ts";
 import { renderMarkdown } from "./render.ts";
+import { renderHtml } from "./html.ts";
 
 export class Store {
   readonly root: string;
@@ -58,6 +59,7 @@ export class Store {
     }
     writeAtomic(stateFile, json);
     writeAtomic(path.join(dir, "transcript.md"), renderMarkdown(w.state, all));
+    writeAtomic(path.join(dir, "transcript.html"), renderHtml(w.state, all));
   }
 
   transcript(name = this.current()): Entry[] {
