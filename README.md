@@ -146,7 +146,7 @@ Set the model with `backend.model` in `team.config.json`, `--model`, or the `TEA
   - `iterationStart`: where the next iteration restarts after a rejection
   - `finale`: a wrap-up phase, skipped in the normal order and run once before finishing when work is left
 - **Language**: `language` (default `ja`) is the language the agents speak.
-- **Memory length**: `historyWindow` is the number of recent transcript entries included in each prompt.
+- **Memory length**: `historyWindow` is the number of recent transcript entries included in each prompt. In the prompt, an entry whose full text the same prompt already shows in the Backlog, Decisions or Demos section (a task, a task update, a decision, a demo) appears as a one-line reference; `transcript.md` and `team log` keep the full text.
 
 ## Development
 

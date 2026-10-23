@@ -3,10 +3,10 @@
 import * as fs from "node:fs";
 import { execFileSync } from "node:child_process";
 import * as path from "node:path";
-import type { Entry, PersonaSpec, PhaseDef, SessionState, Trial } from "./types.ts";
+import type { Demo, Entry, EntryKind, PersonaSpec, PhaseDef, SessionState, Trial } from "./types.ts";
 import { ACTION_HELP, PROTOCOL_HELP } from "./protocol.ts";
 import { EXTERNAL_WORKSPACE_GUIDE, allowedActions, canEdit, roleGuide, workspaceGuide } from "./sop.ts";
-import { formatBacklog, formatEntry, formatQuestions } from "./render.ts";
+import { displayName, formatBacklog, formatEntry, formatQuestions } from "./render.ts";
 import { answersByQuestion, currentPhase, findMember, latestVerdicts, visibleTo, wrapupItems } from "./world.ts";
 
 export interface TurnPrompt {
@@ -115,7 +115,7 @@ const USER_SECTIONS = {
 
   backlog: ({ s }) => ["## Backlog", formatBacklog(s.tasks, "(no tasks yet)")],
 
-  decisions: ({ s }) => ["## Decisions", ...(s.decisions.length ? s.decisions.map((d) => `- ${d.text}`) : ["(none)"])],
+  decisions: ({ s }) => ["## Decisions", ...(s.decisions.length ? s.decisions.map((d, i) => `- ${decisionId(i)}: ${d.text}`) : ["(none)"])],
 
   wrapup: ({ s, phase }) => {
     if (!phase.finale) return null;
@@ -165,11 +165,9 @@ const USER_SECTIONS = {
     return trial ? formatTrial(trial) : null;
   },
 
-  demos: ({ s, m, phase }) => {
-    if (m.role === "engineer" && !phase.finale) return null;
-    // Demos of this iteration stay in view even when they scroll out of the history window.
-    const demos = (s.demos ?? []).filter((d) => d.iteration === s.iteration);
-    return demos.length ? ["## Demos shown by the team (this iteration)", ...demos.map((d) => `- ${displayDemo(s, d)}`)] : null;
+  demos: (c) => {
+    const demos = demosShown(c);
+    return demos?.length ? ["## Demos shown by the team (this iteration)", ...demos.map((d) => `- ${displayDemo(c.s, d)}`)] : null;
   },
 
   notes: ({ s, m }) => {
@@ -196,11 +194,12 @@ const USER_SECTIONS = {
         ]
       : null,
 
-  conversation: ({ s, m, entries }) => {
-    const { window, older } = recentEntries(entries, m.id, s.historyWindow);
+  conversation: (c) => {
+    const { window, older } = recentEntries(c.entries, c.m.id, c.s.historyWindow);
+    const show = windowEntry(c);
     return [
       `## Conversation so far${older ? ` (latest ${window.length}; older entries omitted)` : ""}`,
-      ...(window.length ? window.map((e) => formatEntry(s, e)) : ["(nothing yet)"]),
+      ...(window.length ? window.map(show) : ["(nothing yet)"]),
     ];
   },
 
@@ -229,6 +228,133 @@ function recentEntries(entries: Entry[], memberId: string, size: number): { wind
   let i = entries.length - 1;
   for (; i >= 0 && window.length < size; i--) if (visibleTo(entries[i], memberId)) window.unshift(entries[i]);
   return { window, older: i >= 0 };
+}
+
+/** The demos the `demos` section lists for this member, or null when the section is not shown to them. */
+function demosShown({ s, m, phase }: Ctx): Demo[] | null {
+  if (m.role === "engineer" && !phase.finale) return null;
+  // Demos of this iteration stay in view even when they scroll out of the history window.
+  return (s.demos ?? []).filter((d) => d.iteration === s.iteration);
+}
+
+/** Decisions are append-only, so the i-th one is always `D{i+1}`; the id is never stored. */
+const decisionId = (i: number) => `D${i + 1}`;
+
+/**
+ * Where each decision entry sits in `s.decisions`: the n-th entry with a given author, phase, iteration and text is
+ * the n-th such decision, so a decision repeated later still gets its own number.
+ */
+function decisionIndexes(s: SessionState, entries: readonly Entry[]): Map<Entry, number> {
+  const key = (by: string, text: string, phase: string, iteration: number) => JSON.stringify([by, text, phase, iteration]);
+  const listed = new Map<string, number[]>();
+  s.decisions.forEach((d, i) => {
+    const k = key(d.by, d.text, d.phase, d.iteration);
+    listed.set(k, [...(listed.get(k) ?? []), i]);
+  });
+  const seen = new Map<string, number>();
+  const out = new Map<Entry, number>();
+  for (const e of entries) {
+    if (e.kind !== "decision") continue;
+    const k = key(e.from, e.text, e.phase, e.iteration);
+    const nth = seen.get(k) ?? 0;
+    seen.set(k, nth + 1);
+    const i = listed.get(k)?.[nth];
+    if (i !== undefined) out.set(e, i);
+  }
+  return out;
+}
+
+/**
+ * How the conversation section shows an entry. An entry whose full text this same prompt shows elsewhere (the
+ * Backlog, Decisions or Demos section) becomes one reference line. The rest keep their text but never carry a
+ * `[TAG]`, which agents copy into their replies as if it were an action. (render.ts keeps the tagged full text
+ * for the transcript and the log.)
+ */
+function windowEntry(c: Ctx): (e: Entry) => string {
+  const { s } = c;
+  const demos = demosShown(c);
+  const decisions = decisionIndexes(s, c.entries);
+  const reference = (e: Entry): string | null => {
+    switch (e.kind) {
+      case "task":
+        return taskReference(s, e.text);
+      case "task_update":
+        return taskUpdateReference(s, e.text);
+      case "decision": {
+        const i = decisions.get(e);
+        return i === undefined ? null : `made decision ${decisionId(i)} (in Decisions)`;
+      }
+      case "demo": {
+        const listed = demos?.some((d) => d.by === e.from && d.text === e.text && d.phase === e.phase && d.iteration === e.iteration);
+        const task = /^(T\d+): /.exec(e.text)?.[1];
+        return listed ? `showed a demo${task ? ` for ${task}` : ""} (in Demos)` : null;
+      }
+      default:
+        return null;
+    }
+  };
+  return (logged) => {
+    const e = asTaskUpdate(logged);
+    const ref = reference(e);
+    return ref ? `${displayName(s, e.from)} ${ref}` : untaggedEntry(s, e);
+  };
+}
+
+/** Sessions saved early logged every task status update under the kind "task_done"; they read as task updates. */
+const asTaskUpdate = (e: Entry): Entry => ((e.kind as string) === "task_done" ? { ...e, kind: "task_update" } : e);
+
+/** A task creation entry, as a reference line, when the Backlog shows the same title and acceptance criteria. */
+function taskReference(s: SessionState, text: string): string | null {
+  const m = /^(T\d+) owner=\S*: ([^\n]*)(?:\n([\s\S]*))?$/.exec(text);
+  const t = m && s.tasks.find((x) => x.id === m[1]);
+  if (!m || !t) return null;
+  return t.title === m[2] && t.acceptance === (m[3] ?? "") ? `added task ${t.id}: ${t.title} (full text in Backlog)` : null;
+}
+
+/** A task update, as a reference line, when the Backlog shows the text it carries for that task right now. */
+function taskUpdateReference(s: SessionState, text: string): string | null {
+  const check = /^(T\d+) check by a person: ([\s\S]+)$/.exec(text);
+  if (check) return s.tasks.find((x) => x.id === check[1])?.checks?.includes(check[2]) ? `added a check to ${check[1]} (in Backlog)` : null;
+  // A status-only update ("T1 → doing") has no text and is short already.
+  const update = /^(T\d+) → (\w+): ([\s\S]+)$/.exec(text);
+  const t = update && s.tasks.find((x) => x.id === update[1]);
+  if (!update || !t) return null;
+  const [, id, status, said] = update;
+  switch (status) {
+    case "done":
+      return t.summary === said ? `finished ${id} (result in Backlog)` : null;
+    case "dropped":
+      return t.summary === said ? `dropped ${id} (reason in Backlog)` : null;
+    case "blocked":
+      // Sessions saved before `handoff` existed kept it in the summary.
+      return t.status === "blocked" && (t.handoff ?? t.summary) === said ? `handed ${id} over to a person (hand-off in Backlog)` : null;
+    default:
+      return null;
+  }
+}
+
+/** Labels for the kinds whose name does not read well in "Name (label): text". */
+const KIND_LABELS: Partial<Record<EntryKind, string>> = { ask_human: "ask the human", advance: "end phase" };
+
+/** An entry in full, like render.ts formatEntry but with "(label)" where it has "[TAG]". */
+function untaggedEntry(s: SessionState, e: Entry): string {
+  const who = displayName(s, e.from);
+  switch (e.kind) {
+    case "system":
+    case "say":
+    case "task_update":
+      return formatEntry(s, e);
+    case "think":
+      return `${who} (your memo): ${e.text}`;
+    case "note":
+      return `${who} (your note): ${e.text}`;
+    case "verdict": {
+      const v = /^(ACCEPT|REJECT): ([\s\S]*)$/.exec(e.text);
+      return v ? `${who} (verdict ${v[1]}): ${v[2]}` : `${who} (verdict): ${e.text}`;
+    }
+    default:
+      return `${who} (${KIND_LABELS[e.kind] ?? e.kind.replace(/_/g, " ")}): ${e.text}`;
+  }
 }
 
 /** The team talks in a meeting: short remarks and questions; long material goes into tasks, demos and notes. */
