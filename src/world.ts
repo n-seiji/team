@@ -203,7 +203,8 @@ export class World {
       case "TASK_START":
       case "TASK_DONE":
       case "TASK_BLOCKED":
-      case "TASK_DROP": {
+      case "TASK_DROP":
+      case "CHECK": {
         const tid = a.arg ?? /\bT\d+\b/.exec(a.text)?.[0];
         const t = s.tasks.find((x) => x.id === tid);
         if (!t) {
@@ -213,6 +214,10 @@ export class World {
         // A dropped task is closed for good: an engineer's stale TASK_START must not bring it back.
         if (t.status === "dropped") {
           this.log("system", "system", `Ignored [${a.type}] from ${m.id}: ${t.id} is already dropped.`);
+          break;
+        }
+        if (a.type === "CHECK") {
+          this.addCheck(m.id, t, a.text);
           break;
         }
         t.owner ??= m.id;
@@ -264,10 +269,26 @@ export class World {
     }
   }
 
-  private updateTask(by: string, t: Task, status: TaskStatus, summary?: string): void {
+  private updateTask(by: string, t: Task, status: TaskStatus, text?: string): void {
     t.status = status;
-    if (summary !== undefined) t.summary = summary;
-    this.log(by, "task_update", `${t.id} → ${status}${summary ? ": " + summary : ""}`);
+    if (status === "blocked") t.handoff = text ?? "";
+    else {
+      delete t.handoff;
+      if (text !== undefined) t.summary = text;
+    }
+    this.log(by, "task_update", `${t.id} → ${status}${text ? ": " + text : ""}`);
+  }
+
+  /** [CHECK]: something a person should check on a built task. Neither its status nor its summary changes. */
+  private addCheck(by: string, t: Task, text: string): void {
+    const ignore = (why: string) => this.log("system", "system", `Ignored [CHECK] from ${by}: ${why}`);
+    if (t.status !== "done") {
+      return ignore(`${t.id} is not done. Use [CHECK] on a built task, or [TASK_BLOCKED] to hand work over to a person.`);
+    }
+    if (!text) return ignore(`say what a person should check on ${t.id}.`);
+    if (t.checks?.includes(text)) return ignore(`${t.id} already has that check.`);
+    (t.checks ??= []).push(text);
+    this.log(by, "task_update", `${t.id} check by a person: ${text}`);
   }
 
   /**
@@ -383,8 +404,10 @@ export class World {
         .join(", ");
     const open = list((t) => !isSettled(t));
     const blocked = list((t) => t.status === "blocked");
+    const checked = list((t) => t.status === "done" && !!t.checks?.length);
     const unanswered = (s.questions ?? []).filter((_, i) => !this.answered.has(questionId(i)));
     const rest = [
+      checked && `Built, a person should check: ${checked}.`,
       open && `Still open: ${open}.`,
       blocked && `Waiting on a person: ${blocked}.`,
       unanswered.length && `${unanswered.length} question(s) for the human (see team status).`,

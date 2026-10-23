@@ -30,9 +30,13 @@ export function formatEntry(s: SessionState, e: Entry): string {
 
 export function formatTask(t: Task): string {
   const acc = t.acceptance ? `\n    acceptance: ${indent(t.acceptance, "    ")}` : "";
-  const label = t.status === "blocked" ? "needs a person" : t.status === "dropped" ? "dropped" : "result";
+  // Sessions saved before `handoff` existed kept a blocked task's hand-off in its summary.
+  const oldHandoff = t.status === "blocked" && t.handoff === undefined;
+  const label = oldHandoff ? "needs a person" : t.status === "dropped" ? "dropped" : "result";
   const sum = t.summary ? `\n    ${label}: ${indent(t.summary, "    ")}` : "";
-  return `- ${t.id} [${t.status}] owner=${t.owner ?? "-"} ${t.title}${acc}${sum}`;
+  const handoff = t.status === "blocked" && t.handoff ? `\n    needs a person: ${indent(t.handoff, "    ")}` : "";
+  const checks = (t.checks ?? []).map((c) => `\n    check by a person: ${indent(c, "    ")}`).join("");
+  return `- ${t.id} [${t.status}] owner=${t.owner ?? "-"} ${t.title}${acc}${sum}${handoff}${checks}`;
 }
 
 export function formatBacklog(tasks: Task[], empty: string): string {
