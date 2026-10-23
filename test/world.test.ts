@@ -293,3 +293,29 @@ test("users see the trial run's real output in their acceptance prompt", async (
   assert.match(u, /opened \/day: 3 rows/);
   assert.match(u, /day\.png/);
 });
+
+test("a member whose last remark read like a report is reminded to talk", async () => {
+  const { buildPrompt } = await import("../src/prompt.ts");
+  const w = make();
+  w.record("pm", "[SAY to=all] " + "長い説明です。".repeat(150));
+  w.record("u1", "はい");
+  w.record("u2", "はい");
+  assert.match(buildPrompt(w.state, "pm", w.emitted, []).user, /read like a written report/);
+  assert.doesNotMatch(buildPrompt(w.state, "u1", w.emitted, []).user, /read like a written report/);
+  assert.match(buildPrompt(w.state, "u1", w.emitted, []).system, /live meeting/);
+});
+
+test("a round leaves room for several question-and-answer exchanges", () => {
+  const w = make();
+  w.record("pm", "[SAY to=u1] q1");
+  w.record("u1", "[SAY to=pm] a1");
+  w.record("u2", "[SAY to=pm] me too");
+  // the PM already spoke, so each answer earns it a follow-up turn, and each follow-up earns the user a reply
+  const order: string[] = [];
+  for (let i = 0; i < 6 && w.state.round === 1; i++) {
+    const [id] = w.next();
+    order.push(id);
+    w.record(id, id === "pm" ? "[SAY to=u1] more?" : "[SAY to=pm] sure");
+  }
+  assert.ok(order.filter((id) => id === "pm").length >= 2, `pm follows up more than once: ${order.join(",")}`);
+});

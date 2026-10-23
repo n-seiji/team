@@ -47,7 +47,8 @@ export function buildPrompt(
     "## Your role",
     roleGuide(m.role),
     "",
-    `Always write the content of your messages in the language "${s.language}". Be concise: say what matters, like in a real meeting.`,
+    `Always write the content of your messages in the language "${s.language}".`,
+    MEETING_STYLE,
   ].join("\n");
 
   // Walk back from the end: only the latest window of visible entries is needed.
@@ -67,6 +68,8 @@ export function buildPrompt(
   const others = m.role === "engineer" ? (extra.others ?? []) : [];
   const questions = m.role !== "user" && s.questions?.length ? formatQuestions(s) : "";
   const trial = s.trials?.find((t) => t.iteration === s.iteration);
+  const lastSay = entries.findLast((e) => e.kind === "say" && e.from === m.id);
+  const longLast = lastSay && lastSay.text.length > LONG_SAY ? lastSay.text.length : 0;
   const rejections = m.role === "pm" && phase.iterationStart ? rejectionsToAddress(s) : [];
 
   const user = [
@@ -133,12 +136,24 @@ export function buildPrompt(
     "",
     "## Your turn",
     `It is now your turn, ${m.persona.name}. Act according to the phase goal and your persona.`,
+    ...(longLast ? [`Your last message was ${longLast} characters, which read like a written report. Talk this time: respond to the others and leave reference material to tasks and notes.`] : []),
     PROTOCOL_HELP,
     ...actions.map((a) => "  " + ACTION_HELP[a]),
   ].join("\n");
 
   return { member: m.id, role: m.role, canEdit: edit, system, user };
 }
+
+/** The team talks in a meeting: short remarks and questions; long material goes into tasks, demos and notes. */
+const MEETING_STYLE =
+  "This is a live meeting, not an exchange of written reports. Speak the way you would out loud, in your own voice: " +
+  "casual spoken language, no headings or bullet lists, react to what the last person just said (agree, push back, " +
+  "ask back), answer what you were asked before moving on, and when you need someone's input, ask them directly " +
+  "(to=<id>) so they answer next. A remark can be long when you are explaining something, but it is still talk. " +
+  "Put reference material (specs, file lists, test output, step-by-step plans) in [TASK], [TASK_DONE], [DEMO] or [NOTE].";
+
+/** A [SAY] longer than this (characters) reads as a report; its author gets a reminder on their next turn. */
+const LONG_SAY = 800;
 
 /** Where a session keeps evidence files: screenshots, generated files, trial runs. */
 export function artifactsDir(session: string): string {

@@ -252,7 +252,7 @@ export class World {
     const waiting = targets.filter((id) => s.queue.includes(id));
     s.queue = [...waiting, ...s.queue.filter((q) => !waiting.includes(q))];
     for (const id of targets) {
-      if (waiting.includes(id) || s.insertions >= speakers.size) continue;
+      if (waiting.includes(id) || s.insertions >= REPLY_BUDGET * speakers.size) continue;
       s.queue.push(id);
       s.insertions++;
     }
@@ -381,6 +381,9 @@ export class World {
 }
 
 const systemNow = () => new Date().toISOString();
+
+/** Extra reply turns per round, per speaker: enough for a few question-and-answer exchanges, but bounded. */
+const REPLY_BUDGET = 2;
 
 const TASK_STATUS: Record<string, TaskStatus> = {
   TASK_START: "doing",

@@ -11,7 +11,7 @@ export const DEFAULT_PHASES: PhaseDef[] = [
       "Users answer strictly in character, with concrete episodes. No solutions yet.",
     speakers: ["pm", "user"],
     mode: "round-robin",
-    maxRounds: 2,
+    maxRounds: 3,
   },
   {
     id: "planning",
@@ -22,7 +22,7 @@ export const DEFAULT_PHASES: PhaseDef[] = [
       "(e.g. a URL on their phone vs. a terminal command) and make that part of the acceptance criteria.",
     speakers: ["pm", "engineer"],
     mode: "round-robin",
-    maxRounds: 2,
+    maxRounds: 3,
     iterationStart: true,
   },
   {

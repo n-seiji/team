@@ -157,7 +157,7 @@ test("users see this iteration's demos in acceptance; status --json names the ph
   await run(dir, "init", "--name", "d1", "--brief", "デモ確認");
   await run(dir, "run", "--backend", "mock", "--turns", "14");
   let next = JSON.parse(await run(dir, "next", "--json", "--inline"));
-  for (let i = 0; next.phase !== "acceptance" && i < 20; i++) {
+  for (let i = 0; next.phase !== "acceptance" && i < 40; i++) {
     await run(dir, "run", "--backend", "mock", "--turns", "1");
     next = JSON.parse(await run(dir, "next", "--json", "--inline"));
   }

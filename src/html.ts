@@ -214,7 +214,7 @@ body:not(.show-private) .private { display: none }
   ${groups
     .map(
       (g, i) =>
-        `<details${i >= groups.length - 2 || groups.length <= 6 ? " open" : ""}><summary>${esc(g.title)} <span class="muted">${g.items.filter((e) => !isPrivate(e)).length}</span></summary><ol>${g.items.map((e) => entryHtml(s, e)).join("")}</ol></details>`,
+        `<details open><summary>${esc(g.title)} <span class="muted">${g.items.filter((e) => !isPrivate(e)).length}</span></summary><ol>${g.items.map((e) => entryHtml(s, e)).join("")}</ol></details>`,
     )
     .join("\n  ")}
 </div>
