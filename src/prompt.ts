@@ -18,9 +18,9 @@ export interface TurnPrompt {
   user: string;
   /**
    * The parts of `user` in order, without the ones left out this turn. `chars` is a part's share of `user`,
-   * including the newline that joins it to the part before it, so the shares add up to `user.length`.
+   * including the blank line that separates it from the part before it, so Σ chars === user.length.
    */
-  sections: { id: string; chars: number }[];
+  sections: { id: SectionId; chars: number }[];
 }
 
 /** What the sections of one member's turn prompt are built from. */
@@ -37,8 +37,11 @@ interface Ctx {
   answers: ReadonlyMap<string, string>;
 }
 
-/** One part of the user prompt as lines, or null to leave it out. Every part but the first begins with a blank line. */
+/** One part of the user prompt as its own lines, or null to leave it out. The assembler puts a blank line between parts. */
 type Section = (c: Ctx) => string[] | null;
+
+/** Joins two parts of the user prompt: ends the last line of the first and leaves one blank line. */
+const SECTION_SEPARATOR = "\n\n";
 
 /**
  * @param files workspace listing from listWorkspace(); compute it once per step and share it
@@ -83,41 +86,41 @@ export function buildPrompt(
     others: m.role === "engineer" ? (extra.others ?? []) : [],
     answers: answersByQuestion(entries),
   };
-  const parts = Object.entries(USER_SECTIONS).flatMap(([id, build]) => {
+  const parts = (Object.entries(USER_SECTIONS) as [SectionId, Section][]).flatMap(([id, build]) => {
     const lines = build(c);
-    return lines?.length ? [{ id, lines }] : [];
+    return lines ? [{ id, text: lines.join("\n") }] : [];
   });
-  const user = parts.flatMap((p) => p.lines).join("\n");
-  const sections = parts.map((p, i) => ({ id: p.id, chars: p.lines.join("\n").length + (i ? 1 : 0) }));
+  const user = parts.map((p) => p.text).join(SECTION_SEPARATOR);
+  const sections = parts.map((p, i) => ({ id: p.id, chars: p.text.length + (i ? SECTION_SEPARATOR.length : 0) }));
 
   return { member: m.id, role: m.role, canEdit: edit, system, user, sections };
 }
 
-/** The user prompt, part by part, in prompt order (the order of the keys). */
-const USER_SECTIONS: Record<string, Section> = {
+/**
+ * The user prompt, part by part. Key order is prompt order, so keep the keys non-integer-looking
+ * (an integer-like key would be enumerated first).
+ */
+const USER_SECTIONS = {
   brief: ({ s }) => ["## Product brief", s.brief],
 
   phase: ({ s, phase }) => [
-    "",
     `## Current phase: ${phase.id} (iteration ${s.iteration}/${s.maxIterations}, round ${s.round}/${phase.maxRounds})`,
     `Goal: ${phase.goal}`,
   ],
 
   team: ({ s, m }) => [
-    "",
     "## Team",
     ...s.members.map((x) => `- ${x.id}: ${x.persona.name} (${x.role})${x.id === m.id ? "  ← you" : ""}`),
   ],
 
-  backlog: ({ s }) => ["", "## Backlog", formatBacklog(s.tasks, "(no tasks yet)")],
+  backlog: ({ s }) => ["## Backlog", formatBacklog(s.tasks, "(no tasks yet)")],
 
-  decisions: ({ s }) => ["", "## Decisions", ...(s.decisions.length ? s.decisions.map((d) => `- ${d.text}`) : ["(none)"])],
+  decisions: ({ s }) => ["## Decisions", ...(s.decisions.length ? s.decisions.map((d) => `- ${d.text}`) : ["(none)"])],
 
   wrapup: ({ s, phase }) => {
     if (!phase.finale) return null;
     const wrap = wrapupItems(s);
     return [
-      "",
       "## Wrap-up checklist (must be settled before the session ends)",
       ...wrap.tasks.map((t) => `- open task ${t.id} owner=${t.owner ?? "-"}: ${t.title}`),
       ...wrap.decisions.map((d) => `- decision to apply (${d.phase}): ${d.text}`),
@@ -131,7 +134,6 @@ const USER_SECTIONS: Record<string, Section> = {
     const open = m.role !== "user" ? formatQuestions(s, answers, "open") : "";
     return open
       ? [
-          "",
           "## Open questions sent to the human (keep going on the stated defaults unless the human said otherwise)",
           "Ids are assigned by the engine: do not number your own questions and do not write \"Answer to Qn\" lines.",
           open,
@@ -141,7 +143,7 @@ const USER_SECTIONS: Record<string, Section> = {
 
   "answered-questions": ({ s, m, answers }) => {
     const answered = m.role !== "user" ? formatQuestions(s, answers, "answered") : "";
-    return answered ? ["", "## Answered by the human (an answer overrides the default the team stated)", answered] : null;
+    return answered ? ["## Answered by the human (an answer overrides the default the team stated)", answered] : null;
   },
 
   rejections: ({ s, m, phase }) => {
@@ -149,7 +151,6 @@ const USER_SECTIONS: Record<string, Section> = {
     const rejections = rejectionsToAddress(s);
     return rejections.length
       ? [
-          "",
           "## Rejections from the last iteration",
           ...rejections,
           "Before planning fixes, write down in one sentence the premise of the current product that each rejection " +
@@ -161,23 +162,22 @@ const USER_SECTIONS: Record<string, Section> = {
 
   trial: ({ s }) => {
     const trial = s.trials?.find((t) => t.iteration === s.iteration);
-    return trial ? ["", ...formatTrial(trial)] : null;
+    return trial ? formatTrial(trial) : null;
   },
 
   demos: ({ s, m, phase }) => {
     if (m.role === "engineer" && !phase.finale) return null;
     // Demos of this iteration stay in view even when they scroll out of the history window.
     const demos = (s.demos ?? []).filter((d) => d.iteration === s.iteration);
-    return demos.length ? ["", "## Demos shown by the team (this iteration)", ...demos.map((d) => `- ${displayDemo(s, d)}`)] : null;
+    return demos.length ? ["## Demos shown by the team (this iteration)", ...demos.map((d) => `- ${displayDemo(s, d)}`)] : null;
   },
 
   notes: ({ s, m }) => {
     const notes = s.notes[m.id] ?? [];
-    return notes.length ? ["", "## Your long-term notes", ...notes.map((n) => `- ${n}`)] : null;
+    return notes.length ? ["## Your long-term notes", ...notes.map((n) => `- ${n}`)] : null;
   },
 
   workspace: ({ s, m, edit, files }) => [
-    "",
     `## Workspace (${s.workspace}/)`,
     workspaceGuide(m.role),
     ...(m.role === "engineer" ? [`Artifacts folder for evidence (relative to the repository root): ${artifactsDir(s.name)}/`] : []),
@@ -190,7 +190,6 @@ const USER_SECTIONS: Record<string, Section> = {
   others: ({ others }) =>
     others.length
       ? [
-          "",
           "## Other sessions changing the same repository",
           "Avoid clashing with these (e.g. do not reuse a migration number or edit the same file without need):",
           ...others.map((o) => `- ${o}`),
@@ -200,7 +199,6 @@ const USER_SECTIONS: Record<string, Section> = {
   conversation: ({ s, m, entries }) => {
     const { window, older } = recentEntries(entries, m.id, s.historyWindow);
     return [
-      "",
       `## Conversation so far${older ? ` (latest ${window.length}; older entries omitted)` : ""}`,
       ...(window.length ? window.map((e) => formatEntry(s, e)) : ["(nothing yet)"]),
     ];
@@ -210,7 +208,6 @@ const USER_SECTIONS: Record<string, Section> = {
     const lastSay = entries.findLast((e) => e.kind === "say" && e.from === m.id);
     const longLast = lastSay && lastSay.text.length > LONG_SAY ? lastSay.text.length : 0;
     return [
-      "",
       "## Your turn",
       `It is now your turn, ${m.persona.name}. Act according to the phase goal and your persona.`,
       ...(longLast ? [`Your last message was ${longLast} characters, which read like a written report. Talk this time: respond to the others and leave reference material to tasks and notes.`] : []),
@@ -220,7 +217,10 @@ const USER_SECTIONS: Record<string, Section> = {
         .map((a) => "  " + ACTION_HELP[a]),
     ];
   },
-};
+} satisfies Record<string, Section>;
+
+/** Names of the parts of the user prompt, for `TurnPrompt.sections`. */
+export type SectionId = keyof typeof USER_SECTIONS;
 
 /** The latest `size` entries `memberId` can see, and whether the walk stopped before the start of the transcript. */
 function recentEntries(entries: Entry[], memberId: string, size: number): { window: Entry[]; older: boolean } {
