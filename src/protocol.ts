@@ -99,7 +99,9 @@ export const ACTION_HELP: Record<string, string> = {
   VERIFY:
     "[VERIFY] one shell command, run from the workspace, that tries the product the way a user would and prints what it saw " +
     "(see the phase goal). The latest one counts",
-  DECISION: "[DECISION] a decision the team should follow from now on",
+  DECISION:
+    "[DECISION] a decision the team should follow from now on. Ids (D1, D2, ...) are assigned by the engine: " +
+    "do not number your own decisions",
   ADVANCE: "[ADVANCE] end the current phase now because its goal is met (PM only)",
   VERDICT:
     "[VERDICT accept] or [VERDICT reject] followed by your honest reasons (acceptance phase), what you based it on " +

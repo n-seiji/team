@@ -7,7 +7,7 @@ import type { Demo, Entry, EntryKind, PersonaSpec, PhaseDef, SessionState, Trial
 import { ACTION_HELP, PROTOCOL_HELP } from "./protocol.ts";
 import { EXTERNAL_WORKSPACE_GUIDE, allowedActions, canEdit, roleGuide, workspaceGuide } from "./sop.ts";
 import { displayName, formatBacklog, formatEntry, formatQuestions } from "./render.ts";
-import { answersByQuestion, currentPhase, findMember, latestVerdicts, visibleTo, wrapupItems } from "./world.ts";
+import { answersByQuestion, currentPhase, decisionId, findMember, latestVerdicts, visibleTo, wrapupItems } from "./world.ts";
 
 export interface TurnPrompt {
   member: string;
@@ -115,7 +115,12 @@ const USER_SECTIONS = {
 
   backlog: ({ s }) => ["## Backlog", formatBacklog(s.tasks, "(no tasks yet)")],
 
-  decisions: ({ s }) => ["## Decisions", ...(s.decisions.length ? s.decisions.map((d, i) => `- ${decisionId(i)}: ${d.text}`) : ["(none)"])],
+  decisions: ({ s }) => [
+    "## Decisions",
+    ...(s.decisions.length
+      ? s.decisions.map((d, i) => `- ${decisionId(i)} (${d.phase}, ${displayName(s, d.by)}): ${d.text}`)
+      : ["(none)"]),
+  ],
 
   wrapup: ({ s, phase }) => {
     if (!phase.finale) return null;
@@ -123,7 +128,7 @@ const USER_SECTIONS = {
     return [
       "## Wrap-up checklist (must be settled before the session ends)",
       ...wrap.tasks.map((t) => `- open task ${t.id} owner=${t.owner ?? "-"}: ${t.title}`),
-      ...wrap.decisions.map((d) => `- decision to apply (${d.phase}): ${d.text}`),
+      ...wrap.decisions.map((d) => `- decision to apply: ${decisionId(s.decisions.indexOf(d))} (in Decisions)`),
       ...wrap.followUps.map(
         (t) => `- follow-up ${t.id} (added in ${t.phase}; users have not seen it): do NOT build it, hand it over: ${t.title}`,
       ),
@@ -237,12 +242,15 @@ function demosShown({ s, m, phase }: Ctx): Demo[] | null {
   return (s.demos ?? []).filter((d) => d.iteration === s.iteration);
 }
 
-/** Decisions are append-only, so the i-th one is always `D{i+1}`; the id is never stored. */
-const decisionId = (i: number) => `D${i + 1}`;
-
 /**
  * Where each decision entry sits in `s.decisions`: the n-th entry with a given author, phase, iteration and text is
  * the n-th such decision, so a decision repeated later still gets its own number.
+ *
+ * `entries` must be the whole transcript from the start, so that "n-th" counts from the same place on both sides.
+ * Matching by key instead of position is deliberate: store.save appends the transcript before it writes the state,
+ * so a crash in between can leave a decision entry with no decision in `s.decisions`. A positional mapping would
+ * then shift the number of every later decision. Key matching leaves only that entry unnumbered, and it falls back
+ * to its full text.
  */
 function decisionIndexes(s: SessionState, entries: readonly Entry[]): Map<Entry, number> {
   const key = (by: string, text: string, phase: string, iteration: number) => JSON.stringify([by, text, phase, iteration]);

@@ -1,7 +1,7 @@
 // A self-contained HTML view of a session for reading it later: the conversation grouped by iteration and
 // phase, with the backlog, decisions, verdicts, questions and trial runs beside it. No external scripts.
 import type { Entry, PersonaSpec, SessionState, Task } from "./types.ts";
-import { answersByQuestion, currentPhase, isPrivate, questionId } from "./world.ts";
+import { answersByQuestion, currentPhase, decisionId, isPrivate, questionId } from "./world.ts";
 
 const LABELS = {
   ja: {
@@ -113,7 +113,7 @@ function taskHtml(t: Task, checkLabel: string): string {
   );
 }
 
-function list<T>(items: T[], render: (x: T) => string, empty: string): string {
+function list<T>(items: T[], render: (x: T, i: number) => string, empty: string): string {
   return items.length ? `<ul>${items.map(render).join("")}</ul>` : `<p class="muted">${empty}</p>`;
 }
 
@@ -235,7 +235,7 @@ body:not(.show-private) .private { display: none }
   ${questions.length ? `<section><h2>${L.questions}</h2>${list(questions, (q) => `<li><b>${q.id}</b> ${body(q.text)} <span class="muted">${esc(nameOf(s, q.by))}</span>${q.answer === undefined ? "" : `<div class="small"><b>${L.answer}:</b> ${body(q.answer)}</div>`}</li>`, L.none)}</section>` : ""}
   <section><h2>${L.verdicts}</h2>${list(s.verdicts, (v) => `<li><span class="kind ${v.verdict}">${v.verdict}</span> ${esc(nameOf(s, v.by))} <span class="muted">${L.iteration} ${v.iteration}</span><div class="small">${body(v.reason)}</div></li>`, L.none)}</section>
   ${trials.length ? `<section><h2>${L.trials}</h2>${list(trials, (t) => `<li><span class="muted">${L.iteration} ${t.iteration}</span> ${t.command ? `<code>${esc(t.command)}</code> → ${t.timedOut ? "timeout" : `exit ${t.exitCode}`}<pre>${esc(t.output.trim())}</pre>${t.artifacts.map((a) => `<div class="small muted">${esc(a)}</div>`).join("")}` : L.none}</li>`, L.none)}</section>` : ""}
-  <section><h2>${L.decisions}</h2>${list(s.decisions, (d) => `<li class="small">${body(d.text)} <span class="muted">${esc(d.phase)}</span></li>`, L.none)}</section>
+  <section><h2>${L.decisions}</h2>${list(s.decisions, (d, i) => `<li class="small"><b>${decisionId(i)}</b> ${body(d.text)} <span class="muted">${esc(d.phase)}</span></li>`, L.none)}</section>
 </aside>
 </main>
 <script>

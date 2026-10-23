@@ -2,6 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { World } from "../src/world.ts";
 import { buildPrompt } from "../src/prompt.ts";
+import { renderHtml } from "../src/html.ts";
+import { formatEntry, renderMarkdown } from "../src/render.ts";
 import type { SectionId, TurnPrompt } from "../src/prompt.ts";
 import { DEFAULT_PHASES } from "../src/sop.ts";
 import type { Entry, PersonaSpec } from "../src/types.ts";
@@ -189,7 +191,10 @@ test("a decision is numbered in the Decisions section and referenced by its numb
   goTo(w, "build");
   for (const id of ["pm", "e1", "u1"]) {
     const prompt = buildPrompt(w.state, id, w.emitted, []);
-    assert.equal(sectionText(prompt, "decisions"), "## Decisions\n- D1: use SQLite\n- D2: one screen only\n- D3: use SQLite");
+    assert.equal(
+      sectionText(prompt, "decisions"),
+      "## Decisions\n- D1 (discovery, PM (pm)): use SQLite\n- D2 (discovery, PM (pm)): one screen only\n- D3 (discovery, PM (pm)): use SQLite",
+    );
     const refs = windowOf(prompt).split("\n").filter((l) => l.includes("decision"));
     assert.deepEqual(refs, [
       "PM (pm) made decision D1 (in Decisions)",
@@ -197,6 +202,77 @@ test("a decision is numbered in the Decisions section and referenced by its numb
       "PM (pm) made decision D3 (in Decisions)",
     ]);
   }
+});
+
+test("a decision repeated after the window scrolls past its first copy is still numbered by its own position", () => {
+  const w = make();
+  rec(w, "pm", "[DECISION] use SQLite");
+  rec(w, "pm", "[DECISION] one screen only");
+  rec(w, "pm", "[DECISION] use SQLite\n[SAY] go");
+  w.state.historyWindow = 2;
+  assert.deepEqual(sectionText(buildPrompt(w.state, "pm", w.emitted, []), "conversation").split("\n"), [
+    "## Conversation so far (latest 2; older entries omitted)",
+    "PM (pm) made decision D3 (in Decisions)",
+    "PM (pm): go",
+  ]);
+});
+
+test("the wrap-up checklist points at a decision by its number instead of repeating it", () => {
+  const w = make();
+  goTo(w, "review");
+  rec(w, "pm", "[DECISION] use SQLite\n[DECISION] one screen only");
+  goTo(w, "wrapup");
+  const prompt = buildPrompt(w.state, "pm", w.emitted, []);
+  const checklist = sectionText(prompt, "wrapup");
+  assert.match(checklist, /- decision to apply: D1 \(in Decisions\)\n- decision to apply: D2 \(in Decisions\)/);
+  assert.ok(!checklist.includes("use SQLite"), "the text stays in Decisions");
+  assert.ok(sectionText(prompt, "decisions").includes("- D2 (review, PM (pm)): one screen only"));
+});
+
+test("a task finished and then handed over shows both its result and its hand-off as references", () => {
+  const w = make();
+  rec(w, "pm", "[TASK owner=e1] Daily view\n- shows 3 rows");
+  rec(w, "e1", "[TASK_DONE T1] built it");
+  rec(w, "e1", "[TASK_BLOCKED T1] the owner must try it on a real phone");
+  const prompt = buildPrompt(w.state, "pm", w.emitted, []);
+  const talk = windowOf(prompt);
+  assert.deepEqual(talk.split("\n").filter((l) => l.includes("T1") && !l.includes("added task")), [
+    "E1 (e1) finished T1 (result in Backlog)",
+    "E1 (e1) handed T1 over to a person (hand-off in Backlog)",
+  ]);
+  const backlog = sectionText(prompt, "backlog");
+  assert.ok(backlog.includes("built it") && backlog.includes("the owner must try it on a real phone"));
+  assert.ok(!talk.includes("built it") && !talk.includes("real phone"));
+});
+
+test("[TASK replaces=...] shows the dropped task's reason as a reference", () => {
+  const w = make();
+  rec(w, "pm", "[TASK owner=e1] Old plan\n- a");
+  rec(w, "pm", "[TASK owner=e1 replaces=T1] New plan\n- b");
+  const prompt = buildPrompt(w.state, "e1", w.emitted, []);
+  assert.deepEqual(windowOf(prompt).split("\n").filter((l) => l.includes("dropped")), ["PM (pm) dropped T1 (reason in Backlog)"]);
+  assert.ok(sectionText(prompt, "backlog").includes("replaced by T2"));
+});
+
+test("a blocked task saved before hand-offs existed still gets its reference", () => {
+  const w = make();
+  rec(w, "pm", "[TASK owner=e1] Daily view");
+  rec(w, "e1", "[TASK_BLOCKED T1] the owner must try it on a real phone");
+  const task = w.state.tasks[0];
+  task.summary = task.handoff;
+  delete task.handoff;
+  const talk = windowOf(buildPrompt(w.state, "pm", w.emitted, []));
+  assert.ok(talk.split("\n").includes("E1 (e1) handed T1 over to a person (hand-off in Backlog)"));
+  assert.ok(!talk.includes("real phone"));
+});
+
+test("a task update logged under the legacy kind task_done becomes a reference when the Backlog holds its text", () => {
+  const w = make();
+  rec(w, "pm", "[TASK owner=e1] Daily view");
+  rec(w, "e1", "[TASK_DONE T1] built it");
+  const entries = w.emitted.map((e) => (e.kind === "task_update" ? ({ ...e, kind: "task_done" } as unknown as Entry) : e));
+  const talk = windowOf(buildPrompt(w.state, "pm", entries, []));
+  assert.ok(talk.split("\n").includes("E1 (e1) finished T1 (result in Backlog)"));
 });
 
 test("a demo is a reference where the Demos section is shown, and stays in full where it is not", () => {
@@ -249,7 +325,7 @@ test("private memos and notes stay in full and say they are the member's own", (
   assert.doesNotMatch(windowOf(buildPrompt(w.state, "u1", w.emitted, [])), /memo|users are on phones/);
 });
 
-test("no line the conversation adds looks like a reply tag, while the protocol help still lists the tags", () => {
+test("no member line in the conversation looks like a reply tag, while the protocol help still lists the tags", () => {
   const w = make();
   rec(w, "pm", "[THINK] plan\n[NOTE] n\n[SAY to=e1] hi\n[TASK owner=e1] A\n- a\n[DECISION] d\n[ASK_HUMAN] q?");
   rec(w, "e1", "[TASK_START T1]\n[TASK_DONE T1] done it\n[DEMO T1] ran it\n[VERIFY] npm test\n[SAY] done");
@@ -265,9 +341,7 @@ test("no line the conversation adds looks like a reply tag, while the protocol h
   assert.match(sectionText(buildPrompt(w.state, "e1", w.emitted, []), "turn"), /\[TASK_DONE T1\]/);
 });
 
-test("the transcript, the log and the HTML view keep the full tagged text", async () => {
-  const { formatEntry, renderMarkdown } = await import("../src/render.ts");
-  const { renderHtml } = await import("../src/html.ts");
+test("the transcript, the log and the HTML view keep the full tagged text and show decision numbers", () => {
   const w = make();
   rec(w, "pm", "[TASK owner=e1] Daily view\n- shows 3 rows\n[DECISION] use SQLite");
   rec(w, "e1", "[TASK_DONE T1] built it\n[DEMO T1] ran it");
@@ -281,7 +355,10 @@ test("the transcript, the log and the HTML view keep the full tagged text", asyn
   ])
     assert.ok(md.includes(text), `transcript.md has ${JSON.stringify(text)}`);
   assert.equal(formatEntry(w.state, w.emitted.find((e) => e.kind === "decision")!), "PM (pm) [DECISION]: use SQLite");
-  assert.ok(renderHtml(w.state, w.emitted).includes("use SQLite"));
+  assert.ok(md.includes("- D1 (discovery, PM (pm)) use SQLite"), "transcript.md numbers its decisions");
+  const sidebar = renderHtml({ ...w.state, language: "en" }, w.emitted).split("<aside>")[1];
+  const decisions = sidebar.split("<h2>Decisions</h2>")[1].split("</section>")[0];
+  assert.ok(decisions.includes("<b>D1</b> use SQLite"), "the HTML decisions sidebar numbers its decisions");
   const talk = windowOf(buildPrompt(w.state, "pm", w.emitted, []));
   assert.ok(!talk.includes("[DECISION]") && !talk.includes("[DEMO]") && !talk.includes("[TASK]"));
 });

@@ -450,6 +450,9 @@ const TASK_STATUS: Record<string, TaskStatus> = {
 /** Questions are append-only, so the i-th one is always `Q{i+1}`; the id is never stored. */
 export const questionId = (i: number) => `Q${i + 1}`;
 
+/** Decisions are append-only, so the i-th one is always `D{i+1}`; the id is never stored. */
+export const decisionId = (i: number) => `D${i + 1}`;
+
 /** The latest answer per question id from `team answer` entries (a later one replaces an earlier one). */
 export function answersByQuestion(entries: readonly Entry[]): Map<string, string> {
   const out = new Map<string, string>();
