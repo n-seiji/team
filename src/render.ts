@@ -1,5 +1,5 @@
 import type { Entry, SessionState, Task } from "./types.ts";
-import { answersByQuestion, currentPhase, findMember, isPrivate, questionId } from "./world.ts";
+import { answersByQuestion, currentPhase, decisionId, findMember, isPrivate, questionId } from "./world.ts";
 
 const indent = (text: string, pad: string) => text.replace(/\n/g, "\n" + pad);
 
@@ -72,7 +72,7 @@ export function renderMarkdown(s: SessionState, entries: Entry[]): string {
   out.push("", "## Backlog", "");
   out.push(formatBacklog(s.tasks, "_(none)_"));
   out.push("", "## Decisions", "");
-  out.push(s.decisions.length ? s.decisions.map((d) => `- (${d.phase}, ${displayName(s, d.by)}) ${d.text}`).join("\n") : "_(none)_");
+  out.push(s.decisions.length ? s.decisions.map((d, i) => `- ${decisionId(i)} (${d.phase}, ${displayName(s, d.by)}) ${d.text}`).join("\n") : "_(none)_");
   const questions = s.questions ?? [];
   if (questions.length) {
     out.push("", "## Questions for the human", "");
