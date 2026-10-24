@@ -331,3 +331,34 @@ test("the finish summary counts only questions that were not answered before the
     else assert.match(log, /Session finished.*1 question\(s\) for the human/);
   }
 });
+
+test("status and both transcripts show a task's checks and hand-off", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "c1", "--brief", "x");
+  const file = path.join(dir, ".team/sessions/c1/state.json");
+  const state = JSON.parse(fs.readFileSync(file, "utf8"));
+  const task = { acceptance: "", owner: "eng-backend", createdBy: "pm" };
+  state.tasks = [
+    { ...task, id: "T1", title: "Save entry", status: "done", summary: "built in app.js", checks: ["Enter saves on a real phone"] },
+    { ...task, id: "T2", title: "Export", status: "done", summary: "built in export.js" },
+    { ...task, id: "T3", title: "Publish", status: "blocked", summary: "works locally", handoff: "publishing needs the owner's account" },
+    { ...task, id: "T4", title: "Print", status: "blocked", summary: "needs a printer" },
+  ];
+  fs.writeFileSync(file, JSON.stringify(state));
+
+  const status = await run(dir, "status");
+  assert.ok(status.includes("- T1 [done] owner=eng-backend Save entry\n    result: built in app.js\n    check by a person: Enter saves on a real phone\n- T2 [done]"));
+  assert.ok(status.includes("- T3 [blocked] owner=eng-backend Publish\n    result: works locally\n    needs a person: publishing needs the owner's account\n- T4 [blocked]"));
+  assert.ok(status.includes("- T4 [blocked] owner=eng-backend Print\n    needs a person: needs a printer"));
+  const json = JSON.parse(await run(dir, "status", "--json"));
+  assert.deepEqual([json.tasks[0].checks, json.tasks[2].handoff], [["Enter saves on a real phone"], "publishing needs the owner's account"]);
+
+  await run(dir, "say", "hello"); // saving regenerates the transcripts
+  const md = fs.readFileSync(path.join(dir, ".team/sessions/c1/transcript.md"), "utf8");
+  assert.ok(md.includes("result: built in app.js\n    check by a person: Enter saves on a real phone"));
+  assert.ok(md.includes("result: works locally\n    needs a person: publishing needs the owner's account"));
+  const html = fs.readFileSync(path.join(dir, ".team/sessions/c1/transcript.html"), "utf8");
+  const aside = html.split("<aside>")[1].split("</aside>")[0];
+  assert.ok(aside.includes("Enter saves on a real phone"));
+  assert.ok(aside.includes("publishing needs the owner's account"));
+});

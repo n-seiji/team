@@ -87,6 +87,9 @@ export const ACTION_HELP: Record<string, string> = {
   TASK_BLOCKED:
     "[TASK_BLOCKED T1] only a real person outside the team can finish this (a real device, an account, a permission, " +
     "publishing); say exactly what they must do. The team moves on",
+  CHECK:
+    "[CHECK T1] something only a real person can check on built task T1 (try it on a real phone, print the sheet); " +
+    "say exactly what to check. T1 stays done",
   TASK_DROP: "[TASK_DROP T1] close a task the team will not do, with the reason (a dropped task cannot be reopened; add a new [TASK])",
   ASK_HUMAN:
     "[ASK_HUMAN] a question only the real human can answer (a product or preference call, a permission, money, " +

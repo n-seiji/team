@@ -65,8 +65,8 @@ Repeat until the session is `done`, or until the stopping point the user asked f
 
 ## 3. Finish
 
-- Show `team status` (backlog with results, tasks waiting on a person, questions for the human) and the users'
-  verdicts, and point to
+- Show `team status` (backlog with results, hand-offs for tasks waiting on a person, checks a person should make on built
+  tasks, questions for the human) and the users' verdicts, and point to
   `.team/sessions/<name>/transcript.html` (the full conversation to read in a browser; `transcript.md` is the same in
   Markdown) and `workspace/<name>/`. Trial runs and screenshots are in `.team/sessions/<name>/artifacts/`.
 - Suggest next steps: another iteration (if users rejected and iterations remain the engine already looped back to

@@ -39,7 +39,7 @@ Key properties:
 | acceptance | users, PM | First the engine itself runs the `[VERIFY]` command and keeps its real output and files (screenshots etc.) as a **trial run**. Users start from that trial run and the demos, read the result and give `[VERDICT accept/reject]`; the PM sums up |
 | wrapup | engineers, PM | Only when the session is about to finish with open tasks, or with decisions made in review / acceptance that nobody has applied yet. Engineers apply them; tasks added in acceptance are handed over, not built, and the PM lists what is left for the real human |
 
-If any user rejects, or the PM turns users' conditions into new tasks in acceptance, and the iteration limit (`maxIterations`) has not been reached, the team goes back to planning so users see the result. Each phase ends after its maximum number of rounds, or earlier when the PM sends `[ADVANCE]`. When the session finishes, the last log line names any task that is still open.
+If any user rejects, or the PM turns users' conditions into new tasks in acceptance, and the iteration limit (`maxIterations`) has not been reached, the team goes back to planning so users see the result. Each phase ends after its maximum number of rounds, or earlier when the PM sends `[ADVANCE]`. When the session finishes, the last log line names any task that is still open, waiting on a person, or built but needing a person's check.
 
 ### Conversation protocol
 
@@ -54,6 +54,7 @@ acceptance criteria (on the following lines)
 [TASK owner=eng-backend replaces=T1] a task that supersedes T1 (T1 is closed)
 [TASK_DONE T1] what was implemented, in which files, and how it was verified (the command and its result, or "not run")
 [TASK_BLOCKED T1] only a real person can finish this (a real device, an account, publishing): what they must do
+[CHECK T1] something only a real person can check on a built task (try it on a real phone); the task stays done
 [TASK_DROP T1] close a task the team will not do (PM only), with the reason; it cannot be reopened
 [ASK_HUMAN] a question only the real human can answer, plus the default the team goes ahead with
 [DEMO T1] what a user does and sees, with real output (pasted, or a generated file / screenshot path)

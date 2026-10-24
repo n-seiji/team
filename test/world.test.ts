@@ -340,7 +340,7 @@ test("a round leaves room for several question-and-answer exchanges", () => {
   assert.ok(order.filter((id) => id === "pm").length >= 2, `pm follows up more than once: ${order.join(",")}`);
 });
 
-test("a dropped task stays closed: later start, done, blocked or drop reports are ignored", () => {
+test("a dropped task stays closed: later start, done, blocked, check or drop reports are ignored", () => {
   const w = make();
   toBuild(w);
   w.record("pm", "[TASK_DROP T2] out of scope", { force: true });
@@ -350,7 +350,7 @@ test("a dropped task stays closed: later start, done, blocked or drop reports ar
   assert.deepEqual(before, [["dropped", "replaced by T3", "e1"], ["dropped", "out of scope", "e2"]]);
 
   const log = w.emitted.length;
-  w.record("e1", "[TASK_START T1]\n[TASK_DONE T1] did A\n[TASK_BLOCKED T1] needs a phone");
+  w.record("e1", "[TASK_START T1]\n[TASK_DONE T1] did A\n[TASK_BLOCKED T1] needs a phone\n[CHECK T1] try it");
   w.record("pm", "[TASK_DROP T1] again", { force: true });
   w.record("e2", "[TASK_START T2]");
   assert.deepEqual(closed(), before);
@@ -359,6 +359,7 @@ test("a dropped task stays closed: later start, done, blocked or drop reports ar
     "Ignored [TASK_START] from e1: T1 is already dropped.",
     "Ignored [TASK_DONE] from e1: T1 is already dropped.",
     "Ignored [TASK_BLOCKED] from e1: T1 is already dropped.",
+    "Ignored [CHECK] from e1: T1 is already dropped.",
     "Ignored [TASK_DROP] from pm: T1 is already dropped.",
     "Ignored [TASK_START] from e2: T2 is already dropped.",
   ]);
@@ -572,4 +573,288 @@ test("a question can still be answered after the session is done, and the answer
 test("the end-of-session summary reports only questions still waiting for the human", () => {
   assert.match(finishedWithQuestion(false).emitted.at(-1)!.text, /1 question\(s\) for the human/);
   assert.doesNotMatch(finishedWithQuestion(true).emitted.at(-1)!.text, /question\(s\) for the human/);
+});
+
+const CHECK = "try it on a real phone: does Enter save the entry?";
+const HANDOFF = "publishing needs a login only the owner has";
+
+/** A one-iteration session in which both users accepted and the PM has not yet closed acceptance. */
+function acceptedOnce(): World {
+  const w = make(1);
+  toAcceptance(w);
+  w.record("u1", "[VERDICT accept] ok");
+  w.record("u2", "[VERDICT accept] ok");
+  return w;
+}
+
+/** In acceptance: T1 is built with a check for a person, T2 is built but handed over to one. */
+function withCheckAndHandoff(): World {
+  const w = make();
+  toBuild(w);
+  w.record("e1", "[TASK_DONE T1] did A");
+  w.record("e2", `[TASK_DONE T2] did B\n[TASK_BLOCKED T2] ${HANDOFF}`);
+  w.record("e1", "lgtm");
+  w.record("e2", "lgtm");
+  w.record("pm", `ready\n[CHECK T1] ${CHECK}`);
+  assert.equal(w.phase.id, "acceptance");
+  return w;
+}
+
+/** The system lines of the log since entry number `from` that say a report was ignored. */
+const ignoredSince = (w: World, from: number) =>
+  w.emitted.slice(from).filter((e) => e.kind === "system" && e.text.startsWith("Ignored")).map((e) => e.text);
+
+/** One task's block of lines in the Backlog section of a prompt. */
+const backlogTask = (prompt: string, id: string) =>
+  section(prompt, /^Backlog/).split(/\n(?=- T\d+ )/).find((t) => t.startsWith(`- ${id} `)) ?? "";
+
+test("[CHECK] on a built task adds a check for a person and changes neither its status nor its summary", () => {
+  const w = acceptedOnce();
+  const log = w.emitted.length;
+  w.record("pm", `[CHECK T1] ${CHECK}`);
+
+  const t = w.state.tasks[0];
+  assert.deepEqual([t.status, t.summary, t.handoff, t.checks], ["done", "ok", undefined, [CHECK]]);
+  assert.deepEqual(w.emitted.slice(log).filter((e) => e.kind === "task_update").map((e) => e.text), [`T1 check by a person: ${CHECK}`]);
+  assert.deepEqual(ignoredSince(w, log), []);
+});
+
+test("[CHECK] on a task that is not done is ignored and points to [TASK_BLOCKED]", () => {
+  const w = make();
+  toBuild(w);
+  const log = w.emitted.length;
+  w.record("e1", "[TASK_START T1]\n[CHECK T1] a\n[CHECK T2] b");
+  w.record("e2", "[TASK_BLOCKED T2] needs the owner's key\n[CHECK T2] c");
+
+  assert.deepEqual(w.state.tasks.map((t) => [t.status, t.checks]), [["doing", undefined], ["blocked", undefined]]);
+  const ignored = ignoredSince(w, log);
+  assert.equal(ignored.length, 3);
+  for (const line of ignored) assert.match(line, /^Ignored \[CHECK\] from e[12]: T[12] is not done\. .*\[TASK_BLOCKED\]/);
+});
+
+test("[CHECK] ignores an exact duplicate and an empty text, and keeps different checks in order", () => {
+  const w = acceptedOnce();
+  const log = w.emitted.length;
+  w.record("pm", `[CHECK T1] ${CHECK}\n[CHECK T1] ${CHECK}\n[CHECK T1] print the sheet and check that it fits A4\n[CHECK T1]`);
+
+  assert.deepEqual(w.state.tasks[0].checks, [CHECK, "print the sheet and check that it fits A4"]);
+  assert.deepEqual(ignoredSince(w, log), [
+    "Ignored [CHECK] from pm: T1 already has that check.",
+    "Ignored [CHECK] from pm: say what a person should check on T1.",
+  ]);
+});
+
+test("the PM and engineers can add checks; users cannot", () => {
+  const w = make();
+  toBuild(w);
+  w.record("e1", "[TASK_DONE T1] did A\n[CHECK T1] not tried on a real phone");
+  w.record("e2", "[TASK_DONE T2] did B");
+  w.record("pm", "[CHECK T2] print it", { force: true });
+  assert.deepEqual(w.state.tasks.map((t) => t.checks), [["not tried on a real phone"], ["print it"]]);
+
+  const log = w.emitted.length;
+  w.record("u1", "[CHECK T1] sneaky", { force: true });
+  assert.deepEqual(ignoredSince(w, log), ['Ignored [CHECK] from u1: not allowed for role "user".']);
+  assert.deepEqual(w.state.tasks[0].checks, ["not tried on a real phone"]);
+});
+
+test("[CHECK] on a dropped task is ignored like any other report", () => {
+  const w = make();
+  toBuild(w);
+  w.record("e1", "[TASK_DONE T1] did A");
+  w.record("pm", "[TASK_DROP T1] out of scope", { force: true });
+  const log = w.emitted.length;
+  w.record("pm", "[CHECK T1] try it\n[CHECK T9] nothing", { force: true });
+  assert.deepEqual(ignoredSince(w, log), [
+    "Ignored [CHECK] from pm: T1 is already dropped.",
+    'Ignored [CHECK] from pm: unknown task "T9".',
+  ]);
+  assert.equal(w.state.tasks[0].checks, undefined);
+});
+
+test("[TASK_BLOCKED] hands work to a person: the task is blocked and the hand-off is kept apart from the summary", () => {
+  const w = make();
+  toBuild(w);
+  w.record("e1", "[TASK_START T1]\n[TASK_BLOCKED T1] needs a real phone to scan the QR");
+  w.record("e2", "[TASK_BLOCKED T2] only the owner can create the API key");
+  assert.deepEqual(
+    w.state.tasks.map((t) => [t.status, t.summary, t.handoff, t.checks]),
+    [
+      ["blocked", undefined, "needs a real phone to scan the QR", undefined],
+      ["blocked", undefined, "only the owner can create the API key", undefined],
+    ],
+  );
+  assert.deepEqual(
+    w.emitted.filter((e) => e.kind === "task_update").map((e) => e.text),
+    ["T1 → doing", "T1 → blocked: needs a real phone to scan the QR", "T2 → blocked: only the owner can create the API key"],
+  );
+});
+
+test("[TASK_DONE] then [TASK_BLOCKED] in one reply blocks the task, keeps what was done, and is reported as waiting on a person", async () => {
+  const { formatTask } = await import("../src/render.ts");
+  const w = make(1);
+  toBuild(w);
+  w.record("e1", `[TASK_DONE T1] works locally\n[TASK_BLOCKED T1] ${HANDOFF}`);
+  w.record("e2", "[TASK_DONE T2] ok");
+
+  const t = w.state.tasks[0];
+  assert.deepEqual([t.status, t.summary, t.handoff, t.checks], ["blocked", "works locally", HANDOFF, undefined]);
+  assert.equal(
+    formatTask(t),
+    `- T1 [blocked] owner=e1 A\n    acceptance: - a works\n    result: works locally\n    needs a person: ${HANDOFF}`,
+  );
+
+  w.record("e1", "lgtm");
+  w.record("e2", "lgtm");
+  w.record("pm", "ready");
+  w.record("u1", "[VERDICT accept] ok");
+  w.record("u2", "[VERDICT accept] ok");
+  w.record("pm", "thanks");
+  assert.equal(w.emitted.at(-1)!.text, "Session finished after iteration 1. 2/2 users accepted. Waiting on a person: T1 (A).");
+});
+
+test("a blocked task that is started or finished again no longer has a hand-off", () => {
+  const w = make();
+  toBuild(w);
+  const t = w.state.tasks[0];
+  w.record("e1", "[TASK_BLOCKED T1] needs a phone");
+  assert.deepEqual([t.status, t.handoff], ["blocked", "needs a phone"]);
+  w.record("e1", "[TASK_START T1]", { force: true });
+  assert.deepEqual([t.status, t.handoff], ["doing", undefined]);
+  w.record("e1", "[TASK_BLOCKED T1] needs a phone again\n[TASK_DONE T1] built it without the phone", { force: true });
+  assert.deepEqual([t.status, t.summary, t.handoff], ["done", "built it without the phone", undefined]);
+});
+
+test("a task keeps its checks when it is reopened and finished again, and further checks are added after them", () => {
+  const w = make();
+  toBuild(w);
+  w.record("e1", "[TASK_DONE T1] did A");
+  w.record("e2", "[TASK_DONE T2] did B");
+  assert.equal(w.phase.id, "review");
+  w.record("pm", `[CHECK T1] ${CHECK}`, { force: true });
+  const t = w.state.tasks[0];
+  assert.deepEqual([t.status, t.summary, t.checks], ["done", "did A", [CHECK]]);
+
+  w.record("e1", "[TASK_START T1] fixing what e2 found");
+  assert.deepEqual([t.status, t.summary, t.checks], ["doing", "did A", [CHECK]]);
+  w.record("e1", "[TASK_DONE T1] did A and fixed the finding", { force: true });
+  assert.deepEqual([t.status, t.summary, t.checks], ["done", "did A and fixed the finding", [CHECK]]);
+
+  w.record("pm", "[CHECK T1] print the sheet and check that it fits A4", { force: true });
+  assert.deepEqual(t.checks, [CHECK, "print the sheet and check that it fits A4"]);
+});
+
+test("a check survives a rejection into the next iteration and shows in the PM's planning prompt", async () => {
+  const { buildPrompt } = await import("../src/prompt.ts");
+  const w = make(2);
+  toAcceptance(w);
+  w.record("u1", "[VERDICT reject] I want it on my phone");
+  w.record("u2", "[VERDICT accept] ok");
+  w.record("pm", `[CHECK T1] ${CHECK}\n[DECISION] fix it`);
+
+  assert.deepEqual([w.state.iteration, w.phase.id], [2, "planning"]);
+  assert.deepEqual([w.state.tasks[0].status, w.state.tasks[0].checks], ["done", [CHECK]]);
+  assert.ok(backlogTask(buildPrompt(w.state, "pm", w.emitted, []).user, "T1").includes(`\n    check by a person: ${CHECK}`));
+});
+
+test("the finish summary lists built tasks that need a check, apart from tasks waiting on a person and still open", () => {
+  const w = acceptedOnce();
+  w.record("pm", `[CHECK T1] ${CHECK}`);
+  assert.equal(w.state.status, "done");
+  assert.equal(w.emitted.at(-1)!.text, "Session finished after iteration 1. 2/2 users accepted. Built, a person should check: T1 (A).");
+
+  const mixed = make(1);
+  toBuild(mixed);
+  mixed.record("e1", "[TASK_DONE T1] ok");
+  mixed.record("e2", "[TASK_BLOCKED T2] only the owner can create the API key");
+  mixed.record("e1", "lgtm");
+  mixed.record("e2", "lgtm");
+  mixed.record("pm", "ready");
+  mixed.record("u1", "[VERDICT accept] ok");
+  mixed.record("u2", "[VERDICT accept] ok");
+  mixed.record("pm", `[CHECK T1] ${CHECK}\n[TASK owner=e1] later\n- x`);
+  assert.equal(mixed.phase.id, "wrapup");
+  for (const id of ["e1", "e2", "pm"]) mixed.record(id, "noted");
+  assert.equal(mixed.state.status, "done");
+  assert.equal(
+    mixed.emitted.at(-1)!.text,
+    "Session finished after iteration 1. 2/2 users accepted. Built, a person should check: T1 (A). Still open: T3 (later). Waiting on a person: T2 (B).",
+  );
+});
+
+test("a task handed over after its check counts as waiting on a person, not as built", () => {
+  const w = acceptedOnce();
+  w.record("pm", `[CHECK T1] ${CHECK}\n[CHECK T2] ${CHECK}\n[TASK_BLOCKED T1] ${HANDOFF}`);
+  assert.equal(
+    w.emitted.at(-1)!.text,
+    "Session finished after iteration 1. 2/2 users accepted. Built, a person should check: T2 (B). Waiting on a person: T1 (A).",
+  );
+});
+
+test("a session without checks ends with no built-with-checks line", () => {
+  assert.doesNotMatch(finishedWithQuestion(false).emitted.at(-1)!.text, /Built/);
+});
+
+test("tasks without a hand-off or checks render as before, whatever their status", async () => {
+  const { formatTask } = await import("../src/render.ts");
+  const base = { id: "T1", title: "A", acceptance: "- a works", owner: "e1", createdBy: "pm" };
+  const acc = "\n    acceptance: - a works";
+  const summary = "did A\nsecond line";
+  assert.equal(formatTask({ ...base, status: "todo" }), `- T1 [todo] owner=e1 A${acc}`);
+  assert.equal(formatTask({ ...base, status: "done", summary }), `- T1 [done] owner=e1 A${acc}\n    result: did A\n    second line`);
+  assert.equal(formatTask({ ...base, status: "dropped", summary }), `- T1 [dropped] owner=e1 A${acc}\n    dropped: did A\n    second line`);
+  // Sessions saved before hand-offs kept a blocked task's hand-off in its summary.
+  assert.equal(formatTask({ ...base, status: "blocked", summary }), `- T1 [blocked] owner=e1 A${acc}\n    needs a person: did A\n    second line`);
+  assert.equal(formatTask({ id: "T2", title: "B", acceptance: "", status: "todo", createdBy: "pm" }), "- T2 [todo] owner=- B");
+});
+
+test("a task shows its result, then what a person must do, then each check on its own line", async () => {
+  const { formatTask } = await import("../src/render.ts");
+  const base = { id: "T5", title: "Save entry", acceptance: "- Enter saves", owner: "e1", createdBy: "pm" };
+  const head = "- T5 [blocked] owner=e1 Save entry\n    acceptance: - Enter saves";
+  assert.equal(
+    formatTask({ ...base, status: "blocked", summary: "built in app.js", handoff: "publish it\nwith the org login" }),
+    `${head}\n    result: built in app.js\n    needs a person: publish it\n    with the org login`,
+  );
+  assert.equal(formatTask({ ...base, status: "blocked", handoff: "publish it" }), `${head}\n    needs a person: publish it`);
+  assert.equal(
+    formatTask({ ...base, status: "done", summary: "built in app.js", checks: ["Enter saves on a real phone", "print it\nand check A4"] }),
+    "- T5 [done] owner=e1 Save entry\n    acceptance: - Enter saves\n    result: built in app.js\n" +
+      "    check by a person: Enter saves on a real phone\n    check by a person: print it\n    and check A4",
+  );
+});
+
+test("prompts show a task's checks and hand-off in the backlog to every role", async () => {
+  const { buildPrompt } = await import("../src/prompt.ts");
+  const w = withCheckAndHandoff();
+  for (const id of ["u1", "pm", "e1"]) {
+    const prompt = buildPrompt(w.state, id, w.emitted, []).user;
+    const t1 = backlogTask(prompt, "T1");
+    const t2 = backlogTask(prompt, "T2");
+    assert.ok(t1.includes(`\n    result: did A\n    check by a person: ${CHECK}`), `${id}: T1 has its result and check`);
+    assert.ok(!t1.includes("needs a person"), `${id}: T1 is not handed over`);
+    assert.ok(t2.includes(`\n    result: did B\n    needs a person: ${HANDOFF}`), `${id}: T2 has its result and hand-off`);
+    assert.ok(!t2.includes("check by a person"), `${id}: T2 has no check`);
+  }
+});
+
+test("the markdown and HTML transcripts list checks and hand-offs in the backlog", async () => {
+  const { renderMarkdown } = await import("../src/render.ts");
+  const { renderHtml } = await import("../src/html.ts");
+  const w = withCheckAndHandoff();
+
+  const md = renderMarkdown(w.state, w.emitted).split("## Decisions")[0];
+  assert.ok(md.includes(`result: did A\n    check by a person: ${CHECK}`));
+  assert.ok(md.includes(`result: did B\n    needs a person: ${HANDOFF}`));
+
+  const side = (html: string) => html.split("<aside>")[1].split("</aside>")[0];
+  const ja = side(renderHtml(w.state, w.emitted));
+  assert.ok(ja.includes(`人が確認:</span> ${CHECK}`));
+  assert.ok(side(renderHtml({ ...w.state, language: "en" }, w.emitted)).includes(`check by a person:</span> ${CHECK}`));
+  assert.ok(ja.includes(`<summary>result</summary><div class="muted small text">did B</div></details><details class="sub"><summary>blocked</summary><div class="muted small text">${HANDOFF}</div>`));
+
+  const legacy = { ...w.state, tasks: [{ ...w.state.tasks[1], handoff: undefined, summary: HANDOFF }] };
+  const old = side(renderHtml(legacy, w.emitted));
+  assert.ok(old.includes(`<summary>blocked</summary><div class="muted small text">${HANDOFF}</div>`));
+  assert.ok(!old.includes("<summary>result</summary>"));
 });

@@ -11,6 +11,7 @@ const LABELS = {
     phase: "フェーズ",
     team: "メンバー",
     backlog: "タスク",
+    check: "人が確認",
     decisions: "決定",
     verdicts: "判定",
     questions: "人への質問",
@@ -30,6 +31,7 @@ const LABELS = {
     phase: "phase",
     team: "Team",
     backlog: "Backlog",
+    check: "check by a person",
     decisions: "Decisions",
     verdicts: "Verdicts",
     questions: "Questions for the human",
@@ -96,11 +98,17 @@ function entryHtml(s: SessionState, e: Entry): string {
   );
 }
 
-function taskHtml(t: Task): string {
+function taskHtml(t: Task, checkLabel: string): string {
+  const sub = (label: string, text: string) =>
+    `<details class="sub"><summary>${label}</summary><div class="muted small text">${body(text)}</div></details>`;
+  // A blocked task with a hand-off keeps what was done in its summary; older sessions kept the hand-off there.
+  const summaryLabel = t.status === "done" || (t.status === "blocked" && t.handoff !== undefined) ? "result" : t.status;
   return (
     `<li><span class="st st-${t.status}">${t.status}</span> <b>${t.id}</b> ${esc(t.title)}` +
     (t.owner ? ` <span class="muted">${esc(t.owner)}</span>` : "") +
-    (t.summary ? `<details class="sub"><summary>${t.status === "done" ? "result" : t.status}</summary><div class="muted small text">${body(t.summary)}</div></details>` : "") +
+    (t.summary ? sub(summaryLabel, t.summary) : "") +
+    (t.status === "blocked" && t.handoff ? sub(t.status, t.handoff) : "") +
+    (t.checks ?? []).map((c) => `<div class="small text"><span class="muted">${checkLabel}:</span> ${body(c)}</div>`).join("") +
     `</li>`
   );
 }
@@ -223,7 +231,7 @@ body:not(.show-private) .private { display: none }
 </div>
 <aside>
   <section><h2>${L.team}</h2>${list(s.members, people, L.none)}</section>
-  <section><h2>${L.backlog}</h2>${list(s.tasks, taskHtml, L.none)}</section>
+  <section><h2>${L.backlog}</h2>${list(s.tasks, (t) => taskHtml(t, L.check), L.none)}</section>
   ${questions.length ? `<section><h2>${L.questions}</h2>${list(questions, (q) => `<li><b>${q.id}</b> ${body(q.text)} <span class="muted">${esc(nameOf(s, q.by))}</span>${q.answer === undefined ? "" : `<div class="small"><b>${L.answer}:</b> ${body(q.answer)}</div>`}</li>`, L.none)}</section>` : ""}
   <section><h2>${L.verdicts}</h2>${list(s.verdicts, (v) => `<li><span class="kind ${v.verdict}">${v.verdict}</span> ${esc(nameOf(s, v.by))} <span class="muted">${L.iteration} ${v.iteration}</span><div class="small">${body(v.reason)}</div></li>`, L.none)}</section>
   ${trials.length ? `<section><h2>${L.trials}</h2>${list(trials, (t) => `<li><span class="muted">${L.iteration} ${t.iteration}</span> ${t.command ? `<code>${esc(t.command)}</code> → ${t.timedOut ? "timeout" : `exit ${t.exitCode}`}<pre>${esc(t.output.trim())}</pre>${t.artifacts.map((a) => `<div class="small muted">${esc(a)}</div>`).join("")}` : L.none}</li>`, L.none)}</section>` : ""}
