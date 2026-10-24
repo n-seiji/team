@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import * as http from "node:http";
 import type { AddressInfo } from "node:net";
 import { AnthropicBackend } from "../src/backends/anthropic.ts";
-const turn = { member: "pm", role: "pm", canEdit: false, system: "s", user: "u" };
+const turn = { member: "pm", role: "pm", canEdit: false, system: "s", user: "u", sections: [] };
 
 async function replyTo(body: object) {
   const server = http.createServer((_req, res) => res.setHeader("content-type", "application/json").end(JSON.stringify(body)));

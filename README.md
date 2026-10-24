@@ -39,7 +39,7 @@ Key properties:
 | acceptance | users, PM | First the engine itself runs the `[VERIFY]` command and keeps its real output and files (screenshots etc.) as a **trial run**. Users start from that trial run and the demos, read the result and give `[VERDICT accept/reject]`; the PM sums up |
 | wrapup | engineers, PM | Only when the session is about to finish with open tasks, or with decisions made in review / acceptance that nobody has applied yet. Engineers apply them; tasks added in acceptance are handed over, not built, and the PM lists what is left for the real human |
 
-If any user rejects, or the PM turns users' conditions into new tasks in acceptance, and the iteration limit (`maxIterations`) has not been reached, the team goes back to planning so users see the result. Each phase ends after its maximum number of rounds, or earlier when the PM sends `[ADVANCE]`. When the session finishes, the last log line names any task that is still open.
+If any user rejects, or the PM turns users' conditions into new tasks in acceptance, and the iteration limit (`maxIterations`) has not been reached, the team goes back to planning so users see the result. Each phase ends after its maximum number of rounds, or earlier when the PM sends `[ADVANCE]`. When the session finishes, the last log line names any task that is still open, waiting on a person, or built but needing a person's check.
 
 ### Conversation protocol
 
@@ -54,6 +54,7 @@ acceptance criteria (on the following lines)
 [TASK owner=eng-backend replaces=T1] a task that supersedes T1 (T1 is closed)
 [TASK_DONE T1] what was implemented, in which files, and how it was verified (the command and its result, or "not run")
 [TASK_BLOCKED T1] only a real person can finish this (a real device, an account, publishing): what they must do
+[CHECK T1] something only a real person can check on a built task (try it on a real phone); the task stays done
 [TASK_DROP T1] close a task the team will not do (PM only), with the reason; it cannot be reopened
 [ASK_HUMAN] a question only the real human can answer, plus the default the team goes ahead with
 [DEMO T1] what a user does and sees, with real output (pasted, or a generated file / screenshot path)
@@ -76,7 +77,7 @@ Open this repository in Claude Code and run:
 /team-dev A tool that lets freelancers create an invoice from the terminal in under a minute
 ```
 
-Claude Code then repeats `team next` → subagent → `team record`. Anything you say mid-session that is meant for the team ("tell them the budget is small") is shared with every member through `team say`. You can also set a stopping point, such as "just discovery" or "up to the next phase".
+Claude Code then repeats `team next` → subagent → `team record`. Anything you say mid-session that is meant for the team ("tell them the budget is small") is shared with every member through `team say`. When a member asks you something with `[ASK_HUMAN]`, the team goes ahead on the default it stated; the question shows up with an id (`Q1`, `Q2`, ...) in `team status`, and `team answer Q2 "..."` answers that one question (the answer overrides the default in every later prompt). You can also set a stopping point, such as "just discovery" or "up to the next phase".
 
 - Full conversation, including each member's private thoughts: `.team/sessions/<name>/transcript.md`, or `transcript.html` to read it in a browser (grouped by phase, filter by member, private memos hidden by default; `team log --html` prints its path and renders it for older sessions)
 - Trial runs and evidence files: `.team/sessions/<name>/artifacts/`
@@ -102,6 +103,7 @@ node src/main.ts run --backend mock                              # walk the flow
 node src/main.ts log --tail 20 --no-thoughts                     # transcript
 node src/main.ts stats                                           # real tokens and cost per phase and role (--json for scripts)
 node src/main.ts say "Let's focus on sole proprietors"           # speak to the team as the human
+node src/main.ts answer Q2 "Yes, publish it"                     # answer one of the team's questions (ids are in status)
 ```
 
 #### Working on an existing repository
@@ -121,7 +123,7 @@ With `--workspace` the folder is used in place (no `workspace/<session>/` is cre
 To drive host mode yourself (for example from another agent framework):
 
 ```bash
-node src/main.ts next --json          # → pending: [{ member, role, subagent, canEdit, promptFile }]
+node src/main.ts next --json          # → pending: [{ member, role, subagent, canEdit, promptFile }], openQuestions: [{ id, by, text }]
 # give promptFile to an LLM and collect its reply
 node src/main.ts record --as pm --file reply.txt [--tokens N] [--duration-ms N]   # optional: the token total and duration the orchestrator reported for the turn, for team stats
 ```
@@ -148,7 +150,7 @@ A `claude-cli` turn that runs longer than `TEAM_TURN_TIMEOUT` seconds (default 1
   - `iterationStart`: where the next iteration restarts after a rejection
   - `finale`: a wrap-up phase, skipped in the normal order and run once before finishing when work is left
 - **Language**: `language` (default `ja`) is the language the agents speak.
-- **Memory length**: `historyWindow` is the number of recent transcript entries included in each prompt.
+- **Memory length**: `historyWindow` is the number of recent transcript entries included in each prompt. In the prompt, an entry whose full text the same prompt already shows in the Backlog, Decisions or Demos section (a task, a task update, a decision, a demo) appears as a one-line reference; `transcript.md` and `team log` keep the full text.
 
 ## Development
 
@@ -178,6 +180,7 @@ src/
   usage.ts      token counts from backends and the totals behind team stats
   backends/     anthropic / claude-cli / mock
 personas/       member definitions
+scripts/        prompt-snapshot.ts: dumps every prompt so `diff -r before after` proves a prompt.ts change altered no byte
 .claude/        subagents (agents/) and the team-dev skill (skills/)
 ```
 

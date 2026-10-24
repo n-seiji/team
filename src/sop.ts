@@ -19,7 +19,9 @@ export const DEFAULT_PHASES: PhaseDef[] = [
       "PM turns findings into a small, shippable scope: [TASK] items with clear acceptance criteria, " +
       "each assigned to an engineer. Engineers challenge feasibility, split or re-assign tasks, and agree on tech choices. " +
       "Decide early how each user will actually get to and start the product with their own device and skills " +
-      "(e.g. a URL on their phone vs. a terminal command) and make that part of the acceptance criteria.",
+      "(e.g. a URL on their phone vs. a terminal command) and make that part of the acceptance criteria. " +
+      "If getting there needs a step only a real person can do (publishing, an account, a purchase), hand that step " +
+      "over now with [TASK_BLOCKED T1] and build everything else so it works the moment the step is done.",
     speakers: ["pm", "engineer"],
     mode: "round-robin",
     maxRounds: 3,
@@ -59,10 +61,14 @@ export const DEFAULT_PHASES: PhaseDef[] = [
       "Users try what was built — start from the trial run (real output the runtime produced with the team's " +
       "verification command), then the team's demos, and open the files they point to — " +
       "and judge it from their own needs. Each user gives a [VERDICT accept|reject] with reasons. " +
+      "Steps the team handed to a real person (shown as \"needs a person\" in the backlog, such as publishing) are " +
+      "judged as if they were done: users name them as pending, and reject only for what the team itself can still change. " +
       "PM summarizes and decides next steps: every condition a user attached to their verdict becomes a [TASK] or gets a " +
       "one-line reason why not (follow-up tasks start another iteration while iterations remain). " +
-      "A condition only a real person can check (a real phone, a printed sheet, a timed first use) is handed over with " +
-      "[TASK_BLOCKED], not simulated. Treat any claim that someone ran or installed something as unverified unless a demo shows it.",
+      "For a condition only a real person can check on a built task (a real phone, a printed sheet, a timed first use), " +
+      "use [CHECK T1] instead of simulating it. " +
+      "Use [TASK_BLOCKED T1] only when the work itself needs a person (an account, publishing, a real device to build on). " +
+      "Treat any claim that someone ran or installed something as unverified unless a demo shows it.",
     speakers: ["user", "pm"],
     mode: "round-robin",
     maxRounds: 1,
@@ -111,7 +117,7 @@ const ROLES: Record<string, RoleDef> = {
       "Keep the backlog true: close tasks you no longer want with [TASK_DROP] or replace them (replaces=T1) " +
       "instead of leaving them open. " +
       NEVER_BLOCK,
-    actions: ["TASK", "TASK_DROP", "TASK_BLOCKED", "DECISION", "ADVANCE", "ASK_HUMAN"],
+    actions: ["TASK", "TASK_DROP", "TASK_BLOCKED", "CHECK", "DECISION", "ADVANCE", "ASK_HUMAN"],
     subagent: "team-pm",
     workspace: "This is what the engineers have built so far. If you can read files, check it against the acceptance criteria.",
   },
@@ -125,7 +131,7 @@ const ROLES: Record<string, RoleDef> = {
       "Run tests and commands so that they always exit (for example `node --test --test-timeout=<ms>` or a `timeout` wrapper), " +
       "and never start a server in the foreground. " +
       NEVER_BLOCK,
-    actions: ["TASK", "TASK_START", "TASK_DONE", "TASK_BLOCKED", "DEMO", "VERIFY", "ASK_HUMAN"],
+    actions: ["TASK", "TASK_START", "TASK_DONE", "TASK_BLOCKED", "CHECK", "DEMO", "VERIFY", "ASK_HUMAN"],
     subagent: "team-engineer",
     workspace:
       "All product code lives here (relative to the repository root). When the phase allows editing and you have file tools, " +
@@ -138,7 +144,9 @@ const ROLES: Record<string, RoleDef> = {
       "you know nothing about the implementation, you speak only from your own life, habits and frustrations, " +
       "and you judge the product honestly — politely, but you will not pretend to like something that does not help you. " +
       "You cannot run, install or open anything outside what you are shown and the files you read, so never say you tried, " +
-      "installed or ran something; say what you read and what you could not check.",
+      "installed or ran something; say what you read and what you could not check. " +
+      "When a step only a real person can do is still pending (the backlog says \"needs a person\", e.g. publishing), " +
+      "judge whether the product would work for you once that step is done, and say that the step is still pending.",
     actions: ["VERDICT"],
     subagent: "team-persona",
     workspace:

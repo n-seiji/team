@@ -64,8 +64,22 @@ export interface Task {
   /** Where the task was created (absent in older sessions). */
   phase?: string;
   iteration?: number;
-  /** What was done ([TASK_DONE]), what a person must do ([TASK_BLOCKED]) or why it was dropped ([TASK_DROP]). */
+  /**
+   * What was done ([TASK_DONE]) or why it was dropped ([TASK_DROP]). Sessions saved before `handoff` existed kept
+   * a blocked task's hand-off here.
+   */
   summary?: string;
+  /**
+   * What a person must do ([TASK_BLOCKED]), set while the task is blocked; `summary` keeps what was done. Empty when
+   * the report gave no text. A blocked task without it is from an older session.
+   */
+  handoff?: string;
+  /**
+   * What a real person should check on a built task ([CHECK]). Adding one changes neither status nor summary, and
+   * a reopened task keeps them. Absent in older sessions. Checks of a task later dropped or replaced are not
+   * carried over to its replacement.
+   */
+  checks?: string[];
 }
 
 /** One run of the team's verification command by the runtime (not by an agent). */
@@ -169,6 +183,8 @@ export interface Entry {
   kind: EntryKind;
   to?: string[];
   text: string;
+  /** On the human's `team answer` entry: the question it answers (e.g. "Q2") and the answer as typed. */
+  answers?: { question: string; text: string };
 }
 
 /** Token counts a backend measured for one reply. Cache reads cost about a tenth of the other parts, so the parts are never added up. */

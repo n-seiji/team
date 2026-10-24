@@ -87,6 +87,9 @@ export const ACTION_HELP: Record<string, string> = {
   TASK_BLOCKED:
     "[TASK_BLOCKED T1] only a real person outside the team can finish this (a real device, an account, a permission, " +
     "publishing); say exactly what they must do. The team moves on",
+  CHECK:
+    "[CHECK T1] something only a real person can check on built task T1 (try it on a real phone, print the sheet); " +
+    "say exactly what to check. T1 stays done",
   TASK_DROP: "[TASK_DROP T1] close a task the team will not do, with the reason (a dropped task cannot be reopened; add a new [TASK])",
   ASK_HUMAN:
     "[ASK_HUMAN] a question only the real human can answer (a product or preference call, a permission, money, " +
@@ -96,7 +99,9 @@ export const ACTION_HELP: Record<string, string> = {
   VERIFY:
     "[VERIFY] one shell command, run from the workspace, that tries the product the way a user would and prints what it saw " +
     "(see the phase goal). The latest one counts",
-  DECISION: "[DECISION] a decision the team should follow from now on",
+  DECISION:
+    "[DECISION] a decision the team should follow from now on. Ids (D1, D2, ...) are assigned by the engine: " +
+    "do not number your own decisions",
   ADVANCE: "[ADVANCE] end the current phase now because its goal is met (PM only)",
   VERDICT:
     "[VERDICT accept] or [VERDICT reject] followed by your honest reasons (acceptance phase), what you based it on " +

@@ -80,7 +80,7 @@ async function turnWith(setup: Setup = {}): Promise<{ args: string[]; reply: Bac
     return await withEnv(env, async () => {
       const backend = new ClaudeCliBackend({ type: "claude-cli" });
       setup.afterCreate?.(settingsFile);
-      const turn = { member: "e1", role: "engineer", canEdit: setup.canEdit ?? false, system: "s", user: "u" };
+      const turn = { member: "e1", role: "engineer", canEdit: setup.canEdit ?? false, system: "s", user: "u", sections: [] };
       const reply = await backend.respond(turn, { state: { externalWorkspace: false } as SessionState, root });
       return { args: JSON.parse(fs.readFileSync(path.join(root, "argv.json"), "utf8")), reply };
     });
@@ -331,7 +331,7 @@ process.exit(1);
 
 type Pids = Record<string, number>;
 
-const TURN = { member: "e1", role: "engineer", canEdit: true, system: "s", user: "u" };
+const TURN = { member: "e1", role: "engineer", canEdit: true, system: "s", user: "u", sections: [] };
 const contextOf = (root: string) => ({ state: { externalWorkspace: false } as SessionState, root });
 const claudeCli = () => new ClaudeCliBackend({ type: "claude-cli" });
 const hangingTurn = (root: string) => claudeCli().respond(TURN, contextOf(root));
@@ -564,7 +564,7 @@ import * as path from "node:path";
 const { ClaudeCliBackend } = await import(process.env.BACKEND_URL);
 const [root, how] = process.argv.slice(2);
 new ClaudeCliBackend({ type: "claude-cli" })
-  .respond({ member: "e1", role: "engineer", canEdit: true, system: "s", user: "u" }, { state: { externalWorkspace: false }, root })
+  .respond({ member: "e1", role: "engineer", canEdit: true, system: "s", user: "u", sections: [] }, { state: { externalWorkspace: false }, root })
   .catch(() => {});
 if (how === "exit") {
   while (!fs.existsSync(path.join(root, "pids.json"))) await new Promise((resolve) => setTimeout(resolve, 25));

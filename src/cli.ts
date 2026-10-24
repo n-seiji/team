@@ -4,7 +4,7 @@ import * as path from "node:path";
 import { parseArgs } from "node:util";
 import { text } from "node:stream/consumers";
 import { Store, loadConfig, loadPersona } from "./store.ts";
-import { World, isPrivate } from "./world.ts";
+import { World, answersByQuestion, isPrivate, questionId } from "./world.ts";
 import { DEFAULT_PHASES, subagentFor } from "./sop.ts";
 import { buildPrompt, listWorkspace, promptAsText } from "./prompt.ts";
 import { formatBacklog, formatEntry, formatQuestions, displayName } from "./render.ts";
@@ -31,6 +31,8 @@ Session
   stats [--json]       ターンごとの実際の使用量 (usage.jsonl) の合計。フェーズ別・ロール別の内訳つき
   overlaps [--json]    同じリポジトリを触る他のセッションと、同じファイル・同じ番号のファイルが重なっていないか確認
   say <text>           人間(あなた)としてチーム全員に発言を差し込む
+  answer <Qn> <text>   メンバーの質問 Qn (status で一覧) に答える。チーム全員に伝わり、以降のプロンプトでは既定の案より優先される。
+                       同じ Qn に答え直すと置き換わる。text は stdin でも可。終了済みのセッションにも答えられる
 
 Host mode (Claude Code などの外部オーケストレーターが各エージェントを実行)
   next [--json] [--inline]
@@ -74,8 +76,8 @@ const OPTIONS = {
   help: { type: "boolean", short: "h" },
 } as const;
 
-async function readStdin(): Promise<string> {
-  if (process.stdin.isTTY) throw new Error("no reply given: pipe it via stdin or use --file");
+async function readStdin(missing: string): Promise<string> {
+  if (process.stdin.isTTY) throw new Error(missing);
   return text(process.stdin);
 }
 
@@ -120,7 +122,11 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
     store.save(w, es); // no-op unless scheduling advanced
     if (flags.json) {
       const pending = items.map(({ text, ...it }) => (flags.inline ? { ...it, prompt: text } : it));
-      out(JSON.stringify({ status: w.state.status, phase: w.phase.id, iteration: w.state.iteration, round: w.state.round, pending }, null, 2));
+      const answers = answersByQuestion(view);
+      const openQuestions = (w.state.questions ?? [])
+        .map((q, i) => ({ id: questionId(i), by: q.by, text: q.text }))
+        .filter((q) => !answers.has(q.id));
+      out(JSON.stringify({ status: w.state.status, phase: w.phase.id, iteration: w.state.iteration, round: w.state.round, openQuestions, pending }, null, 2));
     } else if (w.state.status === "done") {
       out("session is done. See: team log / team status");
     } else {
@@ -170,7 +176,7 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
       // With --json, answer like `next --json` so an orchestrator can start the first turn without another call.
       if (flags.json) return next(w);
       out(`created session "${name}" with ${w.state.members.length} members → .team/sessions/${name}/`);
-      out(statusText(w));
+      out(statusText(w, new Map()));
       return;
     }
 
@@ -195,7 +201,7 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
       const overlaps = findOverlaps(sameRepoChanges(store, w.state)).filter((o) => o.sessions.some((x) => x.session === w.state.name));
       if (flags.json) out(JSON.stringify({ ...w.state, phase: w.phase.id, next: w.next(), overlaps }, null, 2));
       else {
-        out(statusText(w));
+        out(statusText(w, answersByQuestion(store.transcript(w.state.name))));
         if (overlaps.length) out(["overlaps with other sessions:", ...overlaps.map((o) => "  " + formatOverlap(o))].join("\n"));
       }
       return;
@@ -235,8 +241,19 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
 
     case "say": {
       const w = load();
-      const text = pos.join(" ").trim() || (await readStdin()).trim();
+      const text = pos.join(" ").trim() || (await readStdin("no text given: pass it as arguments or pipe it via stdin")).trim();
       w.broadcast(text, flags.as);
+      store.save(w);
+      out("ok");
+      return;
+    }
+
+    case "answer": {
+      const [id, ...words] = pos;
+      if (!id) throw new Error("usage: team answer <Qn> <text>");
+      const w = load();
+      const given = words.join(" ").trim() || (await readStdin("no answer given: pass it after the id or pipe it via stdin")).trim();
+      w.answer(id, given);
       store.save(w);
       out("ok");
       return;
@@ -253,7 +270,7 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
       const tokens = wholeNumber(flags.tokens, "--tokens");
       const durationMs = wholeNumber(flags["duration-ms"], "--duration-ms");
       const file = flags.file;
-      const raw = file ? fs.readFileSync(path.resolve(root, file), "utf8") : await readStdin();
+      const raw = file ? fs.readFileSync(path.resolve(root, file), "utf8") : await readStdin("no reply given: pipe it via stdin or use --file");
       // an interjection (--force) has no prompt of its own; an older file would be another turn's
       const promptChars = w.state.pending.includes(id) ? latestPromptChars(turnsDir(w), id) : undefined;
       const measured = { source: "host" as const, promptChars, durationMs, reportedTokens: tokens };
@@ -391,7 +408,7 @@ async function respondWithRetry(call: () => Promise<BackendReply>, id: string, o
   }
 }
 
-function statusText(w: World): string {
+function statusText(w: World, answers: ReadonlyMap<string, string>): string {
   const s = w.state;
   const next = w.next();
   const lines = [
@@ -401,7 +418,10 @@ function statusText(w: World): string {
     "backlog:",
     formatBacklog(s.tasks, "  (none)"),
   ];
-  if (s.questions?.length) lines.push("questions for the human (the team proceeds on the stated defaults):", formatQuestions(s));
+  const open = formatQuestions(s, answers, "open");
+  if (open) lines.push("open questions for the human (the team proceeds on the stated defaults; answer with: team answer <Qn> <text>):", open);
+  const answered = formatQuestions(s, answers, "answered");
+  if (answered) lines.push("answered questions:", answered);
   if (s.externalWorkspace) lines.splice(1, 0, `workspace: ${s.workspace} (existing codebase)`);
   return lines.join("\n");
 }

@@ -5,6 +5,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { execFileSync } from "node:child_process";
 import { main } from "../src/cli.ts";
+import { Store } from "../src/store.ts";
 import { ReplyError } from "../src/usage.ts";
 
 const repo = path.resolve(import.meta.dirname, "..");
@@ -211,6 +212,156 @@ test("run keeps going when a member's turn fails twice", async () => {
   } finally {
     MockBackend.prototype.respond = orig;
   }
+});
+
+/** The body of the prompt section whose heading matches `title`. */
+const section = (prompt: string, title: RegExp) => prompt.split("\n## ").find((s) => title.test(s.split("\n")[0])) ?? "";
+const OPEN = /^Open questions/;
+const ANSWERED = /^Answered by the human/;
+
+const ASK = "[SAY to=all] hi\n[ASK_HUMAN] Which payment provider? Default: Stripe.\n[ASK_HUMAN] May we publish? Default: no.\n[ADVANCE]";
+
+/** The entries of a session's transcript.jsonl, as written. */
+const logged = (dir: string, name: string) =>
+  fs
+    .readFileSync(path.join(dir, `.team/sessions/${name}/transcript.jsonl`), "utf8")
+    .trim()
+    .split("\n")
+    .map((l) => JSON.parse(l));
+
+/** Put a question from an engineer into a session's state.json, as if it had been asked in the build. */
+function askInState(dir: string, name: string): void {
+  const file = path.join(dir, `.team/sessions/${name}/state.json`);
+  const state = JSON.parse(fs.readFileSync(file, "utf8"));
+  state.questions = [{ by: "eng-backend", text: "May we publish? Default: no.", phase: "build", iteration: 1 }];
+  fs.writeFileSync(file, JSON.stringify(state));
+}
+
+test("answer settles one question: status lists open and answered ones with ids and the next prompt carries the answer", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "a1", "--brief", "x");
+  await run(dir, "record", "--as", "pm", "--file", writeReply(dir, ASK));
+
+  const before = await run(dir, "status");
+  assert.match(before, /Q1 .*Which payment provider/);
+  assert.match(before, /Q2 .*May we publish/);
+  assert.doesNotMatch(before, /answered questions/);
+  assert.deepEqual(JSON.parse(await run(dir, "next", "--json")).openQuestions, [
+    { id: "Q1", by: "pm", text: "Which payment provider? Default: Stripe." },
+    { id: "Q2", by: "pm", text: "May we publish? Default: no." },
+  ]);
+
+  assert.equal(await run(dir, "answer", "q2", "Yes,", "publish it."), "ok");
+  const [open, answered] = (await run(dir, "status")).split("answered questions:");
+  assert.match(open, /Q1 .*Which payment provider/);
+  assert.doesNotMatch(open, /Q2/);
+  assert.match(answered, /Q2 .*May we publish[\s\S]*answer: Yes, publish it\./);
+  assert.doesNotMatch(answered, /Q1/);
+  assert.match(await run(dir, "log"), /human: Answer to Q2 \(May we publish\? Default: no\.\): Yes, publish it\./);
+  assert.deepEqual(
+    JSON.parse(await run(dir, "next", "--json")).openQuestions.map((q: { id: string }) => q.id),
+    ["Q1"],
+  );
+
+  const entry = logged(dir, "a1").at(-1);
+  assert.deepEqual([entry.from, entry.kind, entry.to], ["human", "say", ["all"]]);
+  assert.deepEqual(entry.answers, { question: "Q2", text: "Yes, publish it." });
+
+  const pm = JSON.parse(await run(dir, "next", "--json", "--inline")).pending[0];
+  assert.equal(pm.member, "pm");
+  assert.match(section(pm.prompt, OPEN), /Q1/);
+  assert.doesNotMatch(section(pm.prompt, OPEN), /Q2/);
+  assert.match(section(pm.prompt, ANSWERED), /Q2[\s\S]*Yes, publish it\./);
+});
+
+test("answer rejects an unknown question id and a missing id", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "a2", "--brief", "x");
+  await assert.rejects(run(dir, "answer", "Q1", "yes"), /unknown question "Q1"/);
+  await assert.rejects(run(dir, "answer"), /usage: team answer <Qn> <text>/);
+  assert.doesNotMatch(await run(dir, "log"), /Answer to/);
+});
+
+test("answer works on a finished session and shows in status and both transcripts", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "a3", "--brief", "x");
+  await run(dir, "run", "--backend", "mock");
+  const file = path.join(dir, ".team/sessions/a3/state.json");
+  assert.equal(JSON.parse(fs.readFileSync(file, "utf8")).status, "done");
+  askInState(dir, "a3");
+
+  await run(dir, "answer", "Q1", "Yes, publish it.");
+  assert.equal(JSON.parse(fs.readFileSync(file, "utf8")).status, "done");
+  assert.match(await run(dir, "status"), /answered questions:\n- Q1 .*May we publish[\s\S]*answer: Yes, publish it\./);
+  assert.deepEqual(logged(dir, "a3").at(-1).answers, { question: "Q1", text: "Yes, publish it." });
+  const md = fs.readFileSync(path.join(dir, ".team/sessions/a3/transcript.md"), "utf8");
+  assert.match(md, /Q1 .*May we publish[\s\S]*answer: Yes, publish it\./);
+  const html = fs.readFileSync(path.join(dir, ".team/sessions/a3/transcript.html"), "utf8");
+  assert.match(html, /<b>Q1<\/b>[\s\S]*Yes, publish it\./);
+});
+
+test("an answer given while an older world is held in memory survives that world's save", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "l1", "--brief", "x");
+  await run(dir, "record", "--as", "pm", "--file", writeReply(dir, ASK));
+  const store = new Store(dir);
+  const stale = store.load("l1"); // like `next` waiting out the 10-minute trial, or `run` between two turns
+  await run(dir, "answer", "Q2", "Yes, publish it.");
+  stale.record(stale.next()[0], "[SAY to=all] going on");
+  store.save(stale);
+
+  const [open, answered] = (await run(dir, "status")).split("answered questions:");
+  assert.doesNotMatch(open, /Q2/);
+  assert.match(answered, /Q2 .*May we publish[\s\S]*answer: Yes, publish it\./);
+  const { buildPrompt } = await import("../src/prompt.ts");
+  const prompt = buildPrompt(store.load("l1").state, "pm", store.transcript("l1"), []).user;
+  assert.doesNotMatch(section(prompt, OPEN), /Q2/);
+  assert.match(section(prompt, ANSWERED), /Yes, publish it\./);
+});
+
+test("the finish summary counts only questions that were not answered before the session ended", async () => {
+  for (const [name, answer] of [["g1", false], ["g2", true]] as const) {
+    const dir = sandbox();
+    await run(dir, "init", "--name", name, "--brief", "x");
+    askInState(dir, name);
+    if (answer) await run(dir, "answer", "Q1", "Yes, publish it.");
+    await run(dir, "run", "--backend", "mock");
+    const log = await run(dir, "log");
+    assert.match(log, /Session finished/);
+    if (answer) assert.doesNotMatch(log, /Session finished.*question\(s\) for the human/);
+    else assert.match(log, /Session finished.*1 question\(s\) for the human/);
+  }
+});
+
+test("status and both transcripts show a task's checks and hand-off", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "c1", "--brief", "x");
+  const file = path.join(dir, ".team/sessions/c1/state.json");
+  const state = JSON.parse(fs.readFileSync(file, "utf8"));
+  const task = { acceptance: "", owner: "eng-backend", createdBy: "pm" };
+  state.tasks = [
+    { ...task, id: "T1", title: "Save entry", status: "done", summary: "built in app.js", checks: ["Enter saves on a real phone"] },
+    { ...task, id: "T2", title: "Export", status: "done", summary: "built in export.js" },
+    { ...task, id: "T3", title: "Publish", status: "blocked", summary: "works locally", handoff: "publishing needs the owner's account" },
+    { ...task, id: "T4", title: "Print", status: "blocked", summary: "needs a printer" },
+  ];
+  fs.writeFileSync(file, JSON.stringify(state));
+
+  const status = await run(dir, "status");
+  assert.ok(status.includes("- T1 [done] owner=eng-backend Save entry\n    result: built in app.js\n    check by a person: Enter saves on a real phone\n- T2 [done]"));
+  assert.ok(status.includes("- T3 [blocked] owner=eng-backend Publish\n    result: works locally\n    needs a person: publishing needs the owner's account\n- T4 [blocked]"));
+  assert.ok(status.includes("- T4 [blocked] owner=eng-backend Print\n    needs a person: needs a printer"));
+  const json = JSON.parse(await run(dir, "status", "--json"));
+  assert.deepEqual([json.tasks[0].checks, json.tasks[2].handoff], [["Enter saves on a real phone"], "publishing needs the owner's account"]);
+
+  await run(dir, "say", "hello"); // saving regenerates the transcripts
+  const md = fs.readFileSync(path.join(dir, ".team/sessions/c1/transcript.md"), "utf8");
+  assert.ok(md.includes("result: built in app.js\n    check by a person: Enter saves on a real phone"));
+  assert.ok(md.includes("result: works locally\n    needs a person: publishing needs the owner's account"));
+  const html = fs.readFileSync(path.join(dir, ".team/sessions/c1/transcript.html"), "utf8");
+  const aside = html.split("<aside>")[1].split("</aside>")[0];
+  assert.ok(aside.includes("Enter saves on a real phone"));
+  assert.ok(aside.includes("publishing needs the owner's account"));
 });
 
 interface UsageLine {

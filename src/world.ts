@@ -22,6 +22,11 @@ export class World {
   state: SessionState;
   /** Entries produced since construction (to be appended to the transcript by the caller). */
   readonly emitted: Entry[] = [];
+  /**
+   * Ids of the questions the human has answered, as far as this process knows: the answers in the transcript when it
+   * was loaded (Store.load) plus its own. The transcript is the only record of answers, so state.json has none.
+   */
+  readonly answered = new Set<string>();
   private now: () => string;
 
   constructor(state: SessionState, now: () => string = systemNow) {
@@ -107,6 +112,23 @@ export class World {
     this.log(from, "say", text, ["all"]);
   }
 
+  /** The real human answers question `id` (e.g. "Q2"). Answering again replaces the answer. Allowed once the session is done. */
+  answer(id: string, text: string): void {
+    const qs = this.state.questions ?? [];
+    const n = Number(/^Q([1-9]\d*)$/i.exec(id.trim())?.[1]);
+    const q = qs[n - 1];
+    if (!q) throw new Error(`unknown question "${id}" (${qs.length ? `asked so far: Q1..Q${qs.length}` : "no questions have been asked"})`);
+    if (!text.trim()) throw new Error("an answer is required");
+    const question = questionId(n - 1);
+    const given = text.trim();
+    const asked = Array.from(q.text.replace(/\s+/g, " ").trim());
+    const excerpt = asked.length > 60 ? asked.slice(0, 60).join("") + "…" : asked.join("");
+    const replaced = this.answered.has(question) ? ", replacing the earlier answer" : "";
+    // A plain message from the human, like `say`: agents copy what they see, so no tag-like kind.
+    this.log("human", "say", `Answer to ${question} (${excerpt})${replaced}: ${given}`, ["all"], { question, text: given });
+    this.answered.add(question);
+  }
+
   /** Apply an agent's reply and move the schedule forward. Returns the parsed actions. */
   record(id: string, raw: string, opts: { force?: boolean } = {}): Action[] {
     const s = this.state;
@@ -181,7 +203,8 @@ export class World {
       case "TASK_START":
       case "TASK_DONE":
       case "TASK_BLOCKED":
-      case "TASK_DROP": {
+      case "TASK_DROP":
+      case "CHECK": {
         const tid = a.arg ?? /\bT\d+\b/.exec(a.text)?.[0];
         const t = s.tasks.find((x) => x.id === tid);
         if (!t) {
@@ -191,6 +214,10 @@ export class World {
         // A dropped task is closed for good: an engineer's stale TASK_START must not bring it back.
         if (t.status === "dropped") {
           this.log("system", "system", `Ignored [${a.type}] from ${m.id}: ${t.id} is already dropped.`);
+          break;
+        }
+        if (a.type === "CHECK") {
+          this.addCheck(m.id, t, a.text);
           break;
         }
         t.owner ??= m.id;
@@ -242,10 +269,26 @@ export class World {
     }
   }
 
-  private updateTask(by: string, t: Task, status: TaskStatus, summary?: string): void {
+  private updateTask(by: string, t: Task, status: TaskStatus, text?: string): void {
     t.status = status;
-    if (summary !== undefined) t.summary = summary;
-    this.log(by, "task_update", `${t.id} → ${status}${summary ? ": " + summary : ""}`);
+    if (status === "blocked") t.handoff = text ?? "";
+    else {
+      delete t.handoff;
+      if (text !== undefined) t.summary = text;
+    }
+    this.log(by, "task_update", `${t.id} → ${status}${text ? ": " + text : ""}`);
+  }
+
+  /** [CHECK]: something a person should check on a built task. Neither its status nor its summary changes. */
+  private addCheck(by: string, t: Task, text: string): void {
+    const ignore = (why: string) => this.log("system", "system", `Ignored [CHECK] from ${by}: ${why}`);
+    if (t.status !== "done") {
+      return ignore(`${t.id} is not done. Use [CHECK] on a built task, or [TASK_BLOCKED] to hand work over to a person.`);
+    }
+    if (!text) return ignore(`say what a person should check on ${t.id}.`);
+    if (t.checks?.includes(text)) return ignore(`${t.id} already has that check.`);
+    (t.checks ??= []).push(text);
+    this.log(by, "task_update", `${t.id} check by a person: ${text}`);
   }
 
   /**
@@ -361,11 +404,13 @@ export class World {
         .join(", ");
     const open = list((t) => !isSettled(t));
     const blocked = list((t) => t.status === "blocked");
-    const questions = s.questions ?? [];
+    const checked = list((t) => t.status === "done" && !!t.checks?.length);
+    const unanswered = (s.questions ?? []).filter((_, i) => !this.answered.has(questionId(i)));
     const rest = [
+      checked && `Built, a person should check: ${checked}.`,
       open && `Still open: ${open}.`,
       blocked && `Waiting on a person: ${blocked}.`,
-      questions.length && `${questions.length} question(s) for the human (see team status).`,
+      unanswered.length && `${unanswered.length} question(s) for the human (see team status).`,
     ].filter(Boolean);
     this.log("system", "system", `Session finished after iteration ${s.iteration}. ${summary}${rest.map((r) => " " + r).join("")}`);
   }
@@ -374,7 +419,7 @@ export class World {
     this.log("system", "system", `Phase "${this.phase.id}" started (iteration ${this.state.iteration}) — ${this.phase.goal}`);
   }
 
-  private log(from: string, kind: EntryKind, text: string, to?: string[]): void {
+  private log(from: string, kind: EntryKind, text: string, to?: string[], answers?: Entry["answers"]): void {
     const e: Entry = {
       turn: this.state.turn,
       at: this.now(),
@@ -385,6 +430,7 @@ export class World {
       text,
     };
     if (to) e.to = to;
+    if (answers) e.answers = answers;
     this.emitted.push(e);
   }
 }
@@ -400,6 +446,19 @@ const TASK_STATUS: Record<string, TaskStatus> = {
   TASK_BLOCKED: "blocked",
   TASK_DROP: "dropped",
 };
+
+/** Questions are append-only, so the i-th one is always `Q{i+1}`; the id is never stored. */
+export const questionId = (i: number) => `Q${i + 1}`;
+
+/** Decisions are append-only, so the i-th one is always `D{i+1}`; the id is never stored. */
+export const decisionId = (i: number) => `D${i + 1}`;
+
+/** The latest answer per question id from `team answer` entries (a later one replaces an earlier one). */
+export function answersByQuestion(entries: readonly Entry[]): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const e of entries) if (e.answers) out.set(e.answers.question, e.answers.text);
+  return out;
+}
 
 /** Nothing more the team itself can do: done, dropped, or waiting on a real person. */
 export function isSettled(t: Task): boolean {

@@ -1,5 +1,5 @@
 import type { Entry, SessionState, Task } from "./types.ts";
-import { currentPhase, findMember, isPrivate } from "./world.ts";
+import { answersByQuestion, currentPhase, decisionId, findMember, isPrivate, questionId } from "./world.ts";
 
 const indent = (text: string, pad: string) => text.replace(/\n/g, "\n" + pad);
 
@@ -30,17 +30,30 @@ export function formatEntry(s: SessionState, e: Entry): string {
 
 export function formatTask(t: Task): string {
   const acc = t.acceptance ? `\n    acceptance: ${indent(t.acceptance, "    ")}` : "";
-  const label = t.status === "blocked" ? "needs a person" : t.status === "dropped" ? "dropped" : "result";
+  // Sessions saved before `handoff` existed kept a blocked task's hand-off in its summary.
+  const oldHandoff = t.status === "blocked" && t.handoff === undefined;
+  const label = oldHandoff ? "needs a person" : t.status === "dropped" ? "dropped" : "result";
   const sum = t.summary ? `\n    ${label}: ${indent(t.summary, "    ")}` : "";
-  return `- ${t.id} [${t.status}] owner=${t.owner ?? "-"} ${t.title}${acc}${sum}`;
+  const handoff = t.status === "blocked" && t.handoff ? `\n    needs a person: ${indent(t.handoff, "    ")}` : "";
+  const checks = (t.checks ?? []).map((c) => `\n    check by a person: ${indent(c, "    ")}`).join("");
+  return `- ${t.id} [${t.status}] owner=${t.owner ?? "-"} ${t.title}${acc}${sum}${handoff}${checks}`;
 }
 
 export function formatBacklog(tasks: Task[], empty: string): string {
   return tasks.length ? tasks.map(formatTask).join("\n") : empty;
 }
 
-export function formatQuestions(s: SessionState): string {
-  return (s.questions ?? []).map((q) => `- (${q.phase}, ${displayName(s, q.by)}) ${indent(q.text, "  ")}`).join("\n");
+/** The questions for the human with their ids (Q1, Q2, ...) and answers, all or only the open / answered ones. */
+export function formatQuestions(s: SessionState, answers: ReadonlyMap<string, string>, which: "all" | "open" | "answered" = "all"): string {
+  return (s.questions ?? [])
+    .map((q, i) => ({ q, id: questionId(i), answer: answers.get(questionId(i)) }))
+    .filter(({ answer }) => which === "all" || (answer !== undefined) === (which === "answered"))
+    .map(
+      ({ q, id, answer }) =>
+        `- ${id} (${q.phase}, ${displayName(s, q.by)}) ${indent(q.text, "  ")}` +
+        (answer === undefined ? "" : `\n  answer: ${indent(answer, "    ")}`),
+    )
+    .join("\n");
 }
 
 /** Human-readable transcript, including private thoughts (like TinyTroupe's console view). */
@@ -59,11 +72,11 @@ export function renderMarkdown(s: SessionState, entries: Entry[]): string {
   out.push("", "## Backlog", "");
   out.push(formatBacklog(s.tasks, "_(none)_"));
   out.push("", "## Decisions", "");
-  out.push(s.decisions.length ? s.decisions.map((d) => `- (${d.phase}, ${displayName(s, d.by)}) ${d.text}`).join("\n") : "_(none)_");
+  out.push(s.decisions.length ? s.decisions.map((d, i) => `- ${decisionId(i)} (${d.phase}, ${displayName(s, d.by)}) ${d.text}`).join("\n") : "_(none)_");
   const questions = s.questions ?? [];
   if (questions.length) {
     out.push("", "## Questions for the human", "");
-    out.push(formatQuestions(s));
+    out.push(formatQuestions(s, answersByQuestion(entries)));
   }
   out.push("", "## Verdicts", "");
   out.push(

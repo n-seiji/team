@@ -53,6 +53,7 @@ reject が1件でもあり、イテレーション上限 (`maxIterations`) に�
 [TASK owner=eng-backend replaces=T1] T1 を置き換えるタスク（T1 は閉じる）
 [TASK_DONE T1] 何をどのファイルに実装し、どう確認したか（実行したコマンドと結果、または「未実行」）
 [TASK_BLOCKED T1] 実機・アカウント・公開など、人にしかできない作業。人が何をすればよいか
+[CHECK T1] 作り終えたタスクのうち、人にしか確かめられないこと（実機で試す、など）。タスクは done のまま
 [TASK_DROP T1] やらないことにしたタスクを閉じる（PM のみ）。理由を添える。閉じたタスクは再開できない
 [ASK_HUMAN] 本物の人にしか答えられない質問と、それまでチームが進める既定の案
 [VERIFY] ユーザーと同じ手順でプロダクトを試し、見たものを出力し、スクリーンショットを $TEAM_ARTIFACTS に保存する 1 行のコマンド
@@ -74,7 +75,7 @@ reject が1件でもあり、イテレーション上限 (`maxIterations`) に�
 /team-dev フリーランス向けの、ターミナルから数十秒で請求書を作れるツール
 ```
 
-あとは Claude Code が `team next` → サブエージェント → `team record` を繰り返します。途中で「予算は月1万円までと伝えて」などと話しかければ、`team say` でチーム全員に共有されます。「discovery だけやって」「次のフェーズまで」のように区切りも指定できます。
+あとは Claude Code が `team next` → サブエージェント → `team record` を繰り返します。途中で「予算は月1万円までと伝えて」などと話しかければ、`team say` でチーム全員に共有されます。メンバーが `[ASK_HUMAN]` で質問したときは、チームは自分たちの既定の案で先へ進みます。質問には `team status` で id (`Q1`, `Q2`, ...) が付いて見えるので、`team answer Q2 "..."` でその質問に答えます（以降のプロンプトでは答えが既定の案より優先されます）。「discovery だけやって」「次のフェーズまで」のように区切りも指定できます。
 
 - 会話の全文（各メンバーの思考を含む）: `.team/sessions/<name>/transcript.md`。ブラウザで読むなら `transcript.html`（フェーズごとにまとまり、人で絞り込める。本人だけのメモは既定で隠す。`team log --html` でパスを表示し、古いセッションの分も作る）
 - 試用ログと証拠のファイル: `.team/sessions/<name>/artifacts/`
@@ -100,6 +101,7 @@ node src/main.ts run --backend mock                              # LLM なしで
 node src/main.ts log --tail 20 --no-thoughts                     # 会話ログ
 node src/main.ts stats                                           # フェーズ別・ロール別の実トークン数とコスト (--json でスクリプト向け)
 node src/main.ts say "ターゲットは個人事業主に絞りたい"           # 人間として発言を差し込む
+node src/main.ts answer Q2 "公開してよいです"                     # チームの質問 Q2 に答える (id は status に出る)
 ```
 
 `pnpm team <command>` や、`pnpm link --global` して `team <command>` でも同じです。
@@ -107,7 +109,7 @@ node src/main.ts say "ターゲットは個人事業主に絞りたい"         
 host モードを自分で回す場合（他のエージェント基盤から使う場合など）:
 
 ```bash
-node src/main.ts next --json          # → pending: [{ member, role, subagent, canEdit, promptFile }]
+node src/main.ts next --json          # → pending: [{ member, role, subagent, canEdit, promptFile }], openQuestions: [{ id, by, text }]
 # promptFile を LLM に渡して返答を得る
 node src/main.ts record --as pm --file reply.txt [--tokens N] [--duration-ms N]   # 任意: オーケストレーターが報告したトークン数と所要時間 (team stats 用)
 ```
@@ -130,7 +132,7 @@ node src/main.ts record --as pm --file reply.txt [--tokens N] [--duration-ms N] 
 - **メンバー**: `personas/*.json` を追加・編集して `team.config.json` の `members` に並べます。`role` は `pm` / `engineer` / `user`（それ以外のロール名も使え、汎用の説明で参加します）。`persona` 以下は TinyTroupe 形式の自由な JSON で、そのままプロンプトに入ります。ユーザーには `tech_literacy` のような「試用のしかたに影響する情報」を書くと受け入れテストが現実的になります。
 - **フェーズ**: `team.config.json` に `phases` を書くと `DEFAULT_PHASES` (`src/sop.ts`) を置き換えられます（`id` / `goal` / `speakers` / `mode: round-robin|parallel` / `maxRounds`、任意で `untilTasksDone`（タスクが全部終わったら早めに終える）/ `editors`（このフェーズで `workspace/` を編集できるロール）/ `iterationStart`（reject 後にここから次のイテレーションを始める））。
 - **言語**: `language`（既定 `ja`）。
-- **記憶の長さ**: `historyWindow`（プロンプトに入れる直近の会話件数）。
+- **記憶の長さ**: `historyWindow`（プロンプトに入れる直近の会話件数）。プロンプトでは、同じプロンプトの Backlog・Decisions・Demos に全文がある発言（タスク作成・タスク更新・決定・デモ）は 1 行の参照にします。`transcript.md` と `team log` は全文のままです。
 
 ## 開発
 
@@ -159,6 +161,7 @@ src/
   usage.ts      バックエンドのトークン数と、team stats の集計
   backends/     anthropic / claude-cli / mock
 personas/       メンバー定義
+scripts/        prompt-snapshot.ts: 全プロンプトを書き出す。`diff -r` の前後比較で prompt.ts の変更が 1 バイトも変えていないことを確かめる
 .claude/        サブエージェント (agents/) と team-dev スキル (skills/)
 ```
 
