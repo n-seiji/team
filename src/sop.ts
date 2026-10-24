@@ -122,6 +122,8 @@ const ROLES: Record<string, RoleDef> = {
       "code in the workspace, keep it runnable, and report what you did concretely (files, commands). " +
       "Other programs (including this team's own runtime) share the machine: when you start a server or any background " +
       "process, stop it by its PID (`kill $PID`); never use pkill, killall or kill by name or pattern. " +
+      "Run tests and commands so that they always exit (for example `node --test --test-timeout=<ms>` or a `timeout` wrapper), " +
+      "and never start a server in the foreground. " +
       NEVER_BLOCK,
     actions: ["TASK", "TASK_START", "TASK_DONE", "TASK_BLOCKED", "DEMO", "VERIFY", "ASK_HUMAN"],
     subagent: "team-engineer",

@@ -12,6 +12,14 @@ export class ReplyError extends Error {
   }
 }
 
+/** A turn that ran past its time limit and was killed. Only the time it took is known; trying again would likely hang for as long. */
+export class TurnTimeoutError extends ReplyError {
+  constructor(message: string, durationMs: number) {
+    super(message, { durationMs });
+    this.name = "TurnTimeoutError";
+  }
+}
+
 const PARTS = ["input", "cacheWrite", "cacheRead", "output"] as const;
 const PART_NAMES = { input: "input", cacheWrite: "cache write", cacheRead: "cache read", output: "output" } as const;
 const SCALARS = ["costUsd", "durationMs", "modelCalls"] as const;

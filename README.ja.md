@@ -78,7 +78,7 @@ reject が1件でもあり、イテレーション上限 (`maxIterations`) に�
 
 - 会話の全文（各メンバーの思考を含む）: `.team/sessions/<name>/transcript.md`。ブラウザで読むなら `transcript.html`（フェーズごとにまとまり、人で絞り込める。本人だけのメモは既定で隠す。`team log --html` でパスを表示し、古いセッションの分も作る）
 - 試用ログと証拠のファイル: `.team/sessions/<name>/artifacts/`
-- 各返答に実際にかかったもの: `.team/sessions/<name>/usage.jsonl`。記録した返答ごとに1行で、メンバー・フェーズ・イテレーション・プロンプトと返答の文字数、バックエンドが測定した値（トークン数4種: input / cache write / cache read / output、コスト(USD)、所要時間、モデル呼び出し回数）が入ります。失敗した試行の分も含み、2回失敗して飛ばしたターンには `skipped` が付きます。オーケストレーターが `record --tokens` で渡す1つのトークン数は `reportedTokens` として別に保存し、測定値には足しません。`team stats` はフェーズ別・ロール別に合計し、cache read を他のトークン数に足した合計は出しません。`team stats --json` は `{ session, recorded: true, total, byPhase, byRole }` を出します。各グループにはターン数の内訳（`turns`・`skippedTurns`・`turnsWithoutCost`・`turnsWithoutMeasuredTokens`）が入り、誰も報告しなかった値（`tokens`・`costUsd`・`durationMs`・`modelCalls`・`reportedTokens`）は含みません。使用量の行がないセッション（これより前に保存したもの、まだ何も記録していないもの）は `{ session, recorded: false }` です
+- 各返答に実際にかかったもの: `.team/sessions/<name>/usage.jsonl`。記録した返答ごとに1行で、メンバー・フェーズ・イテレーション・プロンプトと返答の文字数、バックエンドが測定した値（トークン数4種: input / cache write / cache read / output、コスト(USD)、所要時間、モデル呼び出し回数）が入ります。失敗した試行の分も含み、2回失敗して、またはタイムアウトして飛ばしたターンには `skipped` が付きます。オーケストレーターが `record --tokens` で渡す1つのトークン数は `reportedTokens` として別に保存し、測定値には足しません。`team stats` はフェーズ別・ロール別に合計し、cache read を他のトークン数に足した合計は出しません。`team stats --json` は `{ session, recorded: true, total, byPhase, byRole }` を出します。各グループにはターン数の内訳（`turns`・`skippedTurns`・`turnsWithoutCost`・`turnsWithoutMeasuredTokens`）が入り、誰も報告しなかった値（`tokens`・`costUsd`・`durationMs`・`modelCalls`・`reportedTokens`）は含みません。使用量の行がないセッション（これより前に保存したもの、まだ何も記録していないもの）は `{ session, recorded: false }` です
 - 作られたプロダクト: `workspace/<name>/`（セッションごとに別フォルダ）
 
 #### Claude Code on the web / Claude のプロジェクト
@@ -120,6 +120,8 @@ node src/main.ts record --as pm --file reply.txt [--tokens N] [--duration-ms N] 
 | `mock` | なし | 決まった返答で1イテレーションを流す。テスト・デモ用 |
 
 モデルは `team.config.json` の `backend.model`、`--model`、環境変数 `TEAM_MODEL` で指定できます。
+
+`claude-cli` のターンが `TEAM_TURN_TIMEOUT` 秒（既定 1800）を超えると、そのターンのプロセスツリーとプロセスグループを強制終了し、リトライせずにそのターンを飛ばします（ハングは繰り返すだけのため）。`usage.jsonl` の行には `skipped` が付き、かかった時間が残ります。親がすでに終了したプロセスはターンとの関係をたどれず、残ることがあります。
 
 `claude-cli` の各ターンが読み込むのは、プロジェクト（外部ワークスペースならそのワークスペース）の Claude Code 設定と、ユーザー設定のうち deny ルール・`env`・`apiKeyHelper` だけです。グローバルのルール・プラグイン・フック・スキルは読み込みません。
 
