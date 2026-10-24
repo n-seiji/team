@@ -22,6 +22,11 @@ export class World {
   state: SessionState;
   /** Entries produced since construction (to be appended to the transcript by the caller). */
   readonly emitted: Entry[] = [];
+  /**
+   * Ids of the questions the human has answered, as far as this process knows: the answers in the transcript when it
+   * was loaded (Store.load) plus its own. The transcript is the only record of answers, so state.json has none.
+   */
+  readonly answered = new Set<string>();
   private now: () => string;
 
   constructor(state: SessionState, now: () => string = systemNow) {
@@ -105,6 +110,23 @@ export class World {
   /** A stimulus from outside the simulation (e.g. the real human), like TinyWorld.broadcast. */
   broadcast(text: string, from = "human"): void {
     this.log(from, "say", text, ["all"]);
+  }
+
+  /** The real human answers question `id` (e.g. "Q2"). Answering again replaces the answer. Allowed once the session is done. */
+  answer(id: string, text: string): void {
+    const qs = this.state.questions ?? [];
+    const n = Number(/^Q([1-9]\d*)$/i.exec(id.trim())?.[1]);
+    const q = qs[n - 1];
+    if (!q) throw new Error(`unknown question "${id}" (${qs.length ? `asked so far: Q1..Q${qs.length}` : "no questions have been asked"})`);
+    if (!text.trim()) throw new Error("an answer is required");
+    const question = questionId(n - 1);
+    const given = text.trim();
+    const asked = Array.from(q.text.replace(/\s+/g, " ").trim());
+    const excerpt = asked.length > 60 ? asked.slice(0, 60).join("") + "…" : asked.join("");
+    const replaced = this.answered.has(question) ? ", replacing the earlier answer" : "";
+    // A plain message from the human, like `say`: agents copy what they see, so no tag-like kind.
+    this.log("human", "say", `Answer to ${question} (${excerpt})${replaced}: ${given}`, ["all"], { question, text: given });
+    this.answered.add(question);
   }
 
   /** Apply an agent's reply and move the schedule forward. Returns the parsed actions. */
@@ -361,11 +383,11 @@ export class World {
         .join(", ");
     const open = list((t) => !isSettled(t));
     const blocked = list((t) => t.status === "blocked");
-    const questions = s.questions ?? [];
+    const unanswered = (s.questions ?? []).filter((_, i) => !this.answered.has(questionId(i)));
     const rest = [
       open && `Still open: ${open}.`,
       blocked && `Waiting on a person: ${blocked}.`,
-      questions.length && `${questions.length} question(s) for the human (see team status).`,
+      unanswered.length && `${unanswered.length} question(s) for the human (see team status).`,
     ].filter(Boolean);
     this.log("system", "system", `Session finished after iteration ${s.iteration}. ${summary}${rest.map((r) => " " + r).join("")}`);
   }
@@ -374,7 +396,7 @@ export class World {
     this.log("system", "system", `Phase "${this.phase.id}" started (iteration ${this.state.iteration}) — ${this.phase.goal}`);
   }
 
-  private log(from: string, kind: EntryKind, text: string, to?: string[]): void {
+  private log(from: string, kind: EntryKind, text: string, to?: string[], answers?: Entry["answers"]): void {
     const e: Entry = {
       turn: this.state.turn,
       at: this.now(),
@@ -385,6 +407,7 @@ export class World {
       text,
     };
     if (to) e.to = to;
+    if (answers) e.answers = answers;
     this.emitted.push(e);
   }
 }
@@ -400,6 +423,16 @@ const TASK_STATUS: Record<string, TaskStatus> = {
   TASK_BLOCKED: "blocked",
   TASK_DROP: "dropped",
 };
+
+/** Questions are append-only, so the i-th one is always `Q{i+1}`; the id is never stored. */
+export const questionId = (i: number) => `Q${i + 1}`;
+
+/** The latest answer per question id from `team answer` entries (a later one replaces an earlier one). */
+export function answersByQuestion(entries: readonly Entry[]): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const e of entries) if (e.answers) out.set(e.answers.question, e.answers.text);
+  return out;
+}
 
 /** Nothing more the team itself can do: done, dropped, or waiting on a real person. */
 export function isSettled(t: Task): boolean {

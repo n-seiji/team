@@ -438,3 +438,138 @@ test("the streak of rejections counts each iteration's latest verdict, so a chan
   assert.match(pm, /- U1 \(rejected in all 2 iterations so far\): broken again/);
   assert.match(pm, /- U2: now this/, "U2 accepted last time, so no streak");
 });
+
+/** The body of the prompt section whose heading matches `title`. */
+const section = (prompt: string, title: RegExp) => prompt.split("\n## ").find((s) => title.test(s.split("\n")[0])) ?? "";
+const OPEN = /^Open questions/;
+const ANSWERED = /^Answered by the human/;
+
+const askTwo = () => {
+  const w = make();
+  w.record("pm", "[ASK_HUMAN] Which payment provider? Default: Stripe.\n[ASK_HUMAN] May we publish? Default: no.");
+  return w;
+};
+
+test("questions for the human are numbered Q1, Q2 in the order asked, in prompts of everyone but users", async () => {
+  const { buildPrompt } = await import("../src/prompt.ts");
+  const w = askTwo();
+  const open = section(buildPrompt(w.state, "e1", w.emitted, []).user, OPEN);
+  assert.match(open, /- Q1 .*Which payment provider/);
+  assert.match(open, /- Q2 .*May we publish/);
+  assert.match(open, /assigned by the engine/, "members are told not to number their own questions");
+  assert.equal(section(buildPrompt(w.state, "u1", w.emitted, []).user, OPEN), "", "users get no questions section");
+});
+
+test("answering a question moves it from open to answered in the next prompt and tells the whole team", async () => {
+  const { buildPrompt } = await import("../src/prompt.ts");
+  const { formatEntry } = await import("../src/render.ts");
+  const w = askTwo();
+  const asked = structuredClone(w.state.questions);
+  w.answer("Q2", "Yes, publish it.");
+
+  const e = w.emitted.at(-1)!;
+  assert.deepEqual([e.from, e.kind, e.to], ["human", "say", ["all"]]);
+  assert.equal(e.text, "Answer to Q2 (May we publish? Default: no.): Yes, publish it.");
+  assert.deepEqual(e.answers, { question: "Q2", text: "Yes, publish it." });
+  assert.match(formatEntry(w.state, e), /^human: Answer to Q2 /);
+  assert.deepEqual(w.state.questions, asked, "the transcript is the only record of an answer, so state.json has none");
+  for (const id of ["pm", "e1", "u1"]) assert.ok(visibleTo(e, id), `${id} sees the answer`);
+
+  const prompt = buildPrompt(w.state, "e1", w.emitted, []).user;
+  const open = section(prompt, OPEN);
+  assert.match(open, /Q1/);
+  assert.doesNotMatch(open, /Q2/);
+  const answered = section(prompt, ANSWERED);
+  assert.match(answered, /- Q2 .*May we publish/);
+  assert.match(answered, /Yes, publish it\./);
+  assert.doesNotMatch(answered, /Q1/);
+});
+
+test("with every question answered there is no open-questions section", async () => {
+  const { buildPrompt } = await import("../src/prompt.ts");
+  const w = askTwo();
+  w.answer("Q1", "Stripe");
+  w.answer("Q2", "no");
+  const prompt = buildPrompt(w.state, "pm", w.emitted, []).user;
+  assert.equal(section(prompt, OPEN), "");
+  assert.match(section(prompt, ANSWERED), /Q1[\s\S]*Q2/);
+});
+
+test("a multi-line answer keeps its continuation lines under the answer label", async () => {
+  const { buildPrompt } = await import("../src/prompt.ts");
+  const w = askTwo();
+  w.answer("Q1", "Stripe,\nbut only for cards.");
+  const answered = section(buildPrompt(w.state, "pm", w.emitted, []).user, ANSWERED);
+  assert.match(answered, /\n {2}answer: Stripe,\n {4}but only for cards\./);
+});
+
+test("answering an unknown question fails and changes nothing", () => {
+  const w = askTwo();
+  const before = [JSON.stringify(w.state), w.emitted.length];
+  for (const id of ["Q3", "Q0", "2", "T1", ""]) assert.throws(() => w.answer(id, "x"), /unknown question/);
+  assert.throws(() => make().answer("Q1", "x"), /no questions have been asked/);
+  assert.deepEqual([JSON.stringify(w.state), w.emitted.length], before);
+});
+
+test("an empty answer is refused and changes nothing", () => {
+  const w = askTwo();
+  const before = [JSON.stringify(w.state), w.emitted.length];
+  for (const text of ["", "  \n "]) assert.throws(() => w.answer("Q1", text), /an answer is required/);
+  assert.deepEqual([JSON.stringify(w.state), w.emitted.length], before);
+});
+
+test("answering again replaces the earlier answer and the log line says so", async () => {
+  const { buildPrompt } = await import("../src/prompt.ts");
+  const w = askTwo();
+  w.answer("Q1", "Stripe is fine.");
+  assert.doesNotMatch(w.emitted.at(-1)!.text, /replac/);
+  w.answer("q1", "No, use PayPay.");
+  assert.match(w.emitted.at(-1)!.text, /^Answer to Q1 \(.*\), replacing the earlier answer: No, use PayPay\.$/);
+  const answered = section(buildPrompt(w.state, "pm", w.emitted, []).user, ANSWERED);
+  assert.match(answered, /No, use PayPay\./);
+  assert.doesNotMatch(answered, /Stripe is fine\./);
+});
+
+test("answersByQuestion keeps the latest answer per question and ignores plain messages", async () => {
+  const { answersByQuestion } = await import("../src/world.ts");
+  const w = askTwo();
+  w.answer("Q1", "Stripe");
+  w.answer("Q2", "no");
+  w.answer("q1", "PayPay");
+  w.broadcast("Answer to Q2 (May we publish?): yes");
+  assert.deepEqual([...answersByQuestion(w.emitted)], [["Q1", "PayPay"], ["Q2", "no"]]);
+});
+
+/** A one-iteration session in which e1 asks the human something during the build, run through to done. */
+function finishedWithQuestion(answerEarly: boolean): World {
+  const w = make(1);
+  toBuild(w);
+  w.record("e1", "[TASK_DONE T1] ok\n[ASK_HUMAN] May we publish to GitHub Pages? Meanwhile we demo from a local server.");
+  if (answerEarly) w.answer("Q1", "Yes, publish it.");
+  w.record("e2", "[TASK_BLOCKED T2] only the owner can create the API key");
+  w.record("e1", "lgtm");
+  w.record("e2", "lgtm");
+  w.record("pm", "ready");
+  w.record("u1", "[VERDICT accept] ok");
+  w.record("u2", "[VERDICT accept] ok");
+  w.record("pm", "thanks");
+  assert.equal(w.state.status, "done");
+  return w;
+}
+
+test("a question can still be answered after the session is done, and the answer is logged", async () => {
+  const { buildPrompt } = await import("../src/prompt.ts");
+  const w = finishedWithQuestion(false);
+  w.emitted.length = 0;
+  w.answer("Q1", "Yes, publish it.");
+  assert.equal(w.state.status, "done");
+  assert.equal(w.emitted.length, 1);
+  assert.deepEqual([w.emitted[0].from, w.emitted[0].kind, w.emitted[0].answers?.question], ["human", "say", "Q1"]);
+  assert.match(section(buildPrompt(w.state, "pm", w.emitted, []).user, ANSWERED), /Yes, publish it\./);
+  assert.deepEqual(w.next(), [], "the session stays done");
+});
+
+test("the end-of-session summary reports only questions still waiting for the human", () => {
+  assert.match(finishedWithQuestion(false).emitted.at(-1)!.text, /1 question\(s\) for the human/);
+  assert.doesNotMatch(finishedWithQuestion(true).emitted.at(-1)!.text, /question\(s\) for the human/);
+});

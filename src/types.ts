@@ -169,6 +169,8 @@ export interface Entry {
   kind: EntryKind;
   to?: string[];
   text: string;
+  /** On the human's `team answer` entry: the question it answers (e.g. "Q2") and the answer as typed. */
+  answers?: { question: string; text: string };
 }
 
 export interface TeamConfig {

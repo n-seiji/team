@@ -1,7 +1,7 @@
 // A self-contained HTML view of a session for reading it later: the conversation grouped by iteration and
 // phase, with the backlog, decisions, verdicts, questions and trial runs beside it. No external scripts.
 import type { Entry, PersonaSpec, SessionState, Task } from "./types.ts";
-import { currentPhase, isPrivate } from "./world.ts";
+import { answersByQuestion, currentPhase, isPrivate, questionId } from "./world.ts";
 
 const LABELS = {
   ja: {
@@ -14,6 +14,7 @@ const LABELS = {
     decisions: "決定",
     verdicts: "判定",
     questions: "人への質問",
+    answer: "回答",
     trials: "試用ログ",
     transcript: "会話",
     memos: "本人だけのメモも表示",
@@ -32,6 +33,7 @@ const LABELS = {
     decisions: "Decisions",
     verdicts: "Verdicts",
     questions: "Questions for the human",
+    answer: "answer",
     trials: "Trial runs",
     transcript: "Conversation",
     memos: "Show private memos",
@@ -119,7 +121,8 @@ export function renderHtml(s: SessionState, entries: Entry[]): string {
     `<li><span class="dot ${ROLE_CLASS[m.role] ?? "other"}"></span>${esc(m.persona.name)} <span class="muted">${esc(m.id)} · ${esc(m.role)}</span></li>`;
   const options = s.members.map((m) => `<option value="${esc(m.id)}">${esc(m.persona.name)}</option>`).join("");
   const trials = s.trials ?? [];
-  const questions = s.questions ?? [];
+  const answers = answersByQuestion(entries);
+  const questions = (s.questions ?? []).map((q, i) => ({ ...q, id: questionId(i), answer: answers.get(questionId(i)) }));
 
   return `<!doctype html>
 <html lang="${esc(s.language)}">
@@ -221,7 +224,7 @@ body:not(.show-private) .private { display: none }
 <aside>
   <section><h2>${L.team}</h2>${list(s.members, people, L.none)}</section>
   <section><h2>${L.backlog}</h2>${list(s.tasks, taskHtml, L.none)}</section>
-  ${questions.length ? `<section><h2>${L.questions}</h2>${list(questions, (q) => `<li>${body(q.text)} <span class="muted">${esc(nameOf(s, q.by))}</span></li>`, L.none)}</section>` : ""}
+  ${questions.length ? `<section><h2>${L.questions}</h2>${list(questions, (q) => `<li><b>${q.id}</b> ${body(q.text)} <span class="muted">${esc(nameOf(s, q.by))}</span>${q.answer === undefined ? "" : `<div class="small"><b>${L.answer}:</b> ${body(q.answer)}</div>`}</li>`, L.none)}</section>` : ""}
   <section><h2>${L.verdicts}</h2>${list(s.verdicts, (v) => `<li><span class="kind ${v.verdict}">${v.verdict}</span> ${esc(nameOf(s, v.by))} <span class="muted">${L.iteration} ${v.iteration}</span><div class="small">${body(v.reason)}</div></li>`, L.none)}</section>
   ${trials.length ? `<section><h2>${L.trials}</h2>${list(trials, (t) => `<li><span class="muted">${L.iteration} ${t.iteration}</span> ${t.command ? `<code>${esc(t.command)}</code> → ${t.timedOut ? "timeout" : `exit ${t.exitCode}`}<pre>${esc(t.output.trim())}</pre>${t.artifacts.map((a) => `<div class="small muted">${esc(a)}</div>`).join("")}` : L.none}</li>`, L.none)}</section>` : ""}
   <section><h2>${L.decisions}</h2>${list(s.decisions, (d) => `<li class="small">${body(d.text)} <span class="muted">${esc(d.phase)}</span></li>`, L.none)}</section>

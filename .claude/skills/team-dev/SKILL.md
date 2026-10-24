@@ -31,7 +31,7 @@ subagent, tell the user in one line the session name and that they can interject
 Repeat until the session is `done`, or until the stopping point the user asked for (e.g. "just discovery",
 "one phase", "N turns"). If they gave none, run until the end of the current iteration.
 
-1. `team next --json` → `{ status, phase, round, pending: [{ member, name, role, subagent, promptFile }] }`.
+1. `team next --json` → `{ status, phase, round, openQuestions: [{ id, by, text }], pending: [{ member, name, role, subagent, promptFile }] }`.
    If `status` is `"done"`, go to step 3.
 2. For **every** entry in `pending`, launch the Agent tool with `subagent_type: <subagent>` and a prompt like:
    > Read `<promptFile>` and play the turn of `<name>` (`<member>`) exactly as it instructs. Your final message must be only the action tags. Do not message the user or call any chat/messaging tools.
@@ -59,6 +59,9 @@ Repeat until the session is `done`, or until the stopping point the user asked f
    10 minutes), so give the Bash call recording the last `review` reply a long timeout (600000 ms).
 4. When `phase` in that output changed (or every ~6 turns), give the user a 2–4 line update:
    what happened, key decisions/tasks, what's next. Use `team log --tail 15 --no-thoughts` if you need a recap.
+   Add the questions for the human (`[ASK_HUMAN]`) that are new in `openQuestions` since your last update, with their ids
+   (`Q1`, `Q2`, ...) and the default the team went ahead with, so the user can answer by id. The list always holds every
+   question still open, so do not repeat ones you already told the user about.
 
 ## 3. Finish
 
@@ -88,8 +91,14 @@ their own fresh clone. So:
 
 - If the user says something meant for the team ("tell them the budget is small", "I want a web UI"), inject it:
   `team say "<their words>"` — every member sees it as a message from `human`.
-- Members never wait on the user. When a reply has `[ASK_HUMAN]`, put the question (and the default the team went
-  ahead with) in your next update to the user and keep the loop running; relay their answer with `team say`.
+- Members never wait on the user. When a reply has `[ASK_HUMAN]`, the question appears in `openQuestions` with its id
+  (`Q1`, `Q2`, ...). Put it, with the default the team went ahead with, in your next update to the user and keep the
+  loop running. Relay the user's answer to a specific question with `team answer Qn "<their words>"`; it overrides the
+  default for the whole team from the next prompt on, the question then leaves `openQuestions`, and answering the same
+  id again replaces the answer. When members asked the same thing (say two parallel engineers as Q3 and Q4), answer
+  each id: a duplicate you leave open stays open and the team keeps going on its own default. On a finished session
+  `team answer` only records the answer (nobody acts on it any more), so tell the user that instead of promising a
+  change. Keep `team say` for everything else.
 - If the user wants to *be* a member for a turn, record their words with `team record --as <member> --force`.
 - To change who is on the team, edit `team.config.json` / `personas/*.json` and start a new session.
 

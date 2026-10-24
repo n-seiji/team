@@ -3,7 +3,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Entry, PersonaSpec, SessionState, TeamConfig } from "./types.ts";
-import { World, assertPersona } from "./world.ts";
+import { World, answersByQuestion, assertPersona } from "./world.ts";
 import { renderMarkdown } from "./render.ts";
 import { renderHtml } from "./html.ts";
 
@@ -38,7 +38,10 @@ export class Store {
   }
 
   load(name = this.current()): World {
-    return new World(readJson<SessionState>(path.join(this.sessionDir(name), "state.json"), `session not found: ${name}`));
+    const w = new World(readJson<SessionState>(path.join(this.sessionDir(name), "state.json"), `session not found: ${name}`));
+    // Answers live only in the transcript; the world needs to know which questions they settled.
+    for (const id of answersByQuestion(this.transcript(name)).keys()) w.answered.add(id);
+    return w;
   }
 
   /**

@@ -76,7 +76,7 @@ Open this repository in Claude Code and run:
 /team-dev A tool that lets freelancers create an invoice from the terminal in under a minute
 ```
 
-Claude Code then repeats `team next` → subagent → `team record`. Anything you say mid-session that is meant for the team ("tell them the budget is small") is shared with every member through `team say`. You can also set a stopping point, such as "just discovery" or "up to the next phase".
+Claude Code then repeats `team next` → subagent → `team record`. Anything you say mid-session that is meant for the team ("tell them the budget is small") is shared with every member through `team say`. When a member asks you something with `[ASK_HUMAN]`, the team goes ahead on the default it stated; the question shows up with an id (`Q1`, `Q2`, ...) in `team status`, and `team answer Q2 "..."` answers that one question (the answer overrides the default in every later prompt). You can also set a stopping point, such as "just discovery" or "up to the next phase".
 
 - Full conversation, including each member's private thoughts: `.team/sessions/<name>/transcript.md`, or `transcript.html` to read it in a browser (grouped by phase, filter by member, private memos hidden by default; `team log --html` prints its path and renders it for older sessions)
 - Trial runs and evidence files: `.team/sessions/<name>/artifacts/`
@@ -100,6 +100,7 @@ ANTHROPIC_API_KEY=... node src/main.ts run --backend anthropic   # auto mode: Me
 node src/main.ts run --backend mock                              # walk the flow without any LLM
 node src/main.ts log --tail 20 --no-thoughts                     # transcript
 node src/main.ts say "Let's focus on sole proprietors"           # speak to the team as the human
+node src/main.ts answer Q2 "Yes, publish it"                     # answer one of the team's questions (ids are in status)
 ```
 
 #### Working on an existing repository
@@ -119,7 +120,7 @@ With `--workspace` the folder is used in place (no `workspace/<session>/` is cre
 To drive host mode yourself (for example from another agent framework):
 
 ```bash
-node src/main.ts next --json          # → pending: [{ member, role, subagent, canEdit, promptFile }]
+node src/main.ts next --json          # → pending: [{ member, role, subagent, canEdit, promptFile }], openQuestions: [{ id, by, text }]
 # give promptFile to an LLM and collect its reply
 node src/main.ts record --as pm --file reply.txt
 ```
