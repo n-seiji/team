@@ -7,7 +7,7 @@ import type { Entry, SessionState, Trial } from "./types.ts";
 import { ACTION_HELP, PROTOCOL_HELP } from "./protocol.ts";
 import { EXTERNAL_WORKSPACE_GUIDE, allowedActions, canEdit, roleGuide, workspaceGuide } from "./sop.ts";
 import { formatBacklog, formatEntry, formatQuestions } from "./render.ts";
-import { currentPhase, findMember, visibleTo, wrapupItems } from "./world.ts";
+import { currentPhase, findMember, latestVerdicts, visibleTo, wrapupItems } from "./world.ts";
 
 export interface TurnPrompt {
   member: string;
@@ -180,11 +180,13 @@ function formatTrial(t: Trial): string[] {
 /** Last iteration's rejections, marking users who rejected in every iteration so far (the fixes did not land). */
 function rejectionsToAddress(s: SessionState): string[] {
   const last = s.iteration - 1;
-  return s.verdicts
-    .filter((v) => v.iteration === last && v.verdict === "reject")
+  const rejectedIn = (by: string, iteration: number) =>
+    latestVerdicts(s, iteration).every((x) => x.by !== by || x.verdict === "reject");
+  return latestVerdicts(s, last)
+    .filter((v) => v.verdict === "reject")
     .map((v) => {
       const name = findMember(s, v.by)?.persona.name ?? v.by;
-      const streak = s.verdicts.filter((x) => x.by === v.by && x.iteration <= last).every((x) => x.verdict === "reject");
+      const streak = Array.from({ length: last }, (_, i) => i + 1).every((i) => rejectedIn(v.by, i));
       const again = streak && last > 1 ? ` (rejected in all ${last} iterations so far)` : "";
       return `- ${name}${again}: ${v.reason.replace(/\n/g, " ")}`;
     });

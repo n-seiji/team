@@ -159,6 +159,26 @@ test("a rejection with iterations left loops instead of wrapping up", () => {
   assert.equal(w.state.iteration, 2);
 });
 
+test("a user who gives two verdicts in one iteration counts once, by the latest", () => {
+  const w = make(2);
+  toAcceptance(w);
+  w.record("u1", "[VERDICT reject] no");
+  w.record("u2", "[VERDICT accept] ok");
+  w.record("u1", "[VERDICT reject] still no", { force: true });
+  w.record("pm", "[DECISION] retry");
+  assert.equal(w.state.verdicts.length, 3, "every verdict stays in the history");
+  assert.ok(w.emitted.some((e) => e.kind === "system" && /Iteration 2 begins: 1\/2 users rejected \(u1\)\./.test(e.text)));
+
+  const done = make(1);
+  toAcceptance(done);
+  done.record("u1", "[VERDICT reject] no");
+  done.record("u2", "[VERDICT accept] ok");
+  done.record("u1", "[VERDICT accept] fine", { force: true });
+  done.record("pm", "thanks");
+  assert.equal(done.state.status, "done");
+  assert.ok(done.emitted.some((e) => e.kind === "system" && /2\/2 users accepted\./.test(e.text)));
+});
+
 test("demos are recorded for engineers only", () => {
   const w = make();
   toBuild(w);
@@ -318,4 +338,103 @@ test("a round leaves room for several question-and-answer exchanges", () => {
     w.record(id, id === "pm" ? "[SAY to=u1] more?" : "[SAY to=pm] sure");
   }
   assert.ok(order.filter((id) => id === "pm").length >= 2, `pm follows up more than once: ${order.join(",")}`);
+});
+
+test("a dropped task stays closed: later start, done, blocked or drop reports are ignored", () => {
+  const w = make();
+  toBuild(w);
+  w.record("pm", "[TASK_DROP T2] out of scope", { force: true });
+  w.record("pm", "[TASK owner=e1 replaces=T1] A, smaller\n- a'", { force: true });
+  const closed = () => w.state.tasks.slice(0, 2).map((t) => [t.status, t.summary, t.owner]);
+  const before = closed();
+  assert.deepEqual(before, [["dropped", "replaced by T3", "e1"], ["dropped", "out of scope", "e2"]]);
+
+  const log = w.emitted.length;
+  w.record("e1", "[TASK_START T1]\n[TASK_DONE T1] did A\n[TASK_BLOCKED T1] needs a phone");
+  w.record("pm", "[TASK_DROP T1] again", { force: true });
+  w.record("e2", "[TASK_START T2]");
+  assert.deepEqual(closed(), before);
+  const ignored = w.emitted.slice(log).filter((e) => e.kind === "system").map((e) => e.text);
+  assert.deepEqual(ignored, [
+    "Ignored [TASK_START] from e1: T1 is already dropped.",
+    "Ignored [TASK_DONE] from e1: T1 is already dropped.",
+    "Ignored [TASK_BLOCKED] from e1: T1 is already dropped.",
+    "Ignored [TASK_DROP] from pm: T1 is already dropped.",
+    "Ignored [TASK_START] from e2: T2 is already dropped.",
+  ]);
+  assert.ok(!w.emitted.slice(log).some((e) => e.kind === "task_update"));
+});
+
+test("a done task can still be reopened to fix a review finding", () => {
+  const w = make();
+  toBuild(w);
+  w.record("e1", "[TASK_DONE T1] did A");
+  w.record("e2", "[TASK_DONE T2] did B");
+  assert.equal(w.phase.id, "review");
+  w.record("e1", "[TASK_START T1] fixing what e2 found");
+  assert.equal(w.state.tasks[0].status, "doing");
+});
+
+test("replacing an already dropped task is ignored: its drop reason stays and nothing is logged for it", () => {
+  const w = make();
+  toBuild(w);
+  w.record("pm", "[TASK_DROP T2] out of scope", { force: true });
+  const log = w.emitted.length;
+  w.record("pm", "[TASK owner=e1 replaces=T1,T2] C\n- c", { force: true });
+  assert.deepEqual(w.state.tasks.map((t) => [t.id, t.status, t.summary]), [
+    ["T1", "dropped", "replaced by T3"],
+    ["T2", "dropped", "out of scope"],
+    ["T3", "todo", undefined],
+  ]);
+  const added = w.emitted.slice(log);
+  assert.deepEqual(added.filter((e) => e.kind === "task_update").map((e) => e.text), ["T1 → dropped: replaced by T3"]);
+  assert.deepEqual(added.filter((e) => e.kind === "system").map((e) => e.text), ["Ignored replaces=T2 from pm: T2 is already dropped."]);
+});
+
+test("a done task can still be replaced by a new one that supersedes it", () => {
+  const w = make();
+  toBuild(w);
+  w.record("e1", "[TASK_DONE T1] did A");
+  w.record("pm", "[TASK owner=e1 replaces=T1] A, redone\n- a'", { force: true });
+  assert.deepEqual([w.state.tasks[0].status, w.state.tasks[0].summary], ["dropped", "replaced by T3"]);
+  assert.ok(!w.emitted.some((e) => e.kind === "system" && /Ignored replaces/.test(e.text)));
+});
+
+test("a user who rejected then accepted in one iteration is not in the PM's rejections; one who accepted then rejected is", async () => {
+  const { buildPrompt } = await import("../src/prompt.ts");
+  const w = make(3);
+  toAcceptance(w);
+  w.record("u1", "[VERDICT reject] first impression");
+  w.record("u2", "[VERDICT accept] fine");
+  w.record("u1", "[VERDICT accept] it works after all", { force: true });
+  w.record("u2", "[VERDICT reject] on second thought, no", { force: true });
+  w.record("pm", "[DECISION] retry");
+  assert.equal(w.phase.id, "planning");
+  assert.equal(w.state.iteration, 2);
+  const lines = buildPrompt(w.state, "pm", w.emitted, []).user.split("\n");
+  const at = lines.indexOf("## Rejections from the last iteration");
+  assert.ok(at >= 0, "the section is there");
+  assert.equal(lines[at + 1], "- U2: on second thought, no");
+  assert.match(lines[at + 2], /^Before planning fixes/, "U1 is not listed");
+});
+
+test("the streak of rejections counts each iteration's latest verdict, so a changed mind in one iteration decides it", async () => {
+  const { buildPrompt } = await import("../src/prompt.ts");
+  const w = make(3);
+  toAcceptance(w);
+  w.record("u1", "[VERDICT accept] looks fine");
+  w.record("u2", "[VERDICT reject] no");
+  w.record("u1", "[VERDICT reject] on second thought, no", { force: true });
+  w.record("u2", "[VERDICT accept] ok now", { force: true });
+  w.record("pm", "[DECISION] retry");
+  w.record("pm", "[TASK owner=e1] C\n- c\n[ADVANCE]");
+  w.record("e1", "[TASK_DONE T3] ok");
+  for (const id of ["e2", "e1", "e2", "pm"]) w.record(id, "-");
+  w.record("u1", "[VERDICT reject] broken again");
+  w.record("u2", "[VERDICT reject] now this");
+  w.record("pm", "-");
+  assert.equal(w.state.iteration, 3);
+  const pm = buildPrompt(w.state, "pm", w.emitted, []).user;
+  assert.match(pm, /- U1 \(rejected in all 2 iterations so far\): broken again/);
+  assert.match(pm, /- U2: now this/, "U2 accepted last time, so no streak");
 });

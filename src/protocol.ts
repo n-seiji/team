@@ -41,7 +41,7 @@ export function parseReply(raw: string): Action[] {
     if (m) {
       flush();
       const { attrs, arg } = parseAttrs(m[2] ?? "");
-      cur = { type: m[1], attrs, arg, text: m[3] ?? "" };
+      cur = { type: m[1], attrs, arg, text: stripTagColon(m[3] ?? "") };
       continue;
     }
     if (!cur) {
@@ -52,6 +52,11 @@ export function parseReply(raw: string): Action[] {
   }
   flush();
   return actions.filter((a) => a.type === "DONE" || a.type === "ADVANCE" || a.text.length > 0 || a.arg);
+}
+
+/** Agents echo the transcript's `Name [TAG]: text` format; drop that colon, but not one inside the text (`10:30`). */
+function stripTagColon(s: string): string {
+  return s.replace(/^\s*:(?:\s+|$)/, "");
 }
 
 function parseAttrs(s: string): { attrs: Record<string, string>; arg?: string } {
@@ -82,7 +87,7 @@ export const ACTION_HELP: Record<string, string> = {
   TASK_BLOCKED:
     "[TASK_BLOCKED T1] only a real person outside the team can finish this (a real device, an account, a permission, " +
     "publishing); say exactly what they must do. The team moves on",
-  TASK_DROP: "[TASK_DROP T1] close a task the team will not do, with the reason",
+  TASK_DROP: "[TASK_DROP T1] close a task the team will not do, with the reason (a dropped task cannot be reopened; add a new [TASK])",
   ASK_HUMAN:
     "[ASK_HUMAN] a question only the real human can answer (a product or preference call, a permission, money, " +
     "anything irreversible), plus the default the team goes ahead with meanwhile. Never for something you can check yourself",
