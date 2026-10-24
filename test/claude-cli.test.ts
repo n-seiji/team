@@ -50,7 +50,7 @@ async function argvOf(setup: Setup = {}): Promise<string[]> {
   try {
     const backend = new ClaudeCliBackend({ type: "claude-cli" });
     setup.afterCreate?.(settingsFile);
-    const turn = { member: "e1", role: "engineer", canEdit: setup.canEdit ?? false, system: "s", user: "u" };
+    const turn = { member: "e1", role: "engineer", canEdit: setup.canEdit ?? false, system: "s", user: "u", sections: [] };
     const reply = await backend.respond(turn, { state: { externalWorkspace: false } as SessionState, root });
     assert.equal(reply, "[SAY to=all] ok");
     return JSON.parse(fs.readFileSync(path.join(root, "argv.json"), "utf8"));
