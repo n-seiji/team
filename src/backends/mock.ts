@@ -1,11 +1,15 @@
 // Deterministic, offline backend. Walks a whole iteration so the engine,
 // CLI and transcript can be exercised in tests and demos without any LLM.
 import type { TurnPrompt } from "../prompt.ts";
-import type { Backend, TurnContext } from "./index.ts";
+import type { Backend, BackendReply, TurnContext } from "./index.ts";
 import { currentPhase, findMember } from "../world.ts";
 
 export class MockBackend implements Backend {
-  async respond(p: TurnPrompt, { state: s }: TurnContext): Promise<string> {
+  async respond(p: TurnPrompt, ctx: TurnContext): Promise<BackendReply> {
+    return { text: this.text(p, ctx) };
+  }
+
+  private text(p: TurnPrompt, { state: s }: TurnContext): string {
     const phase = currentPhase(s).id;
     const users = s.members.filter((m) => m.role === "user");
     const engineers = s.members.filter((m) => m.role === "engineer");

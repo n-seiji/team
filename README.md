@@ -81,6 +81,7 @@ Claude Code then repeats `team next` → subagent → `team record`. Anything yo
 
 - Full conversation, including each member's private thoughts: `.team/sessions/<name>/transcript.md`, or `transcript.html` to read it in a browser (grouped by phase, filter by member, private memos hidden by default; `team log --html` prints its path and renders it for older sessions)
 - Trial runs and evidence files: `.team/sessions/<name>/artifacts/`
+- What each reply really cost: `.team/sessions/<name>/usage.jsonl`, one line per recorded reply with the member, phase, iteration, prompt and reply size in characters, and what the backend measured: the four token counts (input, cache write, cache read, output), USD cost, duration and model calls. Failed attempts count too, and a turn skipped after two failures or a timeout is marked `skipped`. The one token number an orchestrator passes to `record --tokens` is stored as `reportedTokens`, apart from the measured counts, which it is never added to. `team stats` sums the lines by phase and role and never adds cache reads to the other counts. `team stats --json` prints `{ session, recorded: true, total, byPhase, byRole }`, where each group has its turn counts (`turns`, `skippedTurns`, `turnsWithoutCost`, `turnsWithoutMeasuredTokens`) and leaves out any figure nobody reported (`tokens`, `costUsd`, `durationMs`, `modelCalls`, `reportedTokens`); a session with no usage lines (saved before this, or nothing recorded yet) prints `{ session, recorded: false }`
 - The product being built: `workspace/<name>/` (each session gets its own folder)
 
 #### Claude Code on the web and Claude Projects
@@ -100,6 +101,7 @@ node src/main.ts run --backend claude-cli                        # auto mode: ea
 ANTHROPIC_API_KEY=... node src/main.ts run --backend anthropic   # auto mode: Messages API directly
 node src/main.ts run --backend mock                              # walk the flow without any LLM
 node src/main.ts log --tail 20 --no-thoughts                     # transcript
+node src/main.ts stats                                           # real tokens and cost per phase and role (--json for scripts)
 node src/main.ts say "Let's focus on sole proprietors"           # speak to the team as the human
 node src/main.ts answer Q2 "Yes, publish it"                     # answer one of the team's questions (ids are in status)
 ```
@@ -123,7 +125,7 @@ To drive host mode yourself (for example from another agent framework):
 ```bash
 node src/main.ts next --json          # → pending: [{ member, role, subagent, canEdit, promptFile }], openQuestions: [{ id, by, text }]
 # give promptFile to an LLM and collect its reply
-node src/main.ts record --as pm --file reply.txt
+node src/main.ts record --as pm --file reply.txt [--tokens N] [--duration-ms N]   # optional: the token total and duration the orchestrator reported for the turn, for team stats
 ```
 
 | Backend | Requires | Notes |
@@ -134,6 +136,8 @@ node src/main.ts record --as pm --file reply.txt
 | `mock` | nothing | Canned replies through one iteration. For tests and demos |
 
 Set the model with `backend.model` in `team.config.json`, `--model`, or the `TEAM_MODEL` environment variable.
+
+A `claude-cli` turn that runs longer than `TEAM_TURN_TIMEOUT` seconds (default 1800) is stopped by killing the turn's process tree and process groups, and the member skips it without a retry, since a hang would only repeat. Its `usage.jsonl` line is marked `skipped` and keeps the time it took. A process whose parent has already exited can no longer be traced to the turn and may survive.
 
 `claude-cli` turns load only the project's (and the external workspace's) Claude Code settings plus your deny rules, `env` and `apiKeyHelper` from the user settings. Global rules, plugins, hooks and skills are not loaded.
 
@@ -173,6 +177,7 @@ src/
   render.ts     log and transcript.md formatting
   html.ts       transcript.html (the browser view)
   verify.ts     trial runs of the team's [VERIFY] command before acceptance
+  usage.ts      token counts from backends and the totals behind team stats
   backends/     anthropic / claude-cli / mock
 personas/       member definitions
 scripts/        prompt-snapshot.ts: dumps every prompt so `diff -r before after` proves a prompt.ts change altered no byte
@@ -184,5 +189,5 @@ scripts/        prompt-snapshot.ts: dumps every prompt so `diff -r before after`
 - Simulated users do not replace real users. Use them to widen hypotheses and catch obvious problems, then confirm important decisions with real people.
 - Users judge only what the team shows them: the demos and the files they can open. They cannot use a browser or a phone, so anything not demonstrated stays unverified, and they are told to say so.
 - Engineers in the build phase edit the same `workspace/<session>/` in parallel. They are told to keep to their own files, and conflicts are expected to be fixed in review.
-- In auto mode a turn that fails (for example an API error) is retried once; if it fails again the member skips that turn and the run goes on.
+- In auto mode a turn that fails (for example an API error) is retried once; if it fails again the member skips that turn and the run goes on. A turn that times out is skipped without a retry.
 - The `claude-cli` backend gives engineers Bash and edit tools in phases that allow editing. Run it in a trusted environment, such as a container or a cloud session.

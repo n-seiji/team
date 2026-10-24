@@ -2,7 +2,8 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import type { BackendConfig } from "../types.ts";
 import type { TurnPrompt } from "../prompt.ts";
-import type { Backend } from "./index.ts";
+import { tokensFromApi } from "../usage.ts";
+import type { Backend, BackendReply } from "./index.ts";
 
 const DEFAULT_MODEL = "claude-sonnet-5-5";
 
@@ -15,7 +16,7 @@ export class AnthropicBackend implements Backend {
     this.maxTokens = cfg.maxTokens ?? 2048;
   }
 
-  async respond(p: TurnPrompt): Promise<string> {
+  async respond(p: TurnPrompt): Promise<BackendReply> {
     const key = process.env.ANTHROPIC_API_KEY;
     if (!key) throw new Error("ANTHROPIC_API_KEY is not set (or use --backend claude-cli / host mode)");
     const base = (process.env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com").replace(/\/$/, "");
@@ -35,8 +36,9 @@ export class AnthropicBackend implements Backend {
         continue;
       }
       if (!res.ok) throw new Error(`Anthropic API ${res.status}: ${(await res.text()).slice(0, 500)}`);
-      const body = (await res.json()) as { content: { type: string; text?: string }[] };
-      return body.content.filter((c) => c.type === "text").map((c) => c.text).join("\n");
+      const body = (await res.json()) as { content: { type: string; text?: string }[]; usage?: unknown };
+      const tokens = tokensFromApi(body.usage);
+      return { text: body.content.filter((c) => c.type === "text").map((c) => c.text).join("\n"), usage: tokens && { tokens } };
     }
   }
 }

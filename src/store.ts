@@ -1,8 +1,8 @@
-// File-based persistence: .team/sessions/<name>/{state.json,transcript.jsonl,transcript.md,transcript.html}
+// File-based persistence: .team/sessions/<name>/{state.json,transcript.jsonl,usage.jsonl,transcript.md,transcript.html}
 // Plain files keep sessions inspectable, diffable and portable across OSes.
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { Entry, PersonaSpec, SessionState, TeamConfig } from "./types.ts";
+import type { Entry, PersonaSpec, SessionState, TeamConfig, TurnUsage } from "./types.ts";
 import { World, answersByQuestion, assertPersona } from "./world.ts";
 import { renderMarkdown } from "./render.ts";
 import { renderHtml } from "./html.ts";
@@ -66,19 +66,45 @@ export class Store {
   }
 
   transcript(name = this.current()): Entry[] {
-    const f = path.join(this.sessionDir(name), "transcript.jsonl");
-    if (!fs.existsSync(f)) return [];
-    return fs
-      .readFileSync(f, "utf8")
-      .split("\n")
-      .filter((l) => l.trim())
-      .map((l) => JSON.parse(l) as Entry);
+    return readJsonLines<Entry>(path.join(this.sessionDir(name), "transcript.jsonl")) ?? [];
+  }
+
+  /**
+   * Append one line per reply that was just recorded. Callers do this right after recording, never from `save`,
+   * which also runs for `next` and `say` and would count a turn twice.
+   */
+  appendUsage(name: string, lines: readonly TurnUsage[]): void {
+    if (!lines.length) return;
+    fs.appendFileSync(path.join(this.sessionDir(name), "usage.jsonl"), lines.map((l) => JSON.stringify(l) + "\n").join(""));
+  }
+
+  /** null when the session never recorded usage (saved before it existed). */
+  usage(name = this.current()): TurnUsage[] | null {
+    // `run` may be appending while this reads, so the last line can be half written
+    return readJsonLines<TurnUsage>(path.join(this.sessionDir(name), "usage.jsonl"), { skipUnfinishedLastLine: true });
   }
 
   list(): string[] {
     const d = path.join(this.teamDir, "sessions");
     return fs.existsSync(d) ? fs.readdirSync(d).filter((n) => this.exists(n)) : [];
   }
+}
+
+function readJsonLines<T>(file: string, { skipUnfinishedLastLine = false } = {}): T[] | null {
+  if (!fs.existsSync(file)) return null;
+  const lines = fs
+    .readFileSync(file, "utf8")
+    .split("\n")
+    .filter((l) => l.trim());
+  const parsed: T[] = [];
+  lines.forEach((l, i) => {
+    try {
+      parsed.push(JSON.parse(l) as T);
+    } catch (e) {
+      if (!(skipUnfinishedLastLine && i === lines.length - 1)) throw e;
+    }
+  });
+  return parsed;
 }
 
 function writeAtomic(file: string, data: string): void {

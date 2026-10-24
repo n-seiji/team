@@ -9,10 +9,12 @@ import { DEFAULT_PHASES, subagentFor } from "./sop.ts";
 import { buildPrompt, listWorkspace, promptAsText } from "./prompt.ts";
 import { formatBacklog, formatEntry, formatQuestions, displayName } from "./render.ts";
 import { createBackend } from "./backends/index.ts";
+import type { BackendReply } from "./backends/index.ts";
 import { findOverlaps, formatOverlap, otherSessionChanges, sameRepoChanges } from "./overlap.ts";
 import { runTrialIfDue } from "./verify.ts";
 import { renderHtml } from "./html.ts";
-import type { BackendConfig } from "./types.ts";
+import { ReplyError, TurnTimeoutError, addUsage, formatStats, summarizeUsage } from "./usage.ts";
+import type { BackendConfig, ReplyUsage, TurnUsage } from "./types.ts";
 
 const HELP = `team — PM・エンジニア・ペルソナ(ユーザー)が会話しながら開発するシミュレーター
 
@@ -26,6 +28,7 @@ Session
   log [--tail N] [--md] [--html] [--no-thoughts]
                        会話ログを表示 (--md / --html は transcript.md / transcript.html のパス。HTML はブラウザで読む用)
   sessions             セッション一覧 / use <name> で切り替え
+  stats [--json]       ターンごとの実際の使用量 (usage.jsonl) の合計。フェーズ別・ロール別の内訳つき
   overlaps [--json]    同じリポジトリを触る他のセッションと、同じファイル・同じ番号のファイルが重なっていないか確認
   say <text>           人間(あなた)としてチーム全員に発言を差し込む
   answer <Qn> <text>   メンバーの質問 Qn (status で一覧) に答える。チーム全員に伝わり、以降のプロンプトでは既定の案より優先される。
@@ -35,8 +38,10 @@ Host mode (Claude Code などの外部オーケストレーターが各エージ
   next [--json] [--inline]
                        次に行動すべきメンバーと、そのメンバー用プロンプトを出力
                        (プロンプトは .team/sessions/<s>/turns/*.prompt.md にも保存)
-  record --as <id> [--file <f>] [--force] [--json]
+  record --as <id> [--file <f>] [--force] [--tokens N] [--duration-ms N] [--json]
                        メンバーの返答(stdin か --file)を記録して次へ進める (--json は next --json と同じ出力)
+                       --tokens / --duration-ms: オーケストレーターが報告したそのターンのトークン数・所要時間
+                       (usage.jsonl に記録。トークン数は報告値のまま、測定したトークン数とは別に集計される)
 
 Auto mode (このプロセスが LLM を呼ぶ)
   run [--backend anthropic|claude-cli|mock] [--model <m>] [--turns N]
@@ -59,6 +64,8 @@ const OPTIONS = {
   backend: { type: "string" },
   model: { type: "string" },
   turns: { type: "string" },
+  tokens: { type: "string" },
+  "duration-ms": { type: "string" },
   tail: { type: "string" },
   force: { type: "boolean" },
   json: { type: "boolean" },
@@ -82,6 +89,7 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
   const store = new Store(root);
   const session = flags.session;
   const load = () => store.load(session);
+  const turnsDir = (w: World) => path.join(store.sessionDir(w.state.name), "turns");
 
   /** Schedule the next speaker(s) and print their turn prompts (`next`, and `init --json`). */
   function next(w: World) {
@@ -92,14 +100,14 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
     const view = es.concat(w.emitted);
     const files = listWorkspace(w.state, root);
     const others = otherSessionChanges(store, w.state);
-    const turnsDir = path.join(store.sessionDir(w.state.name), "turns");
-    if (ids.length) fs.mkdirSync(turnsDir, { recursive: true });
+    const promptsDir = turnsDir(w);
+    if (ids.length) fs.mkdirSync(promptsDir, { recursive: true });
     const items = ids.map((id) => {
       const p = buildPrompt(w.state, id, view, files, { others });
       const text = promptAsText(p);
       // Prompts are also written to files so an orchestrator can hand a short
       // path to a subagent instead of copying the whole prompt through its context.
-      const file = path.join(turnsDir, `${String(w.state.turn).padStart(4, "0")}-${id}.prompt.md`);
+      const file = path.join(promptsDir, `${String(w.state.turn).padStart(4, "0")}-${id}.prompt.md`);
       fs.writeFileSync(file, text);
       return {
         member: id,
@@ -259,10 +267,16 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
       const w = load();
       const id = flags.as;
       if (!id) throw new Error("--as <member-id> is required");
+      const tokens = wholeNumber(flags.tokens, "--tokens");
+      const durationMs = wholeNumber(flags["duration-ms"], "--duration-ms");
       const file = flags.file;
       const raw = file ? fs.readFileSync(path.resolve(root, file), "utf8") : await readStdin("no reply given: pipe it via stdin or use --file");
-      const actions = w.record(id, raw, { force: !!flags.force });
+      // an interjection (--force) has no prompt of its own; an older file would be another turn's
+      const promptChars = w.state.pending.includes(id) ? latestPromptChars(turnsDir(w), id) : undefined;
+      const measured = { source: "host" as const, promptChars, durationMs, reportedTokens: tokens };
+      const { actions, usage } = recordTurn(w, id, raw, measured, !!flags.force);
       store.save(w);
+      store.appendUsage(w.state.name, [usage]);
       // With --json, answer like `next --json` so the orchestrator saves a call per turn.
       if (flags.json) return next(w);
       const ids = w.next();
@@ -290,21 +304,34 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
         const files = listWorkspace(w.state, root);
         const others = otherSessionChanges(store, w.state);
         const ctx = { state: w.state, root };
+        const prompts = ids.map((id) => buildPrompt(w.state, id, view, files, { others }));
         // Members scheduled in the same step act in parallel (like TinyWorld steps).
-        const replies = await Promise.all(
-          ids.map((id) => respondWithRetry(() => backend.respond(buildPrompt(w.state, id, view, files, { others }), ctx), id, out)),
-        );
+        const replies = await Promise.all(prompts.map((p) => respondWithRetry(() => backend.respond(p, ctx), p.member, out)));
+        const usage: TurnUsage[] = [];
         ids.forEach((id, i) => {
           const before = w.emitted.length;
-          w.record(id, replies[i]);
+          const { usage: spent, skipped } = replies[i];
+          const measured = { ...spent, source: bcfg.type, promptChars: promptAsText(prompts[i]).length, skipped };
+          usage.push(recordTurn(w, id, replies[i].text, measured).usage);
           for (const e of w.emitted.slice(before)) out(`[${e.phase}] ${formatEntry(w.state, e)}`);
         });
         const fresh = [...w.emitted];
         store.save(w, es);
+        store.appendUsage(w.state.name, usage);
         es.push(...fresh);
         turns += ids.length;
       }
       out(w.state.status === "done" ? "session is done." : `stopped after ${turns} turn(s); run again to continue.`);
+      return;
+    }
+
+    case "stats": {
+      const name = load().state.name;
+      const lines = store.usage(name);
+      const stats = lines?.length ? summarizeUsage(lines) : null;
+      if (flags.json) out(JSON.stringify(stats ? { session: name, recorded: true, ...stats } : { session: name, recorded: false }, null, 2));
+      else if (stats) out(formatStats(name, stats));
+      else out(`session ${name}: no usage recorded (saved before usage tracking, or no reply recorded yet)`);
       return;
     }
 
@@ -313,18 +340,70 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
   }
 }
 
-/** One retry per turn; if that also fails, the member skips the turn so a single bad call does not stop the run. */
-async function respondWithRetry(call: () => Promise<string>, id: string, out: (s: string) => void): Promise<string> {
+/** Parses a count given on the command line, rejecting anything that is not a whole number of at least zero. */
+function wholeNumber(value: string | undefined, flag: string): number | undefined {
+  if (value === undefined) return undefined;
+  if (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value))) throw new Error(`${flag} must be a whole number of 0 or more, got "${value}"`);
+  return Number(value);
+}
+
+/** The size of the newest prompt `next` wrote for a member. Files are `<turn>-<member id>.prompt.md` and ids contain hyphens, so compare the whole id. */
+function latestPromptChars(dir: string, id: string): number | undefined {
+  let newest: { turn: number; file: string } | undefined;
+  for (const file of fs.existsSync(dir) ? fs.readdirSync(dir) : []) {
+    const m = /^(\d+)-(.+)\.prompt\.md$/.exec(file);
+    if (m && m[2] === id && (!newest || Number(m[1]) > newest.turn)) newest = { turn: Number(m[1]), file };
+  }
+  return newest && fs.readFileSync(path.join(dir, newest.file), "utf8").length;
+}
+
+/** Applies a reply and returns what the turn cost. The phase is read first: recording a reply can move the schedule on. */
+function recordTurn(
+  w: World,
+  id: string,
+  raw: string,
+  measured: ReplyUsage & Pick<TurnUsage, "source" | "promptChars" | "reportedTokens" | "skipped">,
+  force = false,
+) {
+  const phase = w.phase.id;
+  const iteration = w.state.iteration;
+  const actions = w.record(id, raw, { force });
+  const usage: TurnUsage = {
+    turn: w.state.turn,
+    member: id,
+    role: w.member(id)!.role,
+    phase,
+    iteration,
+    at: new Date().toISOString(),
+    replyChars: raw.length,
+    ...measured,
+  };
+  return { actions, usage };
+}
+
+/**
+ * One retry per turn; if that also fails, the member skips the turn so a single bad call does not stop the run. A turn that timed out
+ * is skipped at once: it would only hang for the whole limit again, and the members of its step are waiting for it.
+ * The usage of the reply is what every attempt cost, failed ones included.
+ */
+async function respondWithRetry(call: () => Promise<BackendReply>, id: string, out: (s: string) => void): Promise<BackendReply & { skipped?: boolean }> {
+  const spentOn = (e: unknown) => (e instanceof ReplyError ? e.usage : undefined);
+  const skipped = (usage?: ReplyUsage) => ({ text: "[SAY to=all] (could not attend this turn)", usage, skipped: true });
   try {
     return await call();
   } catch (first) {
+    if (first instanceof TurnTimeoutError) {
+      out(`warning: ${id} skips this turn without a retry: ${first.message}`);
+      return skipped(first.usage);
+    }
     out(`warning: ${id}'s turn failed, retrying once: ${(first as Error).message.split("\n")[0]}`);
     try {
-      return await call();
+      const reply = await call();
+      return { ...reply, usage: addUsage(spentOn(first), reply.usage) };
     } catch (e) {
       const reason = (e as Error).message.split("\n")[0].slice(0, 200);
       out(`warning: ${id} skips this turn: ${reason}`);
-      return "[SAY to=all] (could not attend this turn)";
+      return skipped(addUsage(spentOn(first), spentOn(e)));
     }
   }
 }
