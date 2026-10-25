@@ -24,7 +24,7 @@
              └───────▲───────────────────────────────┬──────────────────────────────────────────┘
        team record   │ 返答 (アクションタグ)            │ team next → 次の話者 + ターン用プロンプト
                      │                               ▼
-  host モード: Claude Code (team-dev スキル) ── サブエージェント team-pm / team-engineer / team-persona
+  host モード: Claude Code (team-dev スキル) ── サブエージェント team-pm / team-engineer / team-designer / team-persona
   auto モード: team run ── backend: anthropic (API) | claude-cli (claude -p) | mock
 ```
 
@@ -37,6 +37,8 @@
 | build | エンジニア（**並列**） | 自分のタスクを `workspace/<セッション名>/` に実装し `[TASK_DONE]` |
 | review | エンジニア, PM | 相互レビューと修正。PM が受け入れ基準を確認 |
 | acceptance | ユーザー, PM | 最初にエンジン自身がチームの `[VERIFY]` コマンドを実行し、本物の出力とファイル (スクリーンショットなど) を**試用ログ**として残す。ユーザーは試用ログとデモから成果物を読んで `[VERDICT accept/reject]`。PM がまとめる |
+
+**デザイナー（任意）。** `--config configs/designer.json`（既定のチームにデザイナーを足したもの）で `init` すると、planning の後に **design** フェーズ（デザイナー・PM・エンジニア、2ラウンド）が入ります。デザイナーはセッションの artifacts フォルダ (`.team/sessions/<name>/artifacts/`) に `design.md` を書きます。画面（または CLI コマンド）ごとに、誰がどの順で使うか、状態表（初回・空 / 通常 / 件数が多い / エラー・不正入力 / 間違いの取り消し / 日付・月の切り替わり / スマホ幅）、表示する文言です。PM は重要な行を受け入れ基準に写し、エンジニアは `design.md` に沿って作り、review ではデザイナーが先に話して `design.md` との差分を挙げます。デザイナーにタスクは割り当てず、プロダクトのコードも書きません。`init --workspace`（外部コードベース）では、`design.md` のパスがチームリポジトリからの相対パスになり、claude-cli バックエンドはそこへの権限を与えないため、デザイナーは当面、既定のワークスペースで使う前提です。デザイナーのいないチームや、設定で `phases` を指定した場合は、上記のフェーズのままです。
 
 reject が1件でもあり、イテレーション上限 (`maxIterations`) に達していなければ planning に戻ります。各フェーズは最大ラウンド数で終わるほか、PM が `[ADVANCE]` で早めに切り上げられます。
 
@@ -129,7 +131,7 @@ node src/main.ts record --as pm --file reply.txt [--tokens N] [--duration-ms N] 
 
 ## カスタマイズ
 
-- **メンバー**: `personas/*.json` を追加・編集して `team.config.json` の `members` に並べます。`role` は `pm` / `engineer` / `user`（それ以外のロール名も使え、汎用の説明で参加します）。`persona` 以下は TinyTroupe 形式の自由な JSON で、そのままプロンプトに入ります。ユーザーには `tech_literacy` のような「試用のしかたに影響する情報」を書くと受け入れテストが現実的になります。
+- **メンバー**: `personas/*.json` を追加・編集して `team.config.json` の `members` に並べます。`role` は `pm` / `engineer` / `user` / `designer`（`configs/designer.json` 参照。それ以外のロール名も使え、汎用の説明で参加します）。`persona` 以下は TinyTroupe 形式の自由な JSON で、そのままプロンプトに入ります。ユーザーには `tech_literacy` のような「試用のしかたに影響する情報」を書くと受け入れテストが現実的になります。
 - **フェーズ**: `team.config.json` に `phases` を書くと `DEFAULT_PHASES` (`src/sop.ts`) を置き換えられます（`id` / `goal` / `speakers` / `mode: round-robin|parallel` / `maxRounds`、任意で `untilTasksDone`（タスクが全部終わったら早めに終える）/ `editors`（このフェーズで `workspace/` を編集できるロール）/ `iterationStart`（reject 後にここから次のイテレーションを始める））。
 - **言語**: `language`（既定 `ja`）。
 - **記憶の長さ**: `historyWindow`（プロンプトに入れる直近の会話件数）。プロンプトでは、同じプロンプトの Backlog・Decisions・Demos に全文がある発言（タスク作成・タスク更新・決定・デモ）は 1 行の参照にします。`transcript.md` と `team log` は全文のままです。

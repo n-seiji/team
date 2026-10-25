@@ -89,6 +89,66 @@ export const DEFAULT_PHASES: PhaseDef[] = [
   },
 ];
 
+/** Shared by the designer variant and the no-designer comparison config, so the two differ only in who writes it. */
+export const STATE_TABLE =
+  "For each screen (or CLI command) write who uses it, in which order, and a state table with a row for each of: " +
+  "first use or empty, normal, many items, error or bad input, undoing a mistake, the day or month boundary, phone width. " +
+  "Give the visible copy. Every choice names the user need from the brief or the interviews that it serves; " +
+  "one persona's remark is a question to raise, not a rule.";
+export const VERIFY_STATES =
+  "The engineer who owns [VERIFY] makes its journeys cover those states: empty, day or month change, undo and phone width.";
+
+/**
+ * Phases for a team: the default ones, plus a design phase after planning when the team has a designer.
+ * A config's own `phases` replaces this entirely.
+ */
+export function phasesFor(members: readonly { role: Role }[]): PhaseDef[] {
+  if (!members.some((m) => m.role === "designer")) return DEFAULT_PHASES;
+  const noTask = "Never assign a task to the designer.";
+  const withGoal = (p: PhaseDef, f: (goal: string) => string): PhaseDef => ({ ...p, goal: f(p.goal) });
+  const phases: PhaseDef[] = [];
+  for (const p of DEFAULT_PHASES) {
+    switch (p.id) {
+      case "planning":
+        phases.push(
+          withGoal(p, (g) => `${g} ${noTask} Every product decision names the user need it serves; one persona's remark is a question to raise, not a rule.`),
+          {
+            id: "design",
+            goal:
+              "The designer writes design.md in the artifacts folder for this iteration's tasks (from iteration 2 on, " +
+              "changes only what the rejections and new tasks need). " + STATE_TABLE + " " +
+              "The PM copies each state-table row that matters into the acceptance criteria (update tasks with replaces=, or add a [TASK]) " +
+              "so the design reaches the build; engineers flag what is costly and agree. " + noTask,
+            speakers: ["designer", "pm", "engineer"],
+            mode: "round-robin",
+            maxRounds: 2,
+            editors: ["designer"],
+          },
+        );
+        break;
+      case "build":
+        phases.push(withGoal(p, (g) => `${g} Build to design.md in the artifacts folder; disagree in [SAY], don't silently diverge.`));
+        break;
+      case "review":
+        phases.push({
+          ...withGoal(
+            p,
+            (g) =>
+              "The designer goes first: compare the built product with design.md (render the pages or run the commands, " +
+              "screenshots into the artifacts folder) and list the gaps by state-table row; engineers fix them in their turn. " +
+              `${g} ${VERIFY_STATES}`,
+          ),
+          speakers: ["designer", "engineer", "pm"],
+          editors: ["engineer", "designer"],
+        });
+        break;
+      default:
+        phases.push(p);
+    }
+  }
+  return phases;
+}
+
 /**
  * The real human supervises asynchronously, so the team never waits on them: facts are checked, not asked; only
  * calls a person must make are asked, with a default to proceed on.
@@ -137,6 +197,21 @@ const ROLES: Record<string, RoleDef> = {
       "All product code lives here (relative to the repository root). When the phase allows editing and you have file tools, " +
       "read and edit files here for real; keep the product runnable and document how to run it in its README.md. " +
       "Save screenshots and other evidence for demos in the session's artifacts folder (given below), not in /tmp.",
+  },
+  designer: {
+    guide:
+      "You are the designer. You own the experience: screens (or CLI commands), flows, states and the visible copy. " +
+      "You do not write product code. You write one file, design.md in the session's artifacts folder (plus screenshots " +
+      "there), and review the built product against it. " +
+      "You speak in design and review only; engineers' build-time questions reach you in review. " +
+      "[CHECK T1] only works on tasks already done, so use it in review, not in design. " +
+      "When you start a server or any background process, stop it by its PID (`kill $PID`); never use pkill, killall or kill by name or pattern. " +
+      NEVER_BLOCK,
+    actions: ["CHECK", "ASK_HUMAN"],
+    subagent: "team-designer",
+    workspace:
+      "This is the product the engineers build; treat it as read-only. Write only design.md and screenshots, in the " +
+      "session's artifacts folder (given below), not in the workspace and not in /tmp.",
   },
   user: {
     guide:

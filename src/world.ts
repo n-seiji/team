@@ -184,7 +184,11 @@ export class World {
         };
         s.tasks.push(t);
         this.log(m.id, "task", `${t.id} owner=${owner ?? "-"}: ${t.title}${t.acceptance ? "\n" + t.acceptance : ""}`);
-        if (owner && !this.member(owner)) this.log("system", "system", `Warning: ${t.id} owner "${owner}" is not a team member.`);
+        const ownerMember = owner ? this.member(owner) : undefined;
+        if (owner && !ownerMember) this.log("system", "system", `Warning: ${t.id} owner "${owner}" is not a team member.`);
+        else if (ownerMember && ownerMember.role !== "engineer") {
+          this.log("system", "system", `Task ${t.id} is owned by ${owner} (${ownerMember.role}), who cannot finish tasks; assign it to an engineer.`);
+        }
         // [TASK replaces=T1]: the new task supersedes T1, so T1 no longer holds the build open.
         for (const old of (a.attrs.replaces ?? "").split(",").map((x) => x.trim()).filter(Boolean)) {
           const o = s.tasks.find((x) => x.id === old && x !== t);
