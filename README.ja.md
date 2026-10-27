@@ -137,7 +137,7 @@ node src/main.ts record --as pm --file reply.txt [--tokens N] [--duration-ms N] 
 ## 開発
 
 ```bash
-npm install -g pnpm@12.9.0   # pnpm が未インストールなら最初に1回（package.json で固定した版。corepack では pnpm 12 が起動しない）
+npm install -g pnpm@12.15.0   # pnpm が未インストールなら最初に1回（package.json で固定した版。corepack では pnpm 12 が起動しない）
 pnpm install         # 型チェック用の devDependencies のみ
 pnpm test            # node --test（依存なし）
 pnpm typecheck       # tsc --noEmit
