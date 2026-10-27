@@ -155,7 +155,7 @@ A `claude-cli` turn that runs longer than `TEAM_TURN_TIMEOUT` seconds (default 1
 ## Development
 
 ```bash
-npm install -g pnpm@12.9.0   # once, if pnpm is not installed (the version pinned in package.json; corepack cannot start pnpm 12)
+npm install -g pnpm@12.15.0   # once, if pnpm is not installed (the version pinned in package.json; corepack cannot start pnpm 12)
 pnpm install         # devDependencies for type checking only
 pnpm test            # node --test, no dependencies
 pnpm typecheck       # tsc --noEmit
