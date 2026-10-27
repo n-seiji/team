@@ -26,6 +26,14 @@ export class MockBackend implements Backend {
         );
         return `[DECISION] 最小スコープで1イテレーション回す。\n${tasks.join("\n")}`;
       }
+      case "designer:design":
+        return "[SAY to=all] design.md に画面ごとの状態表（初回・通常・エラー・取り消し・日付の切り替わり・スマホ幅）を書きました。";
+      case "pm:design":
+        return "[SAY to=all] 状態表のうち重要な行を受け入れ基準に反映しました。";
+      case "engineer:design":
+        return "[SAY to=all] 状態表どおりに作れます。コストが高い箇所はありません。";
+      case "designer:review":
+        return "[SAY to=all] design.md と照らし合わせました。状態表の行はすべて満たされています。";
       case "engineer:planning":
         return "[SAY to=all] 実装可能です。インターフェースはJSONで合わせましょう。";
       case "engineer:build": {

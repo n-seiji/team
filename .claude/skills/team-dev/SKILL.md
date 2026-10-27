@@ -39,6 +39,8 @@ Repeat until the session is `done`, or until the stopping point the user asked f
    If that subagent type is not available (e.g. `.claude/agents/` was added after this Claude Code session started),
    use `general-purpose` instead and begin the prompt with the body of `.claude/agents/<subagent>.md`
    (its role rules and allowed tools still apply).
+   The designer role (only in teams made with `--config configs/designer.json`) uses `team-designer`; before a Claude Code
+   restart it is not registered either, so the same `general-purpose` fallback applies.
    When `pending` has several members (e.g. engineers in `build`), launch them **in the same message** so they work
    in parallel, and run them in the foreground (you need their results before the next step).
 3. Record every reply in **one** Bash call, in the same order as `pending`, passing each final message verbatim

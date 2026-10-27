@@ -24,7 +24,7 @@ Key properties:
              └───────▲───────────────────────────────┬──────────────────────────────────────────┘
        team record   │ reply (action tags)            │ team next → next speaker(s) + turn prompt
                      │                               ▼
-  host mode: Claude Code (team-dev skill) ── subagents team-pm / team-engineer / team-persona
+  host mode: Claude Code (team-dev skill) ── subagents team-pm / team-engineer / team-designer / team-persona
   auto mode: team run ── backend: anthropic (API) | claude-cli (claude -p) | mock
 ```
 
@@ -38,6 +38,8 @@ Key properties:
 | review | engineers, PM | Cross-review and fixes; each engineer posts a `[DEMO]` with output they really produced and the team declares one verification command with `[VERIFY]`; the PM checks the acceptance criteria |
 | acceptance | users, PM | First the engine itself runs the `[VERIFY]` command and keeps its real output and files (screenshots etc.) as a **trial run**. Users start from that trial run and the demos, read the result and give `[VERDICT accept/reject]`; the PM sums up |
 | wrapup | engineers, PM | Only when the session is about to finish with open tasks, or with decisions made in review / acceptance that nobody has applied yet. Engineers apply them; tasks added in acceptance are handed over, not built, and the PM lists what is left for the real human |
+
+**Designer (optional).** With `--config configs/designer.json` (the default team plus a designer), `init` inserts a **design** phase after planning (designer, PM, engineers; two rounds). The designer writes `design.md` in the session's artifacts folder (`.team/sessions/<name>/artifacts/`): per screen or command, who uses it and a state table (first use or empty, normal, many items, error or bad input, undoing a mistake, the day or month boundary, phone width) plus the visible copy. The PM copies the rows that matter into acceptance criteria, engineers build to it, and in review the designer speaks first and lists gaps against `design.md`. The designer never gets a task and never writes product code. With `init --workspace` (an external codebase) the designer's `design.md` path is relative to the team repository, which the claude-cli backend does not grant, so the designer is meant for the default workspace for now. Teams without a designer, and configs that set their own `phases`, keep exactly the phases above.
 
 If any user rejects, or the PM turns users' conditions into new tasks in acceptance, and the iteration limit (`maxIterations`) has not been reached, the team goes back to planning so users see the result. Each phase ends after its maximum number of rounds, or earlier when the PM sends `[ADVANCE]`. When the session finishes, the last log line names any task that is still open, waiting on a person, or built but needing a person's check.
 
@@ -143,7 +145,7 @@ A `claude-cli` turn that runs longer than `TEAM_TURN_TIMEOUT` seconds (default 1
 
 ## Customization
 
-- **Members**: add or edit `personas/*.json` and list them under `members` in `team.config.json`. `role` is `pm`, `engineer` or `user`; other role names also work and join with a generic description. Everything under `persona` is free-form TinyTroupe-style JSON and goes into the prompt as-is. For users, details that affect how they would try the product (such as `tech_literacy`) make acceptance testing much more realistic.
+- **Members**: add or edit `personas/*.json` and list them under `members` in `team.config.json`. `role` is `pm`, `engineer`, `user` or `designer` (see `configs/designer.json`); other role names also work and join with a generic description. Everything under `persona` is free-form TinyTroupe-style JSON and goes into the prompt as-is. For users, details that affect how they would try the product (such as `tech_literacy`) make acceptance testing much more realistic.
 - **Phases**: a `phases` array in `team.config.json` replaces `DEFAULT_PHASES` (`src/sop.ts`). Each phase has `id`, `goal`, `speakers`, `mode` (`round-robin` or `parallel`) and `maxRounds`. Optional fields:
   - `untilTasksDone`: end early once every task is done
   - `editors`: roles allowed to edit `workspace/` in this phase

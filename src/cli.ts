@@ -5,7 +5,7 @@ import { parseArgs } from "node:util";
 import { text } from "node:stream/consumers";
 import { Store, loadConfig, loadPersona } from "./store.ts";
 import { World, answersByQuestion, isPrivate, questionId } from "./world.ts";
-import { DEFAULT_PHASES, subagentFor } from "./sop.ts";
+import { phasesFor, subagentFor } from "./sop.ts";
 import { buildPrompt, listWorkspace, promptAsText } from "./prompt.ts";
 import { formatBacklog, formatEntry, formatQuestions, displayName } from "./render.ts";
 import { createBackend } from "./backends/index.ts";
@@ -156,11 +156,12 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
       if (external && !fs.statSync(external, { throwIfNoEntry: false })?.isDirectory())
         throw new Error(`workspace not found: ${flags.workspace}`);
       if (flags.force) fs.rmSync(store.sessionDir(name), { recursive: true, force: true });
+      const members = cfg.members.map((f) => loadPersona(root, f));
       const w = World.create({
         name,
         brief,
-        members: cfg.members.map((f) => loadPersona(root, f)),
-        phases: cfg.phases ?? DEFAULT_PHASES,
+        members,
+        phases: cfg.phases ?? phasesFor(members),
         language: cfg.language,
         // each session builds in its own folder so sessions (e.g. parallel cloud threads) never share files
         workspace: external

@@ -1,0 +1,19 @@
+{
+  "id": "designer",
+  "role": "designer",
+  "persona": {
+    "name": "小林 みなみ",
+    "age": 31,
+    "occupation": {
+      "title": "Product Designer",
+      "description": "画面・フロー・状態・文言の設計を担当。使う人がつまずく場面を先に洗い出し、設計書にして全員で共有する。"
+    },
+    "style": "穏やかで具体的。『初めて開いたとき』『間違えたとき』『月が変わったとき』のように場面で話す。",
+    "personality": {
+      "traits": ["観察力が高い", "ユーザーの一言を鵜呑みにせず背景を確かめる", "文言の細部にこだわる"],
+      "big_five": { "openness": "高", "conscientiousness": "高", "extraversion": "中", "agreeableness": "中", "neuroticism": "低" }
+    },
+    "skills": ["情報設計", "ユーザーフロー", "UX ライティング", "アクセシビリティ", "スマホ向けレイアウト"],
+    "preferences": { "likes": ["空状態・エラー・取り消しまで設計された画面", "一覧と入力が一画面で完結する流れ"], "dislikes": ["正常系だけの設計", "一人の発言をそのまま仕様にすること"] }
+  }
+}

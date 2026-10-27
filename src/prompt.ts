@@ -3,7 +3,7 @@
 import * as fs from "node:fs";
 import { execFileSync } from "node:child_process";
 import * as path from "node:path";
-import type { Demo, Entry, EntryKind, PersonaSpec, PhaseDef, SessionState, Trial } from "./types.ts";
+import type { Demo, Entry, EntryKind, PersonaSpec, PhaseDef, Role, SessionState, Trial } from "./types.ts";
 import { ACTION_HELP, PROTOCOL_HELP } from "./protocol.ts";
 import { EXTERNAL_WORKSPACE_GUIDE, allowedActions, canEdit, roleGuide, workspaceGuide } from "./sop.ts";
 import { displayName, formatBacklog, formatEntry, formatQuestions } from "./render.ts";
@@ -83,7 +83,7 @@ export function buildPrompt(
     edit,
     entries,
     files,
-    others: m.role === "engineer" ? (extra.others ?? []) : [],
+    others: canBuild(m.role) ? (extra.others ?? []) : [],
     answers: answersByQuestion(entries),
   };
   const parts = (Object.entries(USER_SECTIONS) as [SectionId, Section][]).flatMap(([id, build]) => {
@@ -95,6 +95,9 @@ export function buildPrompt(
 
   return { member: m.id, role: m.role, canEdit: edit, system, user, sections };
 }
+
+/** Roles that work in or against the product, so they see the artifacts folder and the other sessions' changes. */
+const canBuild = (role: Role): boolean => role === "engineer" || role === "designer";
 
 /**
  * The user prompt, part by part. Key order is prompt order, so keep the keys non-integer-looking
@@ -152,7 +155,8 @@ const USER_SECTIONS = {
   },
 
   rejections: ({ s, m, phase }) => {
-    if (m.role !== "pm" || !phase.iterationStart) return null;
+    const asked = (m.role === "pm" && phase.iterationStart) || (m.role === "designer" && phase.id === "design");
+    if (!asked) return null;
     const rejections = rejectionsToAddress(s);
     return rejections.length
       ? [
@@ -183,8 +187,8 @@ const USER_SECTIONS = {
   workspace: ({ s, m, edit, files }) => [
     `## Workspace (${s.workspace}/)`,
     workspaceGuide(m.role),
-    ...(m.role === "engineer" ? [`Artifacts folder for evidence (relative to the repository root): ${artifactsDir(s.name)}/`] : []),
-    ...(s.externalWorkspace && m.role === "engineer" ? [EXTERNAL_WORKSPACE_GUIDE] : []),
+    ...(canBuild(m.role) ? [`Artifacts folder for evidence (relative to the repository root): ${artifactsDir(s.name)}/`] : []),
+    ...(s.externalWorkspace && canBuild(m.role) ? [EXTERNAL_WORKSPACE_GUIDE] : []),
     edit ? "You may edit files in the workspace during this phase." : "Do not edit files during this phase.",
     ...(s.externalWorkspace ? ["Files changed so far (git status, relative to the workspace):"] : []),
     ...(files.length ? files.map((f) => `- ${f}`) : [s.externalWorkspace ? "(no changes yet)" : "(empty)"]),
