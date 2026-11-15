@@ -741,7 +741,7 @@ function asWindows<T>(fn: () => T): T {
 }
 
 test("on Windows a bare claude is looked for in the turn's folder first, as cmd.exe does", async () => {
-  const { dir } = installedClaude(undefined, "claude.cmd");
+  const { dir } = installedClaude(undefined, "claude.CMD"); // PATHEXT's own case: this also runs on case-sensitive file systems
   const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), "team-preflight-"));
   await withEnv({ TEAM_CLAUDE_BIN: undefined, PATH: elsewhere, PATHEXT: WINDOWS_PATHEXT }, () => asWindows(() => preflightOf(dir)));
 });
