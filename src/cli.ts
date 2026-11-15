@@ -7,7 +7,7 @@ import { Store, loadConfig, loadPersona } from "./store.ts";
 import { World, answersByQuestion, isPrivate, questionId } from "./world.ts";
 import { DEFAULT_PHASES, subagentFor } from "./sop.ts";
 import { buildPrompt, listWorkspace, promptAsText } from "./prompt.ts";
-import { formatBacklog, formatBackendLine, formatEntry, formatQuestions, formatSkipStop, displayName } from "./render.ts";
+import { SKIPPED_TURN_REPLY, displayName, formatBackendLine, formatBacklog, formatEmptyReply, formatEntry, formatLeftoverWorkspace, formatQuestions, formatSkipStop, formatUnstaffedRoles } from "./render.ts";
 import { createBackend } from "./backends/index.ts";
 import type { BackendReply } from "./backends/index.ts";
 import { findOverlaps, formatOverlap, otherSessionChanges, sameRepoChanges } from "./overlap.ts";
@@ -27,13 +27,14 @@ Session
   init [<brief>] --brief <text> | --brief-file <f>  [--name <n>] [--config <f>] [--workspace <dir>] [--force] [--json]
                        新しいセッションを作成して current にする (--json は next --json と同じ出力)
                        --workspace: 既存のコードベース (git worktree など) をそのまま作業場所にする
+                       --force: 同名のセッションを作り直す (そのセッションの保存内容すべて (.team/sessions/<name>/) が消える。workspace/<name>/ のファイルは消さず、残っていれば警告する)
   status [--json]      フェーズ・バックログ・次の発言者を表示
   log [--tail N] [--md] [--html] [--no-thoughts]
-                       会話ログを表示 (--md / --html は transcript.md / transcript.html のパス。HTML はブラウザで読む用)
+                       会話ログを表示 (N は 0 以上の整数。--md / --html は transcript.md / transcript.html のパス。HTML はブラウザで読む用)
   sessions             セッション一覧 / use <name> で切り替え
   stats [--json]       ターンごとの実際の使用量 (usage.jsonl) の合計。フェーズ別・ロール別の内訳つき
   overlaps [--json]    同じリポジトリを触る他のセッションと、同じファイル・同じ番号のファイルが重なっていないか確認
-  say <text>           人間(あなた)としてチーム全員に発言を差し込む
+  say <text>           人間(あなた)としてチーム全員に発言を差し込む (空は不可)
   answer <Qn> <text>   メンバーの質問 Qn (status で一覧) に答える。チーム全員に伝わり、以降のプロンプトでは既定の案より優先される。
                        同じ Qn に答え直すと置き換わる。text は stdin でも可。終了済みのセッションにも答えられる
 
@@ -43,17 +44,19 @@ Host mode (Claude Code などの外部オーケストレーターが各エージ
                        (プロンプトは .team/sessions/<s>/turns/*.prompt.md にも保存)
   record --as <id> [--file <f>] [--force] [--tokens N] [--duration-ms N] [--json]
                        メンバーの返答(stdin か --file)を記録して次へ進める (--json は next --json と同じ出力)
+                       返答が空 (空白だけも含む) なら何も記録せず exit 1 (--force でも同じ)。返答できなかったメンバーは ${SKIPPED_TURN_REPLY} を記録する
                        --tokens / --duration-ms: オーケストレーターが報告したそのターンのトークン数・所要時間
                        (usage.jsonl に記録。トークン数は報告値のまま、測定したトークン数とは別に集計される)
 
 Auto mode (このプロセスが LLM を呼ぶ)
   run [--backend anthropic|claude-cli|mock] [--model <m>] [--turns N]
-                       claude コマンドや API キーが無いなど、動かない設定なら何も変えずに止まる。
+                       N は 0 以上の整数。claude コマンドや API キーが無いなど、動かない設定なら何も変えずに止まる。
+                       返答が空 (空白だけも含む) の試行も失敗として数え、1 回リトライしてもだめならスキップする。
                        ターンが ${MAX_SKIPPED_IN_A_ROW} 回続けて失敗 (スキップ) したら、その step は記録せずに止まる。原因を直して run すれば続きから再開できる
                        (連続数は 1 回の run の中で数える。再開や --turns の短い実行では 0 から)
 
 Global options
-  --root <dir>         リポジトリルート (default: cwd)
+  --root <dir>         リポジトリルート (default: cwd)。.team はここだけを見る (親ディレクトリは探さない)
   --session <name>     current 以外のセッションを対象にする
 `;
 
@@ -87,7 +90,12 @@ async function readStdin(missing: string): Promise<string> {
   return text(process.stdin);
 }
 
-export async function main(argv: string[], out: (s: string) => void = (s) => process.stdout.write(s + "\n")) {
+/** `warn` is stderr: a warning must not end up in the JSON that `init --json` and `record --json` print. */
+export async function main(
+  argv: string[],
+  out: (s: string) => void = (s) => process.stdout.write(s + "\n"),
+  warn: (s: string) => void = (s) => process.stderr.write(s + "\n"),
+) {
   const { values: flags, positionals } = parseArgs({ args: argv, options: OPTIONS, allowPositionals: true });
   const [first = "help", ...pos] = positionals;
   const cmd = flags.help ? "help" : first;
@@ -101,7 +109,7 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
   function next(w: World) {
     const ids = w.next();
     // stderr, so `next --json` stays parseable
-    runTrialIfDue(w, root, (s) => process.stderr.write(s + "\n"));
+    runTrialIfDue(w, root, warn);
     const es = store.transcript(w.state.name);
     const view = es.concat(w.emitted);
     const files = listWorkspace(w.state, root);
@@ -156,17 +164,21 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
       const brief = (briefFile ? fs.readFileSync(path.resolve(root, briefFile), "utf8") : flags.brief ?? pos.join(" ")).trim();
       if (!brief) throw new Error("a product brief is required: --brief \"...\"");
       const name = flags.name ?? new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "");
-      if (store.exists(name) && !flags.force) throw new Error(`session "${name}" already exists (use --force to overwrite)`);
+      if (store.exists(name) && !flags.force) {
+        throw new Error(`session "${name}" already exists. Pass another --name, continue it with "team use ${name}", or start it over with --force (this deletes everything saved for it in .team/sessions/${name}/).`);
+      }
       // An existing codebase (e.g. a git worktree of another repository) is used in place.
       const external = flags.workspace ? path.resolve(root, flags.workspace) : undefined;
       if (external && !fs.statSync(external, { throwIfNoEntry: false })?.isDirectory())
         throw new Error(`workspace not found: ${flags.workspace}`);
-      if (flags.force) fs.rmSync(store.sessionDir(name), { recursive: true, force: true });
+      // Read and built in memory first; `store.create` puts the session in place only once all of it is written.
+      const members = cfg.members.map((f) => loadPersona(root, f));
+      const phases = cfg.phases ?? DEFAULT_PHASES;
       const w = World.create({
         name,
         brief,
-        members: cfg.members.map((f) => loadPersona(root, f)),
-        phases: cfg.phases ?? DEFAULT_PHASES,
+        members,
+        phases,
         language: cfg.language,
         // each session builds in its own folder so sessions (e.g. parallel cloud threads) never share files
         workspace: external
@@ -176,9 +188,14 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
         maxIterations: cfg.maxIterations,
         historyWindow: cfg.historyWindow,
       });
-      fs.mkdirSync(path.resolve(root, w.state.workspace), { recursive: true });
-      store.save(w);
+      const workspace = path.resolve(root, w.state.workspace);
+      const leftovers = !!flags.force && !external && hasFiles(workspace);
+      const unstaffed = formatUnstaffedRoles(phases, members);
+      fs.mkdirSync(workspace, { recursive: true });
+      store.create(w);
       store.setCurrent(name);
+      for (const warning of unstaffed) warn(warning);
+      if (leftovers) warn(formatLeftoverWorkspace(w.state.workspace));
       // With --json, answer like `next --json` so an orchestrator can start the first turn without another call.
       if (flags.json) return next(w);
       out(`created session "${name}" with ${w.state.members.length} members → .team/sessions/${name}/`);
@@ -196,9 +213,11 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
     }
 
     case "use": {
-      if (!pos[0] || !store.exists(pos[0])) throw new Error(`session not found: ${pos[0] ?? ""}`);
-      store.setCurrent(pos[0]);
-      out(`current session: ${pos[0]}`);
+      const [name] = pos;
+      if (!name) throw new Error('usage: team use <name> (the names are listed by "team sessions")');
+      store.requireSession(name);
+      store.setCurrent(name);
+      out(`current session: ${name}`);
       return;
     }
 
@@ -225,6 +244,7 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
     }
 
     case "log": {
+      const tail = wholeNumber(flags.tail, "--tail") ?? 0;
       const w = load();
       if (flags.html) {
         // Rendered on demand too, so sessions saved before the HTML view existed get one.
@@ -239,7 +259,6 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
       }
       let es = store.transcript(w.state.name);
       if (flags["no-thoughts"]) es = es.filter((e) => !isPrivate(e));
-      const tail = Number(flags.tail ?? 0);
       if (tail > 0) es = es.slice(-tail);
       for (const e of es) out(`[${e.iteration}:${e.phase}#${e.turn}] ${formatEntry(w.state, e)}`);
       return;
@@ -247,7 +266,9 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
 
     case "say": {
       const w = load();
-      const text = pos.join(" ").trim() || (await readStdin("no text given: pass it as arguments or pipe it via stdin")).trim();
+      const missing = "no text given: pass it as arguments or pipe it via stdin";
+      const text = pos.join(" ").trim() || (await readStdin(missing)).trim();
+      if (!text) throw new Error(missing);
       w.broadcast(text, flags.as);
       store.save(w);
       out("ok");
@@ -277,6 +298,8 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
       const durationMs = wholeNumber(flags["duration-ms"], "--duration-ms");
       const file = flags.file;
       const raw = file ? fs.readFileSync(path.resolve(root, file), "utf8") : await readStdin("no reply given: pipe it via stdin or use --file");
+      // --force lets a member interject out of turn; it never lets an empty reply through
+      if (!raw.trim()) throw new Error(formatEmptyReply(id));
       // an interjection (--force) has no prompt of its own; an older file would be another turn's
       const promptChars = w.state.pending.includes(id) ? latestPromptChars(turnsDir(w), id) : undefined;
       const measured = { source: "host" as const, promptChars, durationMs, reportedTokens: tokens };
@@ -293,13 +316,13 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
     }
 
     case "run": {
+      const maxTurns = wholeNumber(flags.turns, "--turns") ?? 200;
       const cfg = loadConfig(root, flags.config);
       const bcfg: BackendConfig = { ...(cfg.backend ?? { type: "mock" }) };
       const b = flags.backend;
       if (b) bcfg.type = b as BackendConfig["type"];
       if (flags.model) bcfg.model = flags.model;
       const backend = createBackend(bcfg);
-      const maxTurns = Number(flags.turns ?? 200);
       let turns = 0;
       const w = load();
       const ctx = { state: w.state, root };
@@ -367,6 +390,10 @@ function wholeNumber(value: string | undefined, flag: string): number | undefine
   return Number(value);
 }
 
+function hasFiles(dir: string): boolean {
+  return !!fs.statSync(dir, { throwIfNoEntry: false })?.isDirectory() && fs.readdirSync(dir).length > 0;
+}
+
 /** The size of the newest prompt `next` wrote for a member. Files are `<turn>-<member id>.prompt.md` and ids contain hyphens, so compare the whole id. */
 function latestPromptChars(dir: string, id: string): number | undefined {
   let newest: { turn: number; file: string } | undefined;
@@ -419,9 +446,15 @@ type StepReply = BackendReply & ({ skipped?: false } | { skipped: true; reason: 
  */
 async function respondWithRetry(call: () => Promise<BackendReply>, id: string, out: (s: string) => void): Promise<StepReply> {
   const spentOn = (e: unknown) => (e instanceof ReplyError ? e.usage : undefined);
-  const skipped = (usage: ReplyUsage | undefined, reason: string) => ({ text: "[SAY to=all] (could not attend this turn)", usage, skipped: true, reason });
+  const skipped = (usage: ReplyUsage | undefined, reason: string) => ({ text: SKIPPED_TURN_REPLY, usage, skipped: true, reason });
+  // An empty reply would use up the member's turn without anyone having spoken, so it fails like an error does.
+  const attempt = async () => {
+    const reply = await call();
+    if (!reply.text.trim()) throw new ReplyError("the backend returned an empty reply", reply.usage);
+    return reply;
+  };
   try {
-    return await call();
+    return await attempt();
   } catch (first) {
     if (first instanceof TurnTimeoutError) {
       out(`warning: ${id} skips this turn without a retry: ${first.message}`);
@@ -429,7 +462,7 @@ async function respondWithRetry(call: () => Promise<BackendReply>, id: string, o
     }
     out(`warning: ${id}'s turn failed, retrying once: ${(first as Error).message.split("\n")[0]}`);
     try {
-      const reply = await call();
+      const reply = await attempt();
       return { ...reply, usage: addUsage(spentOn(first), reply.usage) };
     } catch (e) {
       const reason = (e as Error).message.split("\n")[0].slice(0, 200);

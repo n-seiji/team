@@ -6,6 +6,7 @@ import type { Entry, PersonaSpec, SessionState, TeamConfig, TurnUsage } from "./
 import { World, answersByQuestion, assertPersona } from "./world.ts";
 import { renderMarkdown } from "./render.ts";
 import { renderHtml } from "./html.ts";
+import { assertSessionName, isSessionName } from "./session-name.ts";
 
 export class Store {
   readonly root: string;
@@ -17,12 +18,25 @@ export class Store {
     return path.join(this.root, ".team");
   }
 
+  /** The only place a session name becomes a path. */
   sessionDir(name: string): string {
-    if (!/^[\w.-]+$/.test(name)) throw new Error(`invalid session name: ${name}`);
-    return path.join(this.teamDir, "sessions", name);
+    return path.join(this.teamDir, "sessions", assertSessionName(name));
+  }
+
+  /** Sessions are only looked for in the root itself, so a missing `.team` usually means the command ran in the wrong folder. */
+  private requireTeamDir(): void {
+    if (!fs.existsSync(this.teamDir)) {
+      throw new Error(`no .team folder in ${this.root}. Run from the repository root or pass --root <dir>; to start a new session, run "team init".`);
+    }
+  }
+
+  requireSession(name: string): void {
+    this.requireTeamDir();
+    if (!this.exists(name)) throw new Error(`session not found: ${name}. The existing ones are listed by "team sessions"; to start a new one, run "team init".`);
   }
 
   current(): string {
+    this.requireTeamDir();
     const f = path.join(this.teamDir, "current");
     if (!fs.existsSync(f)) throw new Error('no session yet — run "team init" first');
     return fs.readFileSync(f, "utf8").trim();
@@ -38,7 +52,8 @@ export class Store {
   }
 
   load(name = this.current()): World {
-    const w = new World(readJson<SessionState>(path.join(this.sessionDir(name), "state.json"), `session not found: ${name}`));
+    this.requireSession(name);
+    const w = new World(readJson<SessionState>(path.join(this.sessionDir(name), "state.json")));
     // Answers live only in the transcript; the world needs to know which questions they settled.
     for (const id of answersByQuestion(this.transcript(name)).keys()) w.answered.add(id);
     return w;
@@ -55,12 +70,44 @@ export class Store {
     const json = JSON.stringify(w.state, null, 2) + "\n";
     if (!w.emitted.length && fs.existsSync(stateFile) && fs.readFileSync(stateFile, "utf8") === json) return;
     fs.mkdirSync(dir, { recursive: true });
-    const all = (entries ?? this.transcript(w.state.name)).concat(w.emitted);
+    this.write(dir, w, entries ?? this.transcript(w.state.name));
+  }
+
+  /**
+   * Save a new session, replacing any session of that name; whether that is allowed is for the caller to decide.
+   * It is written to a folder of its own first (a dot name, so `list` never shows it) and swapped in only once all
+   * of it is written, so a failure leaves the old session as it was.
+   */
+  create(w: World): void {
+    const dir = this.sessionDir(w.state.name);
+    const sessions = path.dirname(dir);
+    fs.mkdirSync(sessions, { recursive: true });
+    const fresh = fs.mkdtempSync(path.join(sessions, ".new-"));
+    const old = `${fresh}.old`;
+    let moved = false;
+    try {
+      this.write(fresh, w, []);
+      if (fs.existsSync(dir)) {
+        fs.renameSync(dir, old);
+        moved = true;
+      }
+      fs.renameSync(fresh, dir);
+    } catch (e) {
+      fs.rmSync(fresh, { recursive: true, force: true });
+      if (moved) fs.renameSync(old, dir);
+      throw e;
+    }
+    fs.rmSync(old, { recursive: true, force: true });
+  }
+
+  /** Writes what changed into `dir`: the emitted entries are appended to the transcript, and `entries` is what was in it before. */
+  private write(dir: string, w: World, entries: Entry[]): void {
+    const all = entries.concat(w.emitted);
     if (w.emitted.length) {
       fs.appendFileSync(path.join(dir, "transcript.jsonl"), w.emitted.map((e) => JSON.stringify(e)).join("\n") + "\n");
       w.emitted.length = 0;
     }
-    writeAtomic(stateFile, json);
+    writeAtomic(path.join(dir, "state.json"), JSON.stringify(w.state, null, 2) + "\n");
     writeAtomic(path.join(dir, "transcript.md"), renderMarkdown(w.state, all));
     writeAtomic(path.join(dir, "transcript.html"), renderHtml(w.state, all));
   }
@@ -85,8 +132,10 @@ export class Store {
   }
 
   list(): string[] {
+    this.requireTeamDir();
     const d = path.join(this.teamDir, "sessions");
-    return fs.existsSync(d) ? fs.readdirSync(d).filter((n) => this.exists(n)) : [];
+    // what else is in the folder (.DS_Store, a half-written new session) must not stop anything
+    return fs.existsSync(d) ? fs.readdirSync(d).filter((n) => isSessionName(n) && this.exists(n)) : [];
   }
 }
 
@@ -113,7 +162,7 @@ function writeAtomic(file: string, data: string): void {
   fs.renameSync(tmp, file);
 }
 
-function readJson<T>(file: string, missing: string): T {
+function readJson<T>(file: string, missing = `file not found: ${file}`): T {
   let text: string;
   try {
     text = fs.readFileSync(file, "utf8");
@@ -121,7 +170,12 @@ function readJson<T>(file: string, missing: string): T {
     if ((e as NodeJS.ErrnoException).code === "ENOENT") throw new Error(missing);
     throw e;
   }
-  return JSON.parse(text) as T;
+  try {
+    return JSON.parse(text) as T;
+  } catch (e) {
+    // the parser's message alone does not say which of the files is broken
+    throw new Error(`${file}: ${(e as Error).message}`, { cause: e });
+  }
 }
 
 export function loadConfig(root: string, file = "team.config.json"): TeamConfig {

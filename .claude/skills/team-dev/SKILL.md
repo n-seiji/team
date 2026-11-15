@@ -15,6 +15,8 @@ All commands run from the repository root. `team` below means `node src/main.ts`
 
 - **The user gave a product idea** → `team init "<their idea, in their words>" --name <short-kebab-name> --json`.
   Its output is the same as `team next --json`, so go straight to step 2.2 and launch the first subagent.
+  If the name is already taken, choose another one; `--force` deletes everything saved for that session
+  (`.team/sessions/<name>/`), so use it only when the user asked to start it over.
 - **Work on an existing repository / a GitHub issue** → check the repository out as a git worktree under `workspace/`
   (one per issue, its own branch), write the issue (title, body, links) to a brief file, and run
   `team init --name <short-name> --workspace workspace/<short-name> --brief-file <file> --json`. Use a config with
@@ -56,8 +58,9 @@ Repeat until the session is `done`, or until the stopping point the user asked f
    it to that member's `record` as `--tokens <n>` (and `--duration-ms <n>` if a duration is reported). The number is
    recorded as reported and `team stats` keeps it apart from the tokens the engine measures itself, so do not adjust,
    add up or estimate it. Leave the flags off when no number is reported.
-   Do not edit, summarize or "fix" a reply; if a subagent replied with no tags at all, record it anyway (untagged
-   text becomes `[SAY]`). If a reply itself contains a line `TEAM_REPLY_END`, write it to `.team/inbox/<member>.txt`
+   Do not edit, summarize or "fix" a reply; if a subagent replied with text but no tags at all, record it anyway
+   (untagged text becomes `[SAY]`). An empty reply is the one exception: `record` refuses it (exit 1, nothing is
+   recorded), so retry the subagent as described under Rules. If a reply itself contains a line `TEAM_REPLY_END`, write it to `.team/inbox/<member>.txt`
    and use `--file` instead.
    When the session enters `acceptance`, that call first runs the team's `[VERIFY]` command (the trial run, up to
    10 minutes), so give the Bash call recording the last `review` reply a long timeout (600000 ms).
@@ -113,5 +116,7 @@ their own fresh clone. So:
 - Never edit `.team/sessions/**` by hand — only through the CLI.
 - Engineers are the only ones who change `workspace/`. If you notice a broken build between turns, do not fix it
   yourself: the next engineer turn (or review phase) will see it.
-- If a subagent fails (error, empty output), retry it once; if it fails again, record
-  `[SAY to=all] (could not attend this turn)` for that member and continue.
+- If a subagent fails (error, empty or whitespace-only output), retry it once; if it fails again, record
+  `[SAY to=all] (could not attend this turn)` for that member and continue. Never pass an empty reply to `record`.
+  A member whose `record` failed (an empty reply, say) stays in `pending`: launch their subagent again, and record
+  the skip line if the second reply fails too.

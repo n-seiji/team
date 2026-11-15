@@ -3,9 +3,12 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { main } from "../src/cli.ts";
 import { Store } from "../src/store.ts";
+import { World } from "../src/world.ts";
+import { artifactsDir } from "../src/prompt.ts";
+import { runTrialIfDue } from "../src/verify.ts";
 import { ReplyError } from "../src/usage.ts";
 import { withEnv } from "./with-env.ts";
 
@@ -941,4 +944,397 @@ test("a step in which only some members are skipped is recorded in full and adds
   assert.ok(skipped.every((l) => l.member === "eng-backend"));
   assert.equal(stateOf(dir, "k5").turn, lines.length, "every reply of every step was recorded");
   assert.equal(logged(dir, "k5").filter((e) => /could not attend this turn/.test(e.text)).length, skipped.length, "the skips were recorded like any reply");
+});
+
+// Input validation and `init --force`
+
+const mainFile = path.join(repo, "src/main.ts");
+
+/** The real command line, for what only a process has: stdin that is empty, the exit code and what goes to stderr. */
+function cli(dir: string, input: string, ...args: string[]) {
+  return spawnSync(process.execPath, [mainFile, ...args, "--root", dir], { input, encoding: "utf8" });
+}
+
+/** Like `run`, but also returns what the command warned about (stderr), which `main` hands to its third argument. */
+async function runWarn(dir: string, ...args: string[]): Promise<{ out: string; warnings: string[] }> {
+  const out: string[] = [];
+  const warnings: string[] = [];
+  await main([...args, "--root", dir], (s) => out.push(s), (s) => warnings.push(s));
+  return { out: out.join("\n"), warnings };
+}
+
+/** A copy of the sandbox's config with `patch` applied, written to `file` inside the sandbox. */
+function writeConfig(dir: string, file: string, patch: Record<string, unknown>): string {
+  const cfg = { ...JSON.parse(fs.readFileSync(path.join(dir, "team.config.json"), "utf8")), ...patch };
+  fs.writeFileSync(path.join(dir, file), JSON.stringify(cfg));
+  return file;
+}
+
+const SKIP_REPLY = "[SAY to=all] (could not attend this turn)";
+
+test("run --turns and log --tail reject anything but a whole number, with the reason, before touching the session", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "v1", "--brief", "x");
+  const before = sessionFiles(dir, "v1");
+  // the `=` form, because parseArgs would take "-1" for another option
+  for (const bad of ["abc", "-1", "1.5", "", "1e3"]) {
+    await assert.rejects(run(dir, "run", "--backend", "mock", `--turns=${bad}`), /--turns must be a whole number of 0 or more/);
+    await assert.rejects(run(dir, "log", `--tail=${bad}`), /--tail must be a whole number of 0 or more/);
+  }
+  assert.deepEqual(sessionFiles(dir, "v1"), before);
+  assert.equal((await run(dir, "log", "--tail", "1")).split("\n").length, 1);
+  assert.ok((await run(dir, "log", "--tail", "0")).split("\n").length > 1, "0 still means the whole log");
+});
+
+test("record refuses an empty or whitespace-only reply, even with --force, and records nothing", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "e1", "--brief", "x");
+  await run(dir, "next", "--json");
+  const before = sessionFiles(dir, "e1");
+  for (const text of ["", "  \n\t\n"]) {
+    for (const extra of [[], ["--force"]]) {
+      await assert.rejects(
+        run(dir, "record", "--as", "pm", "--file", writeReply(dir, text), ...extra),
+        (e: Error) => /empty/.test(e.message) && /stdin or with --file/.test(e.message) && e.message.includes(SKIP_REPLY),
+        `${JSON.stringify(text)} ${extra.join(" ")}`,
+      );
+    }
+  }
+  assert.deepEqual(sessionFiles(dir, "e1"), before);
+  assert.equal(usageLines(dir, "e1").length, 0);
+  await run(dir, "record", "--as", "pm", "--file", writeReply(dir, SKIP_REPLY));
+  assert.equal(stateOf(dir, "e1").turn, 1, "the skip notice the error asks for can be recorded");
+});
+
+test("record and say with nothing on stdin exit 1 with a reason and change nothing", () => {
+  const dir = sandbox();
+  cli(dir, "", "init", "--name", "e2", "--brief", "x");
+  const before = sessionFiles(dir, "e2");
+  const recorded = cli(dir, "", "record", "--as", "pm");
+  assert.equal(recorded.status, 1);
+  assert.match(recorded.stderr, /empty.*stdin or with --file.*could not attend this turn/s);
+  assert.equal(cli(dir, " \n", "record", "--as", "pm").status, 1);
+  for (const input of ["", " \n"]) {
+    const said = cli(dir, input, "say");
+    assert.equal(said.status, 1);
+    assert.match(said.stderr, /no text given/);
+  }
+  assert.equal(cli(dir, "", "say", "  ").status, 1);
+  assert.deepEqual(sessionFiles(dir, "e2"), before);
+  assert.equal(JSON.parse(cli(dir, "", "status", "--json").stdout).turn, 0);
+
+  assert.equal(cli(dir, "予算は月1万円です", "say").status, 0, "text on stdin is still accepted");
+  assert.match(cli(dir, "", "log").stdout, /human: 予算は月1万円です/);
+});
+
+test("run treats an empty reply from the backend as a failed attempt: it is retried, then skipped, and never recorded as a reply", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "e3", "--brief", "x");
+  const out = await runWithBackend(dir, (p, original) => (p.member === "user-yamada" ? Promise.resolve({ text: " \n\t", usage: { costUsd: 0.25 } }) : original()));
+  assert.match(out, /user-yamada's turn failed, retrying once: .*empty reply/);
+  assert.match(out, /user-yamada skips this turn: .*empty reply/);
+  assert.match(out, /session is done/);
+  const skipped = usageLines(dir, "e3").filter((l) => l.skipped);
+  assert.ok(skipped.length > 0);
+  for (const l of skipped) {
+    assert.equal(l.member, "user-yamada");
+    assert.equal(l.costUsd, 0.5, "both empty attempts are paid for");
+    assert.equal(l.replyChars, SKIP_REPLY.length, "the turn holds the skip notice, not the empty text");
+  }
+  assert.equal(logged(dir, "e3").filter((e) => e.from === "user-yamada" && e.text.includes("could not attend this turn")).length, skipped.length);
+});
+
+test("an empty reply followed by a real one on the retry is recorded, and both attempts are paid for", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "e4", "--brief", "x");
+  let first = true;
+  const out = await runWithBackend(dir, async (p, original) => {
+    if (p.member === "pm" && first) {
+      first = false;
+      return { text: "", usage: { tokens: { input: 100 }, costUsd: 0.5 } };
+    }
+    return original();
+  });
+  assert.match(out, /retrying once: .*empty reply/);
+  assert.doesNotMatch(out, /skips this turn/);
+  const [line] = usageLines(dir, "e4");
+  assert.equal(line.member, "pm");
+  assert.equal(line.skipped, undefined);
+  assert.equal(line.costUsd, 0.5);
+  assert.deepEqual(line.tokens, { input: 100 });
+  assert.ok(line.replyChars > SKIP_REPLY.length, "the reply is the retry's");
+});
+
+test("a backend that only returns empty replies stops the run like any other failure, naming the empty reply", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "e5", "--brief", "x");
+  await assert.rejects(runWithBackend(dir, () => Promise.resolve({ text: "" })), /last 3 turns.*empty reply.*not recorded.*team run/s);
+  const state = stateOf(dir, "e5");
+  assert.equal(state.status, "running");
+  assert.equal(state.turn, 2, "two skipped turns were recorded, the third step was not");
+  assert.equal(usageLines(dir, "e5").length, 3);
+  assert.match(await run(dir, "run", "--backend", "mock"), /session is done/);
+});
+
+test("init --force with input that cannot be read leaves the existing session exactly as it was", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "b1", "--brief", "first");
+  await run(dir, "record", "--as", "pm", "--file", writeReply(dir, "[SAY to=all] 前の会話です"));
+  const before = sessionFiles(dir, "b1");
+  const current = fs.readFileSync(path.join(dir, ".team/current"), "utf8");
+  fs.writeFileSync(path.join(dir, "personas/broken.json"), "{ not json");
+  fs.writeFileSync(path.join(dir, "personas/nameless.json"), JSON.stringify({ id: "x", role: "pm", persona: {} }));
+  const cfg = JSON.parse(fs.readFileSync(path.join(dir, "team.config.json"), "utf8"));
+  const withMember = (file: string) => ({ members: [...cfg.members, file] });
+  const cases: [string, Record<string, unknown>, RegExp][] = [
+    ["a persona that is not JSON", withMember("personas/broken.json"), /broken\.json: .*JSON/],
+    ["a persona without a name", withMember("personas/nameless.json"), /needs "id", "role" and "persona.name"/],
+    ["a persona file that is missing", withMember("personas/missing.json"), /persona not found/],
+    ["the same member twice", { members: [cfg.members[0], cfg.members[0]] }, /duplicate member id/],
+    ["no phases", { phases: [] }, /at least one phase/],
+  ];
+  for (const [label, patch, error] of cases) {
+    const config = writeConfig(dir, "broken.config.json", patch);
+    await assert.rejects(run(dir, "init", "--name", "b1", "--brief", "second", "--force", "--config", config), error, label);
+    assert.deepEqual(sessionFiles(dir, "b1"), before, label);
+    assert.equal(fs.readFileSync(path.join(dir, ".team/current"), "utf8"), current, label);
+  }
+  assert.equal(stateOf(dir, "b1").brief, "first");
+  assert.match(await run(dir, "log"), /前の会話です/);
+});
+
+test("init --force replaces the session once everything has been read: the old transcript and usage are gone", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "n1", "--brief", "first");
+  await run(dir, "record", "--as", "pm", "--file", writeReply(dir, "[SAY to=all] 前の会話です"));
+  assert.equal(usageLines(dir, "n1").length, 1);
+  await run(dir, "init", "--name", "n1", "--brief", "second", "--force");
+  const state = stateOf(dir, "n1");
+  assert.equal(state.brief, "second");
+  assert.equal(state.turn, 0);
+  assert.equal(usageLines(dir, "n1").length, 0);
+  assert.doesNotMatch(await run(dir, "log"), /前の会話です/);
+});
+
+test("init --force warns about files left in workspace/<name>/, and deletes none of them", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "w1", "--brief", "x");
+  const old = path.join(dir, "workspace/w1/old.txt");
+  fs.writeFileSync(old, "old");
+  const { out, warnings } = await runWarn(dir, "init", "--name", "w1", "--brief", "x", "--force");
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /workspace\/w1/);
+  assert.match(warnings[0], /new team will see them/);
+  assert.match(warnings[0], /delete .* yourself/i);
+  assert.doesNotMatch(out, /warning/, "warnings are not part of stdout");
+  assert.equal(fs.readFileSync(old, "utf8"), "old");
+
+  fs.rmSync(old);
+  assert.deepEqual((await runWarn(dir, "init", "--name", "w1", "--brief", "x", "--force")).warnings, [], "an empty folder is nothing to warn about");
+  assert.deepEqual((await runWarn(dir, "init", "--name", "w9", "--brief", "x", "--force")).warnings, [], "no folder yet");
+});
+
+test("init --force with --workspace does not warn about the files already in the codebase", async () => {
+  const dir = sandbox();
+  fs.mkdirSync(path.join(dir, "app"));
+  fs.writeFileSync(path.join(dir, "app/index.ts"), "// existing code");
+  await run(dir, "init", "--name", "w2", "--brief", "x", "--workspace", "app");
+  assert.deepEqual((await runWarn(dir, "init", "--name", "w2", "--brief", "x", "--workspace", "app", "--force")).warnings, []);
+  assert.equal(fs.readFileSync(path.join(dir, "app/index.ts"), "utf8"), "// existing code");
+});
+
+test("init --force --json keeps stdout parseable when it has something to warn about", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "w3", "--brief", "x");
+  fs.writeFileSync(path.join(dir, "workspace/w3/old.txt"), "old");
+  const { out, warnings } = await runWarn(dir, "init", "--name", "w3", "--brief", "x", "--force", "--json");
+  assert.equal(JSON.parse(out).pending[0].member, "pm");
+  assert.equal(warnings.length, 1);
+});
+
+test("init warns, but still creates the session, when a phase lists a role that no member has", async () => {
+  const dir = sandbox();
+  const config = writeConfig(dir, "tiny.config.json", {
+    members: ["personas/pm-sato.json", "personas/user-yamada.json"],
+    phases: [
+      { id: "discovery", goal: "g", speakers: ["pm", "user"], mode: "round-robin", maxRounds: 1 },
+      { id: "build", goal: "g", speakers: ["engineer", "designer", "pm"], mode: "parallel", maxRounds: 1 },
+      { id: "review", goal: "g", speakers: ["engineer", "pm"], mode: "round-robin", maxRounds: 1 },
+    ],
+  });
+  const { warnings } = await runWarn(dir, "init", "--name", "p1", "--brief", "x", "--config", config);
+  assert.equal(warnings.length, 2);
+  assert.match(warnings[0], /no member has the role "engineer".*: build, review\./, "one warning per role, naming every phase");
+  assert.match(warnings[1], /no member has the role "designer".*: build\./);
+  assert.equal(stateOf(dir, "p1").status, "running");
+  assert.deepEqual((await runWarn(dir, "init", "--name", "p2", "--brief", "x")).warnings, [], "the default team has every role");
+});
+
+test("a phase without speakers does not make init fail on the way to its warnings", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "p3", "--brief", "first");
+  const config = writeConfig(dir, "nospeakers.config.json", {
+    phases: [
+      { id: "discovery", goal: "g", speakers: ["pm"], mode: "round-robin", maxRounds: 1 },
+      { id: "later", goal: "g", mode: "round-robin", maxRounds: 1 },
+    ],
+  });
+  const { warnings } = await runWarn(dir, "init", "--name", "p3", "--brief", "second", "--force", "--config", config);
+  assert.deepEqual(warnings, []);
+  assert.equal(stateOf(dir, "p3").brief, "second");
+});
+
+test("init on a name that exists says how to go on without deleting anything", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "d1", "--brief", "x");
+  const before = sessionFiles(dir, "d1");
+  await assert.rejects(
+    run(dir, "init", "--name", "d1", "--brief", "again"),
+    (e: Error) =>
+      /session "d1" already exists/.test(e.message) &&
+      /another --name/.test(e.message) &&
+      /team use d1/.test(e.message) &&
+      /--force.*everything saved.*\.team\/sessions\/d1\//.test(e.message),
+  );
+  assert.deepEqual(sessionFiles(dir, "d1"), before);
+});
+
+test("a folder without .team says which folder it looked in and what to do, and does not look further up", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "m1", "--brief", "x");
+  const sub = path.join(dir, "sub");
+  fs.mkdirSync(sub);
+  const commands = [["status"], ["next", "--json"], ["log"], ["say", "hi"], ["status", "--session", "m1"], ["use", "m1"], ["sessions"]];
+  for (const args of commands) {
+    await assert.rejects(
+      run(sub, ...args),
+      (e: Error) => e.message.includes(sub) && /\.team/.test(e.message) && /--root/.test(e.message) && /team init/.test(e.message) && !/no session yet/.test(e.message),
+      args.join(" "),
+    );
+  }
+  assert.ok(!fs.existsSync(path.join(sub, ".team")), "nothing was created there");
+
+  const fresh = sandbox();
+  await assert.rejects(run(fresh, "status"), /no \.team folder/);
+  await run(fresh, "init", "--name", "m2", "--brief", "x");
+  assert.ok(fs.existsSync(path.join(fresh, ".team/sessions/m2/state.json")), "init still starts a new .team");
+  assert.match(await run(fresh, "status"), /session: m2/);
+});
+
+test("errors name the next step: unknown session, use without a name, a name that is not allowed", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "n2", "--brief", "x");
+  await assert.rejects(run(dir, "use", "nope"), /session not found: nope.*team sessions.*team init/s);
+  await assert.rejects(run(dir, "status", "--session", "nope"), /session not found: nope.*team sessions.*team init/s);
+  await assert.rejects(run(dir, "use"), /usage: team use <name>.*team sessions/s);
+  assert.equal(fs.readFileSync(path.join(dir, ".team/current"), "utf8").trim(), "n2");
+
+  await assert.rejects(
+    run(dir, "init", "--name", "請求書", "--brief", "x"),
+    /invalid session name: "請求書" \(use ASCII letters, digits, "_" and "-", which may be joined by single dots; not a Windows device name such as con, nul or com1\)/,
+  );
+});
+
+/** Every file and folder under `dir`, with its content: equal before and after means a command changed nothing at all. */
+function tree(dir: string): Record<string, string | null> {
+  const out: Record<string, string | null> = {};
+  const walk = (d: string) => {
+    for (const ent of fs.readdirSync(d, { withFileTypes: true })) {
+      const f = path.join(d, ent.name);
+      const rel = path.relative(dir, f).split(path.sep).join("/");
+      if (ent.isDirectory()) {
+        out[rel + "/"] = null;
+        walk(f);
+      } else out[rel] = fs.readFileSync(f, "utf8");
+    }
+  };
+  walk(dir);
+  return out;
+}
+
+test("init refuses a session name that is not one plain folder name, and writes and deletes nothing", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "keep", "--brief", "x");
+  const before = tree(dir);
+  const bad = [".", "..", ".x", "x.", "a..b", "con", "NUL.txt", "Com1", "lpt9.x", "a b", "a/b", "請求書", ""];
+  for (const name of bad) {
+    for (const extra of [[], ["--force"]]) {
+      await assert.rejects(run(dir, "init", "--name", name, "--brief", "x", ...extra), /invalid session name/, `${JSON.stringify(name)} ${extra.join(" ")}`);
+      assert.deepEqual(tree(dir), before, `${JSON.stringify(name)} ${extra.join(" ")}`);
+    }
+  }
+  for (const name of ["a.b", "villa-57", "abcXYZ019_-", "com10", "console", "a.con"]) {
+    assert.match(await run(dir, "init", "--name", name, "--brief", "x"), new RegExp(`created session "${name.replace(".", "\\.")}"`), name);
+    assert.ok(fs.existsSync(path.join(dir, ".team/sessions", name, "state.json")), name);
+  }
+});
+
+test("a session name is checked wherever it becomes a path, including the folder trial runs delete", () => {
+  assert.equal(artifactsDir("a.b"), ".team/sessions/a.b/artifacts");
+  for (const bad of ["..", ".", "a/b", "x."]) assert.throws(() => artifactsDir(bad), /invalid session name/, bad);
+
+  const dir = sandbox();
+  fs.mkdirSync(path.join(dir, ".team"));
+  fs.writeFileSync(path.join(dir, ".team/keep.txt"), "keep");
+  const members = [{ id: "pm", role: "pm", persona: { name: "P" } }];
+  const phases = [{ id: "acceptance", goal: "g", speakers: ["pm"], mode: "round-robin" as const, maxRounds: 1, trial: true }];
+  const w = World.create({ name: "..", brief: "x", members, phases });
+  w.state.verify = { command: "echo hi", by: "pm" };
+  const before = tree(dir);
+  assert.throws(() => runTrialIfDue(w, dir), /invalid session name/);
+  assert.deepEqual(tree(dir), before);
+});
+
+test("sessions and the commands that compare sessions skip what is in .team/sessions but is not a session", async () => {
+  const dir = sandbox();
+  repoWithWorktrees(dir);
+  await run(dir, "init", "--name", "a", "--brief", "A", "--workspace", "wt-a");
+  await run(dir, "init", "--name", "b", "--brief", "B", "--workspace", "wt-b");
+  const sessions = path.join(dir, ".team/sessions");
+  fs.writeFileSync(path.join(sessions, ".DS_Store"), "x");
+  for (const stray of ["a b", ".new-abc", "con", "x."]) fs.mkdirSync(path.join(sessions, stray));
+  assert.deepEqual((await run(dir, "sessions")).split("\n").map((l) => l.trim().replace(/^\* /, "")).sort(), ["a", "b"]);
+  assert.match(await run(dir, "status", "--session", "a"), /session: a/);
+  assert.deepEqual(JSON.parse(await run(dir, "overlaps", "--json")).sessions.sort(), ["a", "b"]);
+  assert.equal(JSON.parse(await run(dir, "next", "--json")).pending[0].member, "pm");
+});
+
+test("init --force whose new session cannot be written leaves the old one as it was, and nothing behind", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "z1", "--brief", "first");
+  await run(dir, "record", "--as", "pm", "--file", writeReply(dir, "[SAY to=all] 前の会話です"));
+  const team = path.join(dir, ".team");
+  const before = tree(team);
+  // nothing checks a phase without an id, but the transcript cannot be rendered from it
+  const config = writeConfig(dir, "noid.config.json", { phases: [{ speakers: ["pm"], mode: "round-robin", maxRounds: 1, goal: "g" }] });
+  await assert.rejects(run(dir, "init", "--name", "z1", "--brief", "second", "--force", "--config", config));
+  assert.deepEqual(tree(team), before, "the old session, current and the sessions folder are as they were");
+  await assert.rejects(run(dir, "init", "--name", "z2", "--brief", "new", "--config", config));
+  assert.deepEqual(tree(team), before, "a new name leaves nothing half written either");
+  assert.match(await run(dir, "log"), /前の会話です/);
+});
+
+test("the verification command's start goes to the warning channel, so next --json and record --json stay parseable", async () => {
+  const dir = sandbox();
+  const config = writeConfig(dir, "trial.config.json", {
+    phases: [
+      { id: "review", goal: "g", speakers: ["engineer"], mode: "round-robin", maxRounds: 1 },
+      { id: "acceptance", goal: "g", speakers: ["user"], mode: "round-robin", maxRounds: 1, trial: true },
+    ],
+  });
+  await run(dir, "init", "--name", "t1", "--brief", "x", "--config", config);
+  await run(dir, "record", "--as", "eng-backend", "--file", writeReply(dir, "[VERIFY] echo hi"));
+  const { out, warnings } = await runWarn(dir, "record", "--as", "eng-frontend", "--file", writeReply(dir, "[SAY to=all] ok"), "--json");
+  assert.deepEqual(warnings, ["running the team's verification command: echo hi"]);
+  assert.equal(JSON.parse(out).phase, "acceptance");
+});
+
+test("a file that is not JSON is reported with its path, and the parser's error is kept as the cause", async () => {
+  const dir = sandbox();
+  fs.writeFileSync(path.join(dir, "personas/broken.json"), "{ not json");
+  const config = writeConfig(dir, "broken.config.json", { members: ["personas/broken.json"] });
+  await assert.rejects(
+    run(dir, "init", "--name", "c1", "--brief", "x", "--config", config),
+    (e: Error) => e.message.includes(path.join(dir, "personas/broken.json")) && e.cause instanceof SyntaxError,
+  );
 });

@@ -8,6 +8,7 @@ import { ACTION_HELP, PROTOCOL_HELP } from "./protocol.ts";
 import { EXTERNAL_WORKSPACE_GUIDE, allowedActions, canEdit, roleGuide, workspaceGuide } from "./sop.ts";
 import { displayName, formatBacklog, formatEntry, formatQuestions } from "./render.ts";
 import { answersByQuestion, currentPhase, decisionId, findMember, latestVerdicts, visibleTo, wrapupItems } from "./world.ts";
+import { assertSessionName } from "./session-name.ts";
 
 export interface TurnPrompt {
   member: string;
@@ -378,7 +379,7 @@ const LONG_SAY = 800;
 
 /** Where a session keeps evidence files: screenshots, generated files, trial runs. */
 export function artifactsDir(session: string): string {
-  return `.team/sessions/${session}/artifacts`;
+  return `.team/sessions/${assertSessionName(session)}/artifacts`;
 }
 
 function formatTrial(t: Trial): string[] {
