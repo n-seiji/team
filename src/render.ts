@@ -71,6 +71,33 @@ export function formatLeftoverWorkspace(workspace: string): string {
   return `warning: ${workspace} already has files from before. They were not deleted, so the new team will see them; delete the folder yourself if you want a clean start.`;
 }
 
+/** `continue` does not copy files: a workspace that is gone or empty means the team starts the new iteration without what it built before. */
+export function formatEmptyWorkspace(workspace: string): string {
+  return `warning: ${workspace} does not exist or is empty, so the team will not see what the earlier iterations built, and the trial run before acceptance fails too unless the team rebuilds it. The files are not part of the session (.team/); restore them if you want the team to build on them.`;
+}
+
+/**
+ * What `continue` prints: which iteration the session restarted as, and who speaks first. `via` is what the commands to
+ * run next need to reach this session (see `sessionFlag` in cli.ts): empty when it is the current one.
+ */
+export function formatContinued(s: SessionState, next: readonly string[], via: string): string {
+  return [
+    `continued session "${s.name}": iteration ${s.iteration}/${s.maxIterations} begins at phase "${currentPhase(s).id}".`,
+    `next: ${next.map((id) => displayName(s, id)).join(", ") || "-"}`,
+    `Go on with: team next${via} (host mode) or team run${via} (auto mode).`,
+  ].join("\n");
+}
+
+/** `first`, the line saying a session is done, plus the way to give it another iteration. For text output only: JSON stays as it is. */
+export function withContinueHint(first: string, via: string): string {
+  return `${first}\nTo go on with another iteration: team continue${via} [--iterations N] ["<text>"]`;
+}
+
+/** What `answer` adds on a finished session: the answer is recorded, but only a continued session reads it. */
+export function formatAnswerAfterDone(via: string): string {
+  return `The session is done, so the team acts on this answer only after you run: team continue${via}`;
+}
+
 export function formatTask(t: Task): string {
   const acc = t.acceptance ? `\n    acceptance: ${indent(t.acceptance, "    ")}` : "";
   // Sessions saved before `handoff` existed kept a blocked task's hand-off in its summary.

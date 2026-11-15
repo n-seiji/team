@@ -1338,3 +1338,258 @@ test("a file that is not JSON is reported with its path, and the parser's error 
     (e: Error) => e.message.includes(path.join(dir, "personas/broken.json")) && e.cause instanceof SyntaxError,
   );
 });
+
+// continue: a finished session goes on for another iteration
+
+/** A session the mock team has run to the end. */
+async function finishedSession(dir: string, name: string): Promise<void> {
+  await run(dir, "init", "割り勘CLI", "--name", name);
+  await run(dir, "run", "--backend", "mock");
+  assert.equal(stateOf(dir, name).status, "done");
+}
+
+const CONTINUE_HINT = /team continue/;
+
+/** Puts the session's workspace in a known state, so a test does not depend on whether the mock team wrote files. */
+function setWorkspace(dir: string, name: string, files: Record<string, string> | "missing"): string {
+  const workspace = path.join(dir, "workspace", name);
+  fs.rmSync(workspace, { recursive: true, force: true });
+  if (files === "missing") return workspace;
+  fs.mkdirSync(workspace, { recursive: true });
+  for (const [file, text] of Object.entries(files)) fs.writeFileSync(path.join(workspace, file), text);
+  return workspace;
+}
+
+test("a finished session refuses say, and continue with the words as an argument starts one more iteration in which the PM reads them", async () => {
+  const dir = sandbox();
+  await finishedSession(dir, "c1");
+  setWorkspace(dir, "c1", { "app.js": "// built before\n" });
+  const before = sessionFiles(dir, "c1");
+
+  const said = cli(dir, "", "say", "x");
+  assert.equal(said.status, 1);
+  assert.match(said.stderr, /done.*team continue --say/s);
+  assert.deepEqual(sessionFiles(dir, "c1"), before, "nothing was added to the transcript");
+
+  const { out, warnings } = await runWarn(dir, "continue", "CSV 出力も欲しい");
+  assert.match(out, /continued session "c1": iteration 2\/2 begins at phase "planning"/);
+  assert.match(out, /next: .*\(pm\)/);
+  assert.deepEqual(warnings, [], "the workspace has files");
+  const state = stateOf(dir, "c1");
+  assert.deepEqual([state.status, state.iteration, state.maxIterations], ["running", 2, 2]);
+  const status = JSON.parse(await run(dir, "status", "--json"));
+  assert.deepEqual([status.status, status.iteration, status.maxIterations, status.phase], ["running", 2, 2, "planning"]);
+
+  const log = (await run(dir, "log")).split("\n");
+  assert.match(log.at(-1)!, /^\[2:planning#\d+\] human: CSV 出力も欲しい$/);
+  assert.match(log.at(-3)!, /^\[2:planning#\d+\] — Iteration 2 begins: the human continued the finished session\. PM: .*\[DECISION\]/);
+
+  const pm = JSON.parse(await run(dir, "next", "--json", "--inline")).pending[0];
+  assert.equal(pm.member, "pm");
+  assert.match(pm.prompt, /CSV 出力も欲しい/);
+
+  const ran = await run(dir, "run", "--backend", "mock");
+  assert.match(ran, /session is done/);
+  assert.match((await run(dir, "log", "--tail", "1")), /Session finished after iteration 2/);
+  const after = stateOf(dir, "c1");
+  assert.deepEqual(after.trials.map((t: { iteration: number }) => t.iteration), [1, 2]);
+  const users = after.members.filter((m: { role: string }) => m.role === "user").length;
+  assert.equal(after.verdicts.filter((v: { iteration: number }) => v.iteration === 2).length, users);
+});
+
+test("continue --json prints what next --json prints, and the warning stays out of it", async () => {
+  const dir = sandbox();
+  await finishedSession(dir, "c2");
+  setWorkspace(dir, "c2", {});
+  const { out, warnings } = await runWarn(dir, "continue", "--say", "CSV 出力も欲しい", "--json");
+  const first = JSON.parse(out);
+  assert.deepEqual(Object.keys(first), ["status", "phase", "iteration", "round", "openQuestions", "pending"]);
+  assert.deepEqual([first.status, first.phase, first.iteration, first.round], ["running", "planning", 2, 1]);
+  assert.equal(first.pending[0].member, "pm");
+  assert.match(fs.readFileSync(path.join(dir, first.pending[0].promptFile), "utf8"), /CSV 出力も欲しい/);
+  assert.equal(warnings.length, 1, "the empty workspace is warned about, on stderr");
+  assert.deepEqual(JSON.parse(await run(dir, "next", "--json")), first, "a following next returns the same turn");
+});
+
+test("continue allows one more iteration by default, N more with --iterations, counted from the iteration it was on", async () => {
+  const dir = sandbox();
+  await finishedSession(dir, "c3");
+  await runWarn(dir, "continue");
+  assert.deepEqual([stateOf(dir, "c3").iteration, stateOf(dir, "c3").maxIterations], [2, 2]);
+  assert.doesNotMatch(await run(dir, "log"), /human:/, "no words, no human message");
+  await run(dir, "run", "--backend", "mock");
+  assert.equal(stateOf(dir, "c3").status, "done");
+
+  await runWarn(dir, "continue");
+  assert.deepEqual([stateOf(dir, "c3").iteration, stateOf(dir, "c3").maxIterations], [3, 3]);
+  await run(dir, "run", "--backend", "mock");
+  await runWarn(dir, "continue", "--iterations", "2");
+  assert.deepEqual([stateOf(dir, "c3").iteration, stateOf(dir, "c3").maxIterations], [4, 5], "iterations 4 and 5 were asked for");
+});
+
+test("continue on a session that is still running exits 1, says how to go on, and changes nothing", () => {
+  const dir = sandbox();
+  cli(dir, "", "init", "x", "--name", "c4");
+  const before = sessionFiles(dir, "c4");
+  const r = cli(dir, "", "continue");
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /not finished.*team next.*team run/s);
+  assert.deepEqual(sessionFiles(dir, "c4"), before);
+});
+
+test("continue rejects a bad --iterations or an empty message before touching the finished session", async () => {
+  const dir = sandbox();
+  await finishedSession(dir, "c5");
+  const before = sessionFiles(dir, "c5");
+  // the `=` form, because parseArgs would take "-1" for another option
+  for (const bad of ["0", "abc", "-1", "1.5", "", "1e3"]) {
+    await assert.rejects(run(dir, "continue", `--iterations=${bad}`), /--iterations must be a whole number of 1 or more/, JSON.stringify(bad));
+  }
+  assert.equal(cli(dir, "", "continue", "--iterations=0").status, 1);
+  for (const blank of ["", " ", " \n\t"]) {
+    await assert.rejects(run(dir, "continue", `--say=${blank}`), /message for the team is empty/, JSON.stringify(blank));
+    await assert.rejects(run(dir, "continue", blank), /message for the team is empty/, JSON.stringify(blank));
+  }
+  assert.deepEqual(sessionFiles(dir, "c5"), before);
+  assert.equal(stateOf(dir, "c5").status, "done");
+});
+
+test("continue warns when the workspace is missing or empty and goes on, and stays quiet when it has files", async () => {
+  const dir = sandbox();
+  await finishedSession(dir, "c6");
+
+  setWorkspace(dir, "c6", "missing");
+  const missing = await runWarn(dir, "continue");
+  assert.equal(missing.warnings.length, 1);
+  assert.match(missing.warnings[0], /^warning: workspace\/c6 .*(does not exist|is empty).*will not see.*trial run.*fail/);
+  assert.equal(stateOf(dir, "c6").status, "running", "it goes on regardless");
+
+  await run(dir, "run", "--backend", "mock");
+  setWorkspace(dir, "c6", {});
+  assert.equal((await runWarn(dir, "continue")).warnings.length, 1, "an empty folder warns too");
+
+  await run(dir, "run", "--backend", "mock");
+  setWorkspace(dir, "c6", { "app.js": "// built before\n" });
+  assert.deepEqual((await runWarn(dir, "continue")).warnings, []);
+});
+
+test("continue restarts at the iterationStart phase the session saved, or at the first one for an older session, and keeps the saved phases", async () => {
+  const dir = sandbox();
+  await finishedSession(dir, "c7");
+  const file = path.join(dir, ".team/sessions/c7/state.json");
+  const state = stateOf(dir, "c7");
+  state.phases = state.phases.map((phase: Record<string, unknown>) => {
+    const { iterationStart: _, ...rest } = phase;
+    return rest.id === "discovery" ? { ...rest, maxRounds: 1 } : rest;
+  });
+  fs.writeFileSync(file, JSON.stringify(state));
+
+  await runWarn(dir, "continue");
+  const after = stateOf(dir, "c7");
+  assert.equal(after.phases[after.phaseIndex].id, "discovery");
+  assert.deepEqual(after.phases, state.phases, "the phases saved with the session are used as they are");
+  assert.equal(after.phases[0].maxRounds, 1);
+});
+
+test("answer on a finished session says that continue is what makes the team act on it; on a running one it only says ok", async () => {
+  const dir = sandbox();
+  await finishedSession(dir, "c8");
+  askInState(dir, "c8");
+  const out = await run(dir, "answer", "Q1", "Yes, publish it.");
+  assert.match(out, /^ok\n/);
+  assert.match(out, CONTINUE_HINT);
+  assert.equal(out.split("\n").length, 2, "one added line");
+
+  await run(dir, "init", "x", "--name", "c9");
+  await run(dir, "record", "--as", "pm", "--file", writeReply(dir, "[ASK_HUMAN] Which one? Default: A."));
+  assert.equal(await run(dir, "answer", "Q1", "B"), "ok");
+});
+
+test("run, next and the record that ends a session point to continue, in text output only", async () => {
+  const dir = sandbox();
+  await finishedSession(dir, "d1");
+  const total = stateOf(dir, "d1").turn;
+
+  const again = await run(dir, "run", "--backend", "mock");
+  assert.match(again, /session is done\./);
+  assert.match(again.split("\n").slice(-2).join("\n"), CONTINUE_HINT);
+  assert.match(await run(dir, "next"), /^session is done\. See: team log \/ team status\n.*team continue/);
+  assert.doesNotMatch(await run(dir, "next", "--json"), /continue/);
+
+  await run(dir, "init", "割り勘CLI", "--name", "d2");
+  await run(dir, "run", "--backend", "mock", "--turns", String(total - 1));
+  assert.equal(stateOf(dir, "d2").status, "running");
+  const last = JSON.parse(await run(dir, "next", "--json")).pending[0].member;
+  const recorded = await run(dir, "record", "--as", last, "--file", writeReply(dir, "[SAY to=all] done"));
+  assert.match(recorded, /session is done\./);
+  assert.match(recorded, CONTINUE_HINT);
+});
+
+test("the help lists continue with its options", async () => {
+  const help = await run(sandbox(), "help");
+  assert.match(help, /continue \[<text> \| --say <text>\] \[--iterations N\] \[--json\]/);
+});
+
+test("continue takes the words as arguments or with --say, and refuses both without touching the session", async () => {
+  const dir = sandbox();
+  await finishedSession(dir, "p1");
+  setWorkspace(dir, "p1", { "app.js": "// built before\n" });
+  const before = sessionFiles(dir, "p1");
+
+  const both = cli(dir, "", "continue", "a", "--say", "b");
+  assert.equal(both.status, 1);
+  assert.match(both.stderr, /either as arguments or with --say, not both/);
+  assert.deepEqual(sessionFiles(dir, "p1"), before);
+
+  // the command's words are not dropped, whichever side of --session they are on, and several arguments make one message
+  const noted = await runWarn(dir, "continue", "--session", "p1", "CSV", "も欲しい");
+  assert.deepEqual(noted.warnings, []);
+  assert.match(await run(dir, "log", "--tail", "1"), /^\[2:planning#\d+\] human: CSV も欲しい$/);
+
+  await run(dir, "run", "--backend", "mock");
+  await runWarn(dir, "continue", "--say", "CSV も欲しい");
+  assert.match(await run(dir, "log", "--tail", "1"), /^\[3:planning#\d+\] human: CSV も欲しい$/, "--say says the same thing");
+});
+
+test("continue without words says in the log that the human did not say what to change", async () => {
+  const dir = sandbox();
+  await finishedSession(dir, "n1");
+  setWorkspace(dir, "n1", { "app.js": "// built before\n" });
+  await runWarn(dir, "continue");
+  const log = (await run(dir, "log", "--tail", "3")).split("\n");
+  assert.match(log[1], /Iteration 2 begins: the human continued the finished session without saying what to change\. PM: choose the next improvement yourself/);
+  assert.doesNotMatch(log.join("\n"), /human:/);
+});
+
+test("continue names the session in what to run next when it is not the current one, and only then", async () => {
+  const dir = sandbox();
+  await finishedSession(dir, "s1");
+  await finishedSession(dir, "s2"); // init makes the newest session current
+  for (const name of ["s1", "s2"]) setWorkspace(dir, name, { "app.js": "// built before\n" });
+
+  const other = await runWarn(dir, "continue", "--session", "s1");
+  assert.match(other.out, /Go on with: team next --session s1 \(host mode\) or team run --session s1 \(auto mode\)/);
+  const finishedOther = await run(dir, "run", "--session", "s1", "--backend", "mock");
+  assert.match(finishedOther, /team continue --session s1 \[--iterations N\]/, "the done hint reaches s1, not the current session");
+
+  const current = await runWarn(dir, "continue");
+  assert.doesNotMatch(current.out, /--session/);
+  const finishedCurrent = await run(dir, "run", "--backend", "mock");
+  assert.doesNotMatch(finishedCurrent, /--session/);
+  assert.match(finishedCurrent, CONTINUE_HINT);
+  const named = await runWarn(dir, "continue", "--session", "s2");
+  assert.doesNotMatch(named.out, /--session/, "naming the current session adds nothing");
+});
+
+test("an answer given after the session ended is in the answered section of the PM's prompt once the session is continued", async () => {
+  const dir = sandbox();
+  await finishedSession(dir, "a9");
+  setWorkspace(dir, "a9", { "app.js": "// built before\n" });
+  askInState(dir, "a9");
+  await run(dir, "answer", "Q1", "Yes, publish it.");
+  await runWarn(dir, "continue");
+  const pm = JSON.parse(await run(dir, "next", "--json", "--inline")).pending[0];
+  assert.equal(pm.member, "pm");
+  assert.match(section(pm.prompt, ANSWERED), /- Q1 .*May we publish[\s\S]*Yes, publish it\./);
+  assert.equal(section(pm.prompt, OPEN), "");
+});

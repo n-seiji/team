@@ -858,3 +858,246 @@ test("the markdown and HTML transcripts list checks and hand-offs in the backlog
   assert.ok(old.includes(`<summary>blocked</summary><div class="muted small text">${HANDOFF}</div>`));
   assert.ok(!old.includes("<summary>result</summary>"));
 });
+
+/** A session that all users accepted in iteration 1, with `maxIterations` iterations allowed: done at 1/`maxIterations`. */
+function finishedInFirstIteration(maxIterations = 2): World {
+  const w = make(maxIterations);
+  toAcceptance(w);
+  w.record("u1", "[VERDICT accept] ok");
+  w.record("u2", "[VERDICT accept] ok");
+  w.record("pm", "thanks");
+  assert.deepEqual([w.state.status, w.state.iteration], ["done", 1]);
+  return w;
+}
+
+test("a rejection still opens the next iteration with its reason and a fresh schedule", () => {
+  const w = make(2);
+  toAcceptance(w);
+  w.record("u1", "[VERDICT reject] no");
+  w.record("u2", "[VERDICT accept] ok");
+  w.record("pm", "[DECISION] retry");
+  const begins = w.emitted.filter((e) => e.kind === "system" && /^Iteration \d+ begins/.test(e.text));
+  assert.deepEqual(begins.map((e) => [e.text, e.phase, e.iteration]), [["Iteration 2 begins: 1/2 users rejected (u1).", "planning", 2]]);
+  assert.deepEqual([w.state.round, w.state.pending, w.state.queue], [1, ["pm"], ["e1", "e2"]], "planning's first round has started with the PM");
+});
+
+test("continuing a finished session starts one more iteration at planning and allows only that one", () => {
+  const w = finishedInFirstIteration(2);
+  w.emitted.length = 0;
+
+  w.continueSession(1, "CSV 出力も欲しい");
+
+  assert.deepEqual(
+    [w.state.status, w.state.iteration, w.state.maxIterations, w.phase.id, w.state.round, w.state.queue, w.state.pending],
+    ["running", 2, 2, "planning", 0, [], []],
+  );
+  assert.deepEqual(w.next(), ["pm"], "the PM plans first");
+
+  // done at iteration 2: a rejection does not open iteration 3 because only one more iteration was asked for
+  w.record("pm", "[TASK owner=e1] CSV\n- exports a CSV\n[ADVANCE]");
+  for (const [id, reply] of [["e1", "[TASK_DONE T3] ok"], ["e2", "-"], ["e1", "-"], ["e2", "-"], ["pm", "-"]]) w.record(id, reply);
+  assert.equal(w.phase.id, "acceptance");
+  w.record("u1", "[VERDICT reject] no");
+  w.record("u2", "[VERDICT accept] ok");
+  w.record("pm", "-");
+  assert.equal(w.state.status, "done");
+  assert.match(w.emitted.at(-1)!.text, /^Session finished after iteration 2\. 1\/2 users accepted\./);
+});
+
+test("continue sets maxIterations from the current iteration, not on top of the old limit", () => {
+  const roomy = finishedInFirstIteration(5);
+  roomy.continueSession(1);
+  assert.equal(roomy.state.maxIterations, 2, "5 + 1 would start iterations nobody asked for");
+
+  const two = finishedInFirstIteration(1);
+  two.continueSession(2);
+  assert.deepEqual([two.state.iteration, two.state.maxIterations], [2, 3]);
+});
+
+test("continue needs a whole number of iterations of 1 or more, and refuses anything else without changing the session", () => {
+  const w = finishedInFirstIteration(2);
+  const before = JSON.stringify(w.state);
+  const log = w.emitted.length;
+  for (const n of [0, -1, 1.5, Number.NaN, Infinity]) assert.throws(() => w.continueSession(n), /iterations must be a whole number of 1 or more/, String(n));
+  assert.deepEqual([JSON.stringify(w.state), w.emitted.length], [before, log]);
+});
+
+test("continue writes its entries after the state moved, so they carry the new iteration and phase, and the human's words come last", () => {
+  const w = finishedInFirstIteration(2);
+  assert.equal(w.phase.id, "acceptance", "the session finished in acceptance");
+  w.emitted.length = 0;
+
+  w.continueSession(1, "  CSV 出力も欲しい \n");
+
+  assert.deepEqual(
+    w.emitted.map((e) => [e.from, e.kind, e.iteration, e.phase]),
+    [["system", "system", 2, "planning"], ["system", "system", 2, "planning"], ["human", "say", 2, "planning"]],
+  );
+  const [begin, start, human] = w.emitted;
+  assert.match(begin.text, /^Iteration 2 begins: the human continued the finished session\. PM: .*\[DECISION\]/);
+  assert.match(start.text, /^Phase "planning" started \(iteration 2\)/);
+  assert.deepEqual([human.text, human.to], ["CSV 出力も欲しい", ["all"]]);
+});
+
+test("the log entry tells the PM to plan from the human's words when there are some, and to choose the improvement itself when there are none", () => {
+  const withWords = finishedInFirstIteration(2);
+  withWords.emitted.length = 0;
+  withWords.continueSession(1, "CSV 出力も欲しい");
+  assert.match(withWords.emitted[0].text, /PM: plan again with what the human asks for.*\[DECISION\]/);
+  assert.doesNotMatch(withWords.emitted[0].text, /without saying/);
+
+  const without = finishedInFirstIteration(2);
+  without.emitted.length = 0;
+  without.continueSession(1);
+  const text = without.emitted[0].text;
+  assert.match(text, /^Iteration 2 begins: the human continued the finished session without saying what to change\./);
+  assert.match(text, /PM: choose the next improvement yourself from the users' verdict reasons, the open tasks and the checks waiting for a person.*\[DECISION\]/);
+  assert.doesNotMatch(text, /what the human asks for/, "there is no request to plan from");
+  assert.deepEqual(without.emitted.map((e) => e.from), ["system", "system"], "and no human message");
+});
+
+test("the PM's planning prompt after a continue shows the human's request and which iteration this is", async () => {
+  const { buildPrompt } = await import("../src/prompt.ts");
+  const w = finishedInFirstIteration(2);
+  w.continueSession(1, "CSV 出力も欲しい");
+  const pm = buildPrompt(w.state, "pm", w.emitted, []).user;
+  assert.match(pm, /## Current phase: planning \(iteration 2\/2, round 0\/3\)/);
+  assert.match(pm, /Iteration 2 begins: the human continued the finished session/);
+  assert.match(pm, /human: CSV 出力も欲しい/);
+  assert.match(pm, /T1 \[done\]/, "what the first iteration built stays in the backlog");
+});
+
+test("a session that ended on a rejection shows the PM that iteration's rejections when it is continued", async () => {
+  const { buildPrompt } = await import("../src/prompt.ts");
+  const w = make(1);
+  toAcceptance(w);
+  w.record("u1", "[VERDICT reject] I can't open a terminal");
+  w.record("u2", "[VERDICT accept] ok");
+  w.record("pm", "-");
+  assert.equal(w.state.status, "done", "the iteration limit was reached, so the rejection did not loop");
+
+  w.continueSession(1);
+  const pm = buildPrompt(w.state, "pm", w.emitted, []).user;
+  assert.match(pm, /## Rejections from the last iteration\n- U1: I can't open a terminal/);
+});
+
+test("tasks left open or handed to a person stay as they were; the open ones hold the new iteration's build open", async () => {
+  const { buildPrompt } = await import("../src/prompt.ts");
+  const w = make(1);
+  toBuild(w);
+  w.record("e1", "[TASK_DONE T1] ok");
+  w.record("e2", "[TASK_BLOCKED T2] only the owner can create the API key");
+  for (const [id, reply] of [["e1", "lgtm"], ["e2", "lgtm"], ["pm", "ready"], ["u1", "[VERDICT accept] ok"], ["u2", "[VERDICT accept] ok"]]) w.record(id, reply);
+  w.record("pm", "[TASK owner=e1] later\n- x");
+  for (const id of ["e1", "e2", "pm"]) w.record(id, "noted");
+  assert.equal(w.state.status, "done");
+  assert.deepEqual(w.state.tasks.map((t) => [t.id, t.status]), [["T1", "done"], ["T2", "blocked"], ["T3", "todo"]]);
+
+  w.continueSession(1);
+  assert.deepEqual(w.state.tasks.map((t) => [t.id, t.status]), [["T1", "done"], ["T2", "blocked"], ["T3", "todo"]], "continuing changes no task");
+  const backlog = section(buildPrompt(w.state, "pm", w.emitted, []).user, /^Backlog/);
+  assert.match(backlog, /- T2 \[blocked\].*\n(?:.*\n)*? {4}needs a person: only the owner can create the API key/);
+  assert.match(backlog, /- T3 \[todo\] owner=e1 later/);
+
+  assert.deepEqual(w.next(), ["pm"]);
+  w.record("pm", "[ADVANCE] same scope");
+  assert.equal(w.phase.id, "build");
+  w.record("e1", "-");
+  w.record("e2", "-");
+  assert.deepEqual([w.phase.id, w.state.round], ["build", 2], "T3 is still open, so the build goes on while T2, handed to a person, does not hold it");
+  w.record("e1", "[TASK_DONE T3] built");
+  w.record("e2", "-");
+  assert.equal(w.phase.id, "review");
+  assert.equal(w.state.tasks[1].status, "blocked");
+});
+
+test("an answer given to a finished session is in the PM's answered section once the session is continued", async () => {
+  const { buildPrompt } = await import("../src/prompt.ts");
+  const w = finishedWithQuestion(false);
+  w.answer("Q1", "Yes, publish it.");
+  w.continueSession(1);
+  const prompt = buildPrompt(w.state, "pm", w.emitted, []).user;
+  assert.match(section(prompt, ANSWERED), /- Q1 .*May we publish[\s\S]*Yes, publish it\./);
+  assert.equal(section(prompt, OPEN), "", "nothing is left open");
+});
+
+test("continue clears the reply budget the last round used, so a new iteration starts from zero", () => {
+  const w = make(2);
+  toAcceptance(w);
+  w.record("u1", "[VERDICT accept] ok");
+  w.record("u2", "[VERDICT accept] ok");
+  w.record("pm", "[SAY to=u1] one more question");
+  w.record("u1", "[VERDICT accept] still ok");
+  assert.equal(w.state.status, "done");
+  assert.equal(w.state.insertions, 1, "the last round was extended by a reply, and finishing leaves the count");
+
+  w.continueSession(1);
+  assert.deepEqual([w.state.round, w.state.queue, w.state.pending, w.state.insertions], [0, [], [], 0]);
+});
+
+/** Phases that finish in one pass: `intro` (PM), `work` (engineers), and a finale that nothing ever needs. */
+const tinyPhases = (opts: { start?: string; finaleFirst?: boolean } = {}) => {
+  const phase = (id: string, speakers: string[], extra = {}) => ({ id, goal: `goal of ${id}`, speakers, mode: "round-robin" as const, maxRounds: 1, ...extra });
+  const regular = [phase("intro", ["pm"]), phase("work", ["engineer"])].map((p) => (p.id === opts.start ? { ...p, iterationStart: true } : p));
+  const finale = phase("wrapup", ["pm"], { finale: true });
+  return opts.finaleFirst ? [finale, ...regular] : [...regular, finale];
+};
+
+const finishedTiny = (phases: ReturnType<typeof tinyPhases>): World => {
+  const w = World.create({ name: "t", brief: "b", members: team(), phases, now: () => "T" });
+  for (const id of ["pm", "e1", "e2"]) w.record(id, "-");
+  assert.equal(w.state.status, "done");
+  return w;
+};
+
+test("a continued session restarts at the phase marked iterationStart in the phases it saved", () => {
+  const w = finishedTiny(tinyPhases({ start: "work" }));
+  w.continueSession(1);
+  assert.equal(w.phase.id, "work");
+  assert.deepEqual(w.state.phases, tinyPhases({ start: "work" }), "the saved phases are kept as they were");
+});
+
+test("with no iterationStart a continued session restarts at the first phase that is not a wrap-up, as a new session begins", () => {
+  for (const finaleFirst of [false, true]) {
+    const phases = tinyPhases({ finaleFirst });
+    const fresh = World.create({ name: "t", brief: "b", members: team(), phases, now: () => "T" });
+    const w = finishedTiny(phases);
+    w.continueSession(1);
+    assert.equal(w.phase.id, "intro", `finale first: ${finaleFirst}`);
+    assert.equal(w.state.phaseIndex, fresh.state.phaseIndex);
+  }
+});
+
+test("continue refuses a session that is still running and changes nothing", () => {
+  const w = make(2);
+  const before = JSON.stringify(w.state);
+  const log = w.emitted.length;
+  assert.throws(() => w.continueSession(1, "x"), /not finished.*team next.*team run/s);
+  assert.deepEqual([JSON.stringify(w.state), w.emitted.length], [before, log]);
+});
+
+test("continue with a blank message is refused and changes nothing", () => {
+  const w = finishedInFirstIteration(2);
+  const before = JSON.stringify(w.state);
+  const log = w.emitted.length;
+  for (const say of ["", "  \n\t"]) assert.throws(() => w.continueSession(1, say), /message for the team is empty/);
+  assert.deepEqual([JSON.stringify(w.state), w.emitted.length], [before, log]);
+  assert.equal(w.state.status, "done");
+});
+
+test("a message to a finished session is refused with the way to reach the team, and nothing is logged", () => {
+  const w = finishedInFirstIteration(2);
+  const before = JSON.stringify(w.state);
+  const log = w.emitted.length;
+  assert.throws(() => w.broadcast("one more thing"), /done.*team continue --say/s);
+  assert.deepEqual([JSON.stringify(w.state), w.emitted.length], [before, log]);
+
+  const running = make(2);
+  running.broadcast("予算は月1万円までです");
+  assert.equal(running.emitted.at(-1)!.text, "予算は月1万円までです");
+});
+
+test("a reply recorded on a finished session is refused, and the error says it can be continued", () => {
+  const w = finishedInFirstIteration(2);
+  assert.throws(() => w.record("pm", "[SAY to=all] hi", { force: true }), /session is already done.*team continue/);
+});

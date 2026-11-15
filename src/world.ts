@@ -54,7 +54,7 @@ export class World {
       status: "running",
       members: o.members,
       phases: o.phases,
-      phaseIndex: Math.max(0, o.phases.findIndex((p) => !p.finale)),
+      phaseIndex: firstRegularPhase(o.phases),
       iteration: 1,
       maxIterations: o.maxIterations ?? 2,
       round: 0,
@@ -107,9 +107,56 @@ export class World {
     return [...this.state.pending];
   }
 
-  /** A stimulus from outside the simulation (e.g. the real human), like TinyWorld.broadcast. */
+  /** A stimulus from outside the simulation (e.g. the real human), like TinyWorld.broadcast. Nobody reads it once the session is done. */
   broadcast(text: string, from = "human"): void {
+    if (this.state.status === "done") {
+      throw new Error(`session "${this.state.name}" is done, so no one would read this. To tell the team, continue it: team continue --say "<text>"`);
+    }
     this.log(from, "say", text, ["all"]);
+  }
+
+  /**
+   * A finished session goes on for `iterations` more iterations, counted from the one it ended in (so a session
+   * that stopped early is not given the iterations it never used). The human's words are logged last, as the
+   * freshest entry the PM sees when it plans again.
+   */
+  continueSession(iterations: number, say?: string): void {
+    const s = this.state;
+    if (!Number.isInteger(iterations) || iterations < 1) throw new Error(`iterations must be a whole number of 1 or more, got ${iterations}`);
+    if (s.status !== "done") {
+      throw new Error(`session "${s.name}" is not finished yet (status: ${s.status}). Go on with "team next" or "team run"; "team continue" is for a finished session.`);
+    }
+    const words = say?.trim();
+    if (say !== undefined && !words) throw new Error("the message for the team is empty: give some text, or leave it out");
+    s.status = "running";
+    s.maxIterations = s.iteration + iterations;
+    // Without words there is no request to plan from, and a PM told to follow one would make one up.
+    this.beginIteration(
+      words
+        ? "the human continued the finished session. PM: plan again with what the human asks for, " +
+            "and record any lasting policy as a [DECISION], since the human's words leave the recent history after a while"
+        : "the human continued the finished session without saying what to change. PM: choose the next improvement yourself " +
+            "from the users' verdict reasons, the open tasks and the checks waiting for a person, and record any lasting policy as a [DECISION]",
+    );
+    if (words) this.broadcast(words);
+  }
+
+  /**
+   * Starts the next iteration at the phase marked `iterationStart` (the first phase of the normal order when none is) with a fresh
+   * schedule: the scheduler plans the first round when it next runs. The state moves before anything is logged,
+   * because an entry is stamped with the phase and iteration it is logged in.
+   */
+  private beginIteration(reason: string): void {
+    const s = this.state;
+    s.iteration++;
+    const marked = s.phases.findIndex((p) => p.iterationStart && !p.finale);
+    s.phaseIndex = marked >= 0 ? marked : firstRegularPhase(s.phases);
+    s.round = 0;
+    s.queue = [];
+    s.pending = [];
+    s.insertions = 0;
+    this.log("system", "system", `Iteration ${s.iteration} begins: ${reason}.`);
+    this.logPhaseStart();
   }
 
   /** The real human answers question `id` (e.g. "Q2"). Answering again replaces the answer. Allowed once the session is done. */
@@ -132,7 +179,7 @@ export class World {
   /** Apply an agent's reply and move the schedule forward. Returns the parsed actions. */
   record(id: string, raw: string, opts: { force?: boolean } = {}): Action[] {
     const s = this.state;
-    if (s.status !== "running") throw new Error("session is already done");
+    if (s.status !== "running") throw new Error("session is already done. To go on with another iteration: team continue");
     const m = this.member(id);
     if (!m) throw new Error(`unknown member: ${id}`);
     if (!s.pending.includes(id) && !opts.force) {
@@ -365,13 +412,11 @@ export class World {
       // build them in another iteration so users see them, never silently in wrap-up.
       const followUps = wrapupItems(s).followUps;
       if ((rejected.length > 0 || followUps.length > 0) && s.iteration < s.maxIterations) {
-        s.iteration++;
-        s.phaseIndex = Math.max(0, s.phases.findIndex((p) => p.iterationStart && !p.finale));
-        const why = rejected.length
-          ? `${rejected.length}/${vs.length} users rejected (${rejected.map((r) => r.by).join(", ")})`
-          : `follow-up tasks were added after the build (${followUps.map((t) => t.id).join(", ")})`;
-        this.log("system", "system", `Iteration ${s.iteration} begins: ${why}.`);
-        this.logPhaseStart();
+        this.beginIteration(
+          rejected.length
+            ? `${rejected.length}/${vs.length} users rejected (${rejected.map((r) => r.by).join(", ")})`
+            : `follow-up tasks were added after the build (${followUps.map((t) => t.id).join(", ")})`,
+        );
         return;
       }
       const finale = s.phases.findIndex((p) => p.finale);
@@ -436,6 +481,9 @@ export class World {
 }
 
 const systemNow = () => new Date().toISOString();
+
+/** Where a session starts, and where an iteration restarts when no phase says so: the first phase that is not a wrap-up (a finale is entered only at the end). */
+const firstRegularPhase = (phases: readonly PhaseDef[]) => Math.max(0, phases.findIndex((p) => !p.finale));
 
 /** Extra reply turns per round, per speaker: enough for a few question-and-answer exchanges, but bounded. */
 const REPLY_BUDGET = 2;

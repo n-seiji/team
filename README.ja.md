@@ -38,7 +38,7 @@
 | review | エンジニア, PM | 相互レビューと修正。PM が受け入れ基準を確認 |
 | acceptance | ユーザー, PM | 最初にエンジン自身がチームの `[VERIFY]` コマンドを実行し、本物の出力とファイル (スクリーンショットなど) を**試用ログ**として残す。ユーザーは試用ログとデモから成果物を読んで `[VERDICT accept/reject]`。PM がまとめる |
 
-reject が1件でもあり、イテレーション上限 (`maxIterations`) に達していなければ planning に戻ります。各フェーズは最大ラウンド数で終わるほか、PM が `[ADVANCE]` で早めに切り上げられます。
+reject が1件でもあり、イテレーション上限 (`maxIterations`) に達していなければ planning に戻ります。各フェーズは最大ラウンド数で終わるほか、PM が `[ADVANCE]` で早めに切り上げられます。終了したセッションは `team continue` でもう1イテレーション続けられます（[使い方](#使い方)）。
 
 ### 会話のルール
 
@@ -75,7 +75,7 @@ reject が1件でもあり、イテレーション上限 (`maxIterations`) に�
 /team-dev フリーランス向けの、ターミナルから数十秒で請求書を作れるツール
 ```
 
-あとは Claude Code が `team next` → サブエージェント → `team record` を繰り返します。途中で「予算は月1万円までと伝えて」などと話しかければ、`team say` でチーム全員に共有されます。メンバーが `[ASK_HUMAN]` で質問したときは、チームは自分たちの既定の案で先へ進みます。質問には `team status` で id (`Q1`, `Q2`, ...) が付いて見えるので、`team answer Q2 "..."` でその質問に答えます（以降のプロンプトでは答えが既定の案より優先されます）。「discovery だけやって」「次のフェーズまで」のように区切りも指定できます。
+あとは Claude Code が `team next` → サブエージェント → `team record` を繰り返します。途中で「予算は月1万円までと伝えて」などと話しかければ、`team say` でチーム全員に共有されます。メンバーが `[ASK_HUMAN]` で質問したときは、チームは自分たちの既定の案で先へ進みます。質問には `team status` で id (`Q1`, `Q2`, ...) が付いて見えるので、`team answer Q2 "..."` でその質問に答えます（以降のプロンプトでは答えが既定の案より優先されます）。「discovery だけやって」「次のフェーズまで」のように区切りも指定できます。セッションが終わったあとに「もう1周して、CSV 出力も足して」と頼むこともできます。1イテレーションは最初の1周と同じくらいトークンを使うので、Claude Code は先に確認してから `team continue "..."` を実行します。
 
 - 会話の全文（各メンバーの思考を含む）: `.team/sessions/<name>/transcript.md`。ブラウザで読むなら `transcript.html`（フェーズごとにまとまり、人で絞り込める。本人だけのメモは既定で隠す。`team log --html` でパスを表示し、古いセッションの分も作る）
 - 試用ログと証拠のファイル: `.team/sessions/<name>/artifacts/`
@@ -87,7 +87,7 @@ reject が1件でもあり、イテレーション上限 (`maxIterations`) に�
 クラウドのセッションでも同じように動きます。コンテナが一時的なので、次の点だけ違います。
 
 - クラウドのセッションが始まると、`.claude/hooks/session-start.sh` が pnpm と開発用の依存をバックグラウンドで入れます。セッションはその完了を待たずに始まります（エンジン本体は Node だけで動きます）。
-- セッションの状態と作ったプロダクトは、`.team/sessions/<name>/` と `workspace/<name>/` をコミットして push することで残ります。`team-dev` スキルはフェーズが変わるたびにこれを行います。別のスレッドや後のセッションからは「<name> のセッションを続けて」で再開できます。
+- セッションの状態と作ったプロダクトは、`.team/sessions/<name>/` と `workspace/<name>/` をコミットして push することで残ります。`team-dev` スキルはフェーズが変わるたびにこれを行います。別のスレッドや後のセッションからは「<name> のセッションを続けて」で、実行中のセッションを再開できます（`team next`）。すでに終了したセッションにもう1イテレーション足すのは `team continue` で、スキルは確認を取ってから実行します。
 - プロジェクトでは、1つのスレッドで1つのシミュレーションを回してください。セッションごとにフォルダが分かれているので、スレッド同士が同じファイルを編集することはありません。
 
 ### コマンドラインで使う
@@ -102,11 +102,21 @@ node src/main.ts log --tail 20 --no-thoughts                     # 会話ログ
 node src/main.ts stats                                           # フェーズ別・ロール別の実トークン数とコスト (--json でスクリプト向け)
 node src/main.ts say "ターゲットは個人事業主に絞りたい"           # 人間として発言を差し込む
 node src/main.ts answer Q2 "公開してよいです"                     # チームの質問 Q2 に答える (id は status に出る)
+node src/main.ts continue "CSV 出力も欲しい"                      # 終了したセッションをもう1イテレーション (--iterations N で N 個)
 ```
 
 `pnpm team <command>` や、`pnpm link --global` して `team <command>` でも同じです。
 
 セッション名は ASCII の英数字・`_`・`-` で、単独の `.` でつなげられます（`villa-57`、`v1.2`）。`init` は同名のセッションがあると作らずに、別の `--name` を付ける・`team use <name>` で続ける・`--force` で作り直す、のいずれかを案内します。`--force` が消すのはそのセッションの保存内容すべて（`.team/sessions/<name>/`）で、`workspace/<name>/` のファイルは消しません。残っていれば、新しいチームから見えるので警告します。また、フェーズの `speakers` に、どのメンバーも持たないロールがあれば警告します。警告は stderr に出るので、`--json` の出力はそのまま読めます。
+
+`team continue [<text> | --say <text>] [--iterations N] [--json]` は、`done` のセッションにもう1イテレーション足します。実行中のセッションは exit 1 で止まり、`team next` / `team run` を案内します。
+
+- セッションを running に戻し、`iterationStart` が付いたフェーズ（無ければ、後始末ではない最初のフェーズ）から次のイテレーションを始めます。タスク・決定・ノートは引き継がれます。
+- 上限は「終わったイテレーション + N」です（N は 1 以上の整数で既定 1）。5 回中 1 回目で終わったセッションに、使わなかった残り 4 回を足すことはしません。
+- フェーズはセッションに保存してあるものをそのまま使います。あとから `team.config.json` や `DEFAULT_PHASES` を変えても反映されません。
+- text は `team say` と同じく人間の発言として記録します。引数でも `--say` でも渡せますが、両方は不可です（空も不可）。text が無いときは、人間が何を変えるかを言っていないことをログで PM に伝え、PM がユーザーの verdict の理由・open なタスク・人の確認待ちから次の改善を選びます。発言がプロンプトに載るのは直近の `historyWindow` 件に入っている間だけなので、恒久的な方針は PM に `[DECISION]` にしてもらってください。
+- プロダクトのファイルはセッションに含まれません。`workspace/<name>/` が無い・空なら、stderr に警告したうえで続けます（チームが前回の成果物を見られず、受け入れ前の試行も失敗します）。
+- `--json` は `next --json` と同じ出力です。終了済みのセッションへの `say` は、誰も読まないので拒否します。`answer` は使え、チームが答えを踏まえて動くのは continue したあとです。`run`・`record`・`next` は、セッションの終了を伝えるときに `continue` を案内します。
 
 `.team` はカレントディレクトリ（か `--root`）だけを見ます。親ディレクトリは探しません。`--turns`・`--tail`・`--tokens`・`--duration-ms` は 0 以上の整数だけを受け付けます。`say` と `record` は空の入力を受け付けず、exit 1 で止まって何も記録しません。返答できなかったメンバーには `[SAY to=all] (could not attend this turn)` を記録してください。
 
@@ -136,7 +146,7 @@ node src/main.ts record --as pm --file reply.txt [--tokens N] [--duration-ms N] 
 ## カスタマイズ
 
 - **メンバー**: `personas/*.json` を追加・編集して `team.config.json` の `members` に並べます。`role` は `pm` / `engineer` / `user`（それ以外のロール名も使え、汎用の説明で参加します）。`persona` 以下は TinyTroupe 形式の自由な JSON で、そのままプロンプトに入ります。ユーザーには `tech_literacy` のような「試用のしかたに影響する情報」を書くと受け入れテストが現実的になります。
-- **フェーズ**: `team.config.json` に `phases` を書くと `DEFAULT_PHASES` (`src/sop.ts`) を置き換えられます（`id` / `goal` / `speakers` / `mode: round-robin|parallel` / `maxRounds`、任意で `untilTasksDone`（タスクが全部終わったら早めに終える）/ `editors`（このフェーズで `workspace/` を編集できるロール）/ `iterationStart`（reject 後にここから次のイテレーションを始める））。
+- **フェーズ**: `team.config.json` に `phases` を書くと `DEFAULT_PHASES` (`src/sop.ts`) を置き換えられます（`id` / `goal` / `speakers` / `mode: round-robin|parallel` / `maxRounds`、任意で `untilTasksDone`（タスクが全部終わったら早めに終える）/ `editors`（このフェーズで `workspace/` を編集できるロール）/ `iterationStart`（reject 後や `team continue` のあと、ここから次のイテレーションを始める））。
 - **言語**: `language`（既定 `ja`）。
 - **記憶の長さ**: `historyWindow`（プロンプトに入れる直近の会話件数）。プロンプトでは、同じプロンプトの Backlog・Decisions・Demos に全文がある発言（タスク作成・タスク更新・決定・デモ）は 1 行の参照にします。`transcript.md` と `team log` は全文のままです。
 
