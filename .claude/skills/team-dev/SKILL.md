@@ -16,14 +16,19 @@ All commands run from the repository root. `team` below means `node src/main.ts`
 - **The user gave a product idea** → `team init "<their idea, in their words>" --name <short-kebab-name> --json`.
   Its output is the same as `team next --json`, so go straight to step 2.2 and launch the first subagent.
   If the name is already taken, choose another one; `--force` deletes everything saved for that session
-  (`.team/sessions/<name>/`), so use it only when the user asked to start it over.
+  (`.team/sessions/<name>/`), so use it only when the user asked to start it over. A short name is easier for the
+  user to say later ("continue the <name> session"); without `--name` the session is named after the local date and
+  time (`20261115-1554`).
 - **Work on an existing repository / a GitHub issue** → check the repository out as a git worktree under `workspace/`
   (one per issue, its own branch), write the issue (title, body, links) to a brief file, and run
   `team init --name <short-name> --workspace workspace/<short-name> --brief-file <file> --json`. Use a config with
   personas that fit that product (`--config`). After each session, run `team overlaps` and tell the user about any
   file or migration-number clash with other sessions on the same repository.
-- **"Continue" / no idea** → `team next --json` resumes the current session (`team sessions` / `team use <name>`
-  to switch). If there is no session, ask for one sentence about the product and who it is for.
+- **"Continue" / no idea** → `team next --json` resumes the current session (`team sessions` lists every session with
+  its state, result and last activity, `*` marking the current one; `team use <name>` switches). If the user named a
+  session ("continue the <name> session", which is what the `Next:` line of `team status` tells them to say), run
+  `team use <name>` first, then `team next --json`. If there is no session, ask for one sentence about the product and
+  who it is for.
   If the session is `done` (`status` is `"done"` in that output), it is finished and `team next` will not move it. Another
   iteration costs about as many tokens as the first one did, so do not start it on your own: say that the session is
   finished, and ask whether to give it one more iteration (`team continue`, optionally with what they want changed or
@@ -79,9 +84,13 @@ Repeat until the session is `done`, or until the stopping point the user asked f
 
 ## 3. Finish
 
-- Show `team status` (backlog with results, hand-offs for tasks waiting on a person, checks a person should make on built
-  tasks, questions for the human), the users' verdicts and `team stats` (tokens, cost and prompt size per phase and
-  role), and point to
+- Show `team status`. It is a summary that already holds what the user needs: one line per task, **what a person has to
+  do** (the hand-offs of tasks waiting on a person and the checks a person should make on built tasks, both in full),
+  the users' verdicts (accept or reject, with the start of the reason), the questions for the human (open and
+  answered), any overlap with other sessions, and the next steps. Tell the user about the "needs a person" items, the
+  verdicts and the open questions, in your own words; do not leave one out. Run `team status --full` only when the
+  user asks what each task was built to do and how it was checked (every task's acceptance criteria and result).
+  Then show `team stats` (tokens, cost and prompt size per phase and role), and point to
   `.team/sessions/<name>/transcript.html` (the full conversation to read in a browser; `transcript.md` is the same in
   Markdown) and `workspace/<name>/`. Trial runs and screenshots are in `.team/sessions/<name>/artifacts/`.
 - Suggest next steps: another iteration (if users rejected and iterations remain the engine already looped back to

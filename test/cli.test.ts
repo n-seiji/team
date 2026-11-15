@@ -11,6 +11,7 @@ import { artifactsDir } from "../src/prompt.ts";
 import { runTrialIfDue } from "../src/verify.ts";
 import { ReplyError } from "../src/usage.ts";
 import { withEnv } from "./with-env.ts";
+import { isWellFormed } from "./well-formed.ts";
 
 const repo = path.resolve(import.meta.dirname, "..");
 
@@ -218,6 +219,19 @@ test("run keeps going when a member's turn fails twice", async () => {
   }
 });
 
+/** The lines under a heading of the summary `status` prints, up to the next line that starts at the left margin without a dash. */
+function under(text: string, heading: RegExp): string {
+  const lines = text.split("\n");
+  const start = lines.findIndex((l) => heading.test(l));
+  if (start < 0) return "";
+  const body: string[] = [];
+  for (const l of lines.slice(start + 1)) {
+    if (!/^(- | )/.test(l)) break;
+    body.push(l);
+  }
+  return body.join("\n");
+}
+
 /** The body of the prompt section whose heading matches `title`. */
 const section = (prompt: string, title: RegExp) => prompt.split("\n## ").find((s) => title.test(s.split("\n")[0])) ?? "";
 const OPEN = /^Open questions/;
@@ -256,11 +270,11 @@ test("answer settles one question: status lists open and answered ones with ids 
   ]);
 
   assert.equal(await run(dir, "answer", "q2", "Yes,", "publish it."), "ok");
-  const [open, answered] = (await run(dir, "status")).split("answered questions:");
-  assert.match(open, /Q1 .*Which payment provider/);
-  assert.doesNotMatch(open, /Q2/);
-  assert.match(answered, /Q2 .*May we publish[\s\S]*answer: Yes, publish it\./);
-  assert.doesNotMatch(answered, /Q1/);
+  const after = await run(dir, "status");
+  assert.match(under(after, /^open questions/), /Q1 .*Which payment provider/);
+  assert.doesNotMatch(under(after, /^open questions/), /Q2/);
+  assert.match(under(after, /^answered questions/), /Q2 .*May we publish[\s\S]*answer: Yes, publish it\./);
+  assert.doesNotMatch(under(after, /^answered questions/), /Q1/);
   assert.match(await run(dir, "log"), /human: Answer to Q2 \(May we publish\? Default: no\.\): Yes, publish it\./);
   assert.deepEqual(
     JSON.parse(await run(dir, "next", "--json")).openQuestions.map((q: { id: string }) => q.id),
@@ -337,10 +351,9 @@ test("the finish summary counts only questions that were not answered before the
   }
 });
 
-test("status and both transcripts show a task's checks and hand-off", async () => {
-  const dir = sandbox();
-  await run(dir, "init", "--name", "c1", "--brief", "x");
-  const file = path.join(dir, ".team/sessions/c1/state.json");
+/** Gives the session a backlog with work for a person: a check on a built task, a hand-off, and one kept in the summary (a session saved before `handoff` existed). */
+function addHumanWork(dir: string, name: string): void {
+  const file = path.join(dir, `.team/sessions/${name}/state.json`);
   const state = JSON.parse(fs.readFileSync(file, "utf8"));
   const task = { acceptance: "", owner: "eng-backend", createdBy: "pm" };
   state.tasks = [
@@ -350,8 +363,14 @@ test("status and both transcripts show a task's checks and hand-off", async () =
     { ...task, id: "T4", title: "Print", status: "blocked", summary: "needs a printer" },
   ];
   fs.writeFileSync(file, JSON.stringify(state));
+}
 
-  const status = await run(dir, "status");
+test("status --full and both transcripts show a task's checks and hand-off", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "c1", "--brief", "x");
+  addHumanWork(dir, "c1");
+
+  const status = await run(dir, "status", "--full");
   assert.ok(status.includes("- T1 [done] owner=eng-backend Save entry\n    result: built in app.js\n    check by a person: Enter saves on a real phone\n- T2 [done]"));
   assert.ok(status.includes("- T3 [blocked] owner=eng-backend Publish\n    result: works locally\n    needs a person: publishing needs the owner's account\n- T4 [blocked]"));
   assert.ok(status.includes("- T4 [blocked] owner=eng-backend Print\n    needs a person: needs a printer"));
@@ -1293,7 +1312,7 @@ test("sessions and the commands that compare sessions skip what is in .team/sess
   const sessions = path.join(dir, ".team/sessions");
   fs.writeFileSync(path.join(sessions, ".DS_Store"), "x");
   for (const stray of ["a b", ".new-abc", "con", "x."]) fs.mkdirSync(path.join(sessions, stray));
-  assert.deepEqual((await run(dir, "sessions")).split("\n").map((l) => l.trim().replace(/^\* /, "")).sort(), ["a", "b"]);
+  assert.deepEqual((await run(dir, "sessions")).split("\n").slice(1).map((l) => l.replace(/^[* ] /, "").split(/ +/)[0]).sort(), ["a", "b"]);
   assert.match(await run(dir, "status", "--session", "a"), /session: a/);
   assert.deepEqual(JSON.parse(await run(dir, "overlaps", "--json")).sessions.sort(), ["a", "b"]);
   assert.equal(JSON.parse(await run(dir, "next", "--json")).pending[0].member, "pm");
@@ -1498,6 +1517,7 @@ test("answer on a finished session says that continue is what makes the team act
   const out = await run(dir, "answer", "Q1", "Yes, publish it.");
   assert.match(out, /^ok\n/);
   assert.match(out, CONTINUE_HINT);
+  assert.match(out, /^Next: team continue .*\(the team reads your answer only after this\)/m, "the same next steps, saying why continuing matters");
   assert.equal(out.split("\n").length, 2, "one added line");
 
   await run(dir, "init", "x", "--name", "c9");
@@ -1513,7 +1533,7 @@ test("run, next and the record that ends a session point to continue, in text ou
   const again = await run(dir, "run", "--backend", "mock");
   assert.match(again, /session is done\./);
   assert.match(again.split("\n").slice(-2).join("\n"), CONTINUE_HINT);
-  assert.match(await run(dir, "next"), /^session is done\. See: team log \/ team status\n.*team continue/);
+  assert.match(await run(dir, "next"), /^session is done\.\nNext: team continue "<what to add or change>"/);
   assert.doesNotMatch(await run(dir, "next", "--json"), /continue/);
 
   await run(dir, "init", "割り勘CLI", "--name", "d2");
@@ -1568,9 +1588,10 @@ test("continue names the session in what to run next when it is not the current 
   for (const name of ["s1", "s2"]) setWorkspace(dir, name, { "app.js": "// built before\n" });
 
   const other = await runWarn(dir, "continue", "--session", "s1");
-  assert.match(other.out, /Go on with: team next --session s1 \(host mode\) or team run --session s1 \(auto mode\)/);
+  assert.match(other.out, /^Next: team run --session s1 \(auto mode\).*"continue the s1 session"/m);
+  assert.doesNotMatch(other.out, /Go on with/);
   const finishedOther = await run(dir, "run", "--session", "s1", "--backend", "mock");
-  assert.match(finishedOther, /team continue --session s1 \[--iterations N\]/, "the done hint reaches s1, not the current session");
+  assert.match(finishedOther, /team continue --session s1 "<what to add or change>"/, "the done hint reaches s1, not the current session");
 
   const current = await runWarn(dir, "continue");
   assert.doesNotMatch(current.out, /--session/);
@@ -1592,4 +1613,376 @@ test("an answer given after the session ended is in the answered section of the 
   assert.equal(pm.member, "pm");
   assert.match(section(pm.prompt, ANSWERED), /- Q1 .*May we publish[\s\S]*Yes, publish it\./);
   assert.equal(section(pm.prompt, OPEN), "");
+});
+
+// status, sessions and the next steps: where things stand, and what to do about it
+
+/** A session whose last transcript entry says it was written at `at`, long before the files were copied. */
+function setLastEntryTime(dir: string, name: string, at: Date): void {
+  const file = path.join(dir, ".team/sessions", name, "transcript.jsonl");
+  const lines = fs.readFileSync(file, "utf8").trim().split("\n");
+  lines[lines.length - 1] = JSON.stringify({ ...JSON.parse(lines.at(-1)!), at: at.toISOString() });
+  fs.writeFileSync(file, lines.join("\n") + "\n");
+  const old = new Date(2001, 0, 1);
+  for (const f of ["state.json", "transcript.jsonl"]) fs.utimesSync(path.join(dir, ".team/sessions", name, f), old, old);
+}
+
+test("status is a short summary of a finished session: the verdicts and what to do next, not the text of every task", async () => {
+  const dir = sandbox();
+  await finishedSession(dir, "st1");
+  const summary = await run(dir, "status");
+  const lines = summary.split("\n");
+  assert.ok(lines.length <= 40, `${lines.length} lines`);
+  assert.match(lines[0], /^session: st1 {2}status: done {2}iteration: 1\/2$/);
+  assert.match(lines[1], /^phase: \w+ \(round \d+\/\d+, [\w-]+\)$/);
+  assert.match(summary, /^brief: 割り勘CLI$/m);
+  assert.match(summary, /^- T1 \[done\] owner=\S+ .+$/m);
+  assert.match(under(summary, /^verdicts \(iteration 1\):$/), /\(user-yamada\): (accept|reject)/);
+  assert.doesNotMatch(summary, /acceptance:|result:/);
+  const goal = stateOf(dir, "st1").phases[stateOf(dir, "st1").phaseIndex].goal;
+  assert.ok(!summary.includes(goal), "the phase's goal is not repeated");
+  assert.match(lines.at(-1)!, /^Next: team continue "<what to add or change>"/);
+  assert.doesNotMatch(summary, /next speaker/, "nobody speaks next in a finished session");
+});
+
+test("status --full is the whole text: the phase's goal, every task's acceptance and result, and no next steps", async () => {
+  const dir = sandbox();
+  await finishedSession(dir, "st2");
+  const full = await run(dir, "status", "--full");
+  const goal = stateOf(dir, "st2").phases[stateOf(dir, "st2").phaseIndex].goal;
+  assert.match(full.split("\n")[0], /^session: st2 {2}status: done {2}iteration: 1\/2$/);
+  assert.ok(full.split("\n")[1].endsWith(` — ${goal}`));
+  assert.match(full, /^next: -$/m);
+  assert.match(full, /^backlog:\n- T1 \[done\] owner=\S+ .+\n {4}acceptance: /m);
+  assert.match(full, /^ {4}result: /m);
+  assert.doesNotMatch(full, /^Next:/m);
+});
+
+test("status --json is the state with the phase, who is next and the overlaps, and no lines for a person", async () => {
+  const dir = sandbox();
+  await finishedSession(dir, "st3");
+  const out = await run(dir, "status", "--json");
+  assert.deepEqual(Object.keys(JSON.parse(out)), [...Object.keys(stateOf(dir, "st3")), "phase", "next", "overlaps"]);
+  assert.doesNotMatch(out, /Next:/);
+  assert.deepEqual(JSON.parse(await run(dir, "status", "--json", "--full")), JSON.parse(out), "--full changes nothing in JSON");
+});
+
+test("status of a running session names who speaks next and offers both ways to go on", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "割り勘CLI", "--name", "st4");
+  const summary = await run(dir, "status");
+  assert.match(summary, /^session: st4 {2}status: running {2}iteration: 1\/2$/m);
+  assert.match(summary, /^next speaker: .*\(pm\)$/m);
+  assert.match(summary.split("\n").at(-1)!, /^Next: team run \(auto mode\).*"continue the st4 session"/);
+});
+
+test("status shows the open questions in full, answers them first in the next steps, and then the answered ones apart", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "st5", "--brief", "x");
+  await run(dir, "record", "--as", "pm", "--file", writeReply(dir, ASK));
+  const before = (await run(dir, "status")).split("\n");
+  assert.match(under(before.join("\n"), /^open questions/), /- Q1 \(discovery, .*\(pm\)\) Which payment provider\? Default: Stripe\.\n- Q2 .*May we publish\? Default: no\./);
+  assert.match(before.at(-2)!, /^Next: answer the open questions \(Q1, Q2\): team answer Q1 /);
+  assert.match(before.at(-1)!, /^Next: team run /);
+
+  await run(dir, "answer", "Q1", "Stripe");
+  const after = (await run(dir, "status")).split("\n");
+  assert.match(after.at(-2)!, /^Next: answer the open question \(Q2\): team answer Q2 /);
+  assert.match(under(after.join("\n"), /^answered questions/), /- Q1 .*Which payment provider\?.*\n {2}answer: Stripe/);
+});
+
+test("status of a finished session with a question left open says the team reads the answer only after continue", async () => {
+  const dir = sandbox();
+  await finishedSession(dir, "st6");
+  askInState(dir, "st6");
+  const lines = (await run(dir, "status")).split("\n");
+  assert.match(lines.at(-2)!, /team answer Q1 "<answer>" \(the team reads answers only after team continue\)$/);
+  assert.match(lines.at(-1)!, /^Next: team continue /);
+});
+
+test("status shows what a person must do, and not the results of the tasks", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "st7", "--brief", "x");
+  addHumanWork(dir, "st7");
+  const status = await run(dir, "status");
+  assert.equal(
+    under(status, /^needs a person:/),
+    [
+      "- T1 [done] Save entry",
+      "    check: Enter saves on a real phone",
+      "- T3 [blocked] Publish",
+      "    publishing needs the owner's account",
+      "- T4 [blocked] Print",
+      "    needs a printer",
+    ].join("\n"),
+  );
+  assert.doesNotMatch(status, /built in app\.js|built in export\.js|works locally/);
+  assert.match(under(status, /^backlog:/), /- T2 \[done\] owner=eng-backend Export$/m);
+});
+
+test("status of another session names it in the commands it suggests, and only then", async () => {
+  const dir = sandbox();
+  await finishedSession(dir, "s1");
+  await run(dir, "init", "--name", "s2", "--brief", "x"); // the newest session is current
+  assert.match((await run(dir, "status", "--session", "s1")).split("\n").at(-1)!, /^Next: team continue --session s1 "<what to add or change>" .* team log --session s1 --html$/);
+  assert.doesNotMatch(await run(dir, "status", "--session", "s2"), /--session/);
+  assert.doesNotMatch(await run(dir, "status"), /--session/);
+});
+
+test("sessions is one line per session: current mark, state, phase, iteration, result, last activity and the start of the brief", async () => {
+  const dir = sandbox();
+  await finishedSession(dir, "s1");
+  await run(dir, "init", "家計簿アプリ\n\n毎月の収支を" + "つけたい".repeat(30), "--name", "s2");
+  setLastEntryTime(dir, "s1", new Date(2026, 2, 4, 5, 6));
+  const lines = (await run(dir, "sessions")).split("\n");
+  assert.equal(lines.length, 3);
+  assert.match(lines[0], /^ {2}NAME +STATUS +PHASE +ITER +RESULT +UPDATED +BRIEF$/);
+  assert.match(lines[1], /^ {2}s1 +done +\w+ +1\/2 +\d\/\d accepted +2026-03-04 05:06 +割り勘CLI$/);
+  assert.match(lines[2], /^\* s2 +running +discovery +1\/2 +- +\d{4}-\d\d-\d\d \d\d:\d\d +家計簿アプリ 毎月の収支をつけたい.*…$/);
+  assert.equal(lines[1].indexOf("done"), lines[2].indexOf("running"), "the columns line up");
+  assert.ok(isWellFormed(lines[2]));
+});
+
+test("sessions says when a finished session had no verdict, and dates a session by its last transcript entry, not by its files", async () => {
+  const dir = sandbox();
+  await finishedSession(dir, "v1");
+  const file = path.join(dir, ".team/sessions/v1/state.json");
+  const state = stateOf(dir, "v1");
+  state.verdicts = [];
+  fs.writeFileSync(file, JSON.stringify(state));
+  setLastEntryTime(dir, "v1", new Date(2026, 10, 15, 13, 55));
+  assert.match((await run(dir, "sessions")).split("\n")[1], /^\* v1 +done +\w+ +1\/2 +no verdict +2026-11-15 13:55 /);
+});
+
+test("sessions shows a session that cannot be read as such, and still lists the others", async () => {
+  const dir = sandbox();
+  await finishedSession(dir, "good");
+  for (const [name, text] of [["bad1", "{ not json"], ["bad2", "{}"]]) {
+    fs.mkdirSync(path.join(dir, ".team/sessions", name));
+    fs.writeFileSync(path.join(dir, ".team/sessions", name, "state.json"), text);
+  }
+  fs.appendFileSync(path.join(dir, ".team/sessions/good/transcript.jsonl"), '{"turn":1,"at":"t'); // half written, as while `run` appends
+  const lines = (await run(dir, "sessions")).split("\n");
+  assert.equal(lines.length, 4);
+  assert.match(lines.find((l) => /good/.test(l))!, /^\* good +done /);
+  assert.match(lines.find((l) => /bad1/.test(l))!, /^ {2}bad1 +\(unreadable: .*state\.json.*\)$/);
+  assert.match(lines.find((l) => /bad2/.test(l))!, /^ {2}bad2 +\(unreadable: .+\)$/);
+});
+
+test("sessions with no session in the folder says how to start one", async () => {
+  const dir = sandbox();
+  fs.mkdirSync(path.join(dir, ".team/sessions"), { recursive: true });
+  assert.match(await run(dir, "sessions"), /^no sessions yet\. Start one with: team init/);
+});
+
+/** Runs `main` with the clock set to `now`, the way the engine reads it for the name and the time of a new session. */
+async function runAt(dir: string, now: Date, ...args: string[]): Promise<string> {
+  const out: string[] = [];
+  await main([...args, "--root", dir], (s) => out.push(s), () => {}, () => now.toISOString());
+  return out.join("\n");
+}
+
+test("init without a name names the session after the local date and time, not after the brief", async () => {
+  const dir = sandbox();
+  const out = await runAt(dir, new Date(2026, 10, 15, 9, 5, 30), "init", "割り勘CLI");
+  assert.match(out, /^created session "20261115-0905" with 5 members/);
+  assert.equal(stateOf(dir, "20261115-0905").name, "20261115-0905");
+  assert.equal(stateOf(dir, "20261115-0905").workspace, "workspace/20261115-0905");
+  assert.equal(fs.readFileSync(path.join(dir, ".team/current"), "utf8").trim(), "20261115-0905");
+  assert.equal(stateOf(dir, "20261115-0905").createdAt, new Date(2026, 10, 15, 9, 5, 30).toISOString(), "the session is created at the same time its name says");
+  await assert.rejects(runAt(dir, new Date(2026, 10, 15, 9, 5, 59), "init", "again"), /session "20261115-0905" already exists.*another --name/s);
+  assert.match(await runAt(dir, new Date(2026, 10, 15, 9, 6), "init", "again"), /created session "20261115-0906"/);
+});
+
+test("init says what to do next, and the commands that print JSON print nothing meant for a person", async () => {
+  const dir = sandbox();
+  const out = await run(dir, "init", "割り勘CLI", "--name", "i1");
+  assert.match(out, /^created session "i1" with 5 members → \.team\/sessions\/i1\/$/m);
+  assert.match(out.split("\n").at(-1)!, /^Next: team run \(auto mode\).*"continue the i1 session"/);
+
+  const json: string[] = [
+    await run(dir, "init", "x", "--name", "i2", "--json"),
+    await run(dir, "next", "--json"),
+    await run(dir, "record", "--as", "pm", "--file", writeReply(dir, "[ASK_HUMAN] Which one? Default: A."), "--json"),
+    await run(dir, "status", "--json"),
+    await run(dir, "stats", "--json"),
+  ];
+  for (const text of json) {
+    assert.doesNotThrow(() => JSON.parse(text), text);
+    assert.doesNotMatch(text, /Next:/);
+  }
+  await run(dir, "run", "--backend", "mock");
+  assert.doesNotMatch((await runWarn(dir, "continue", "--json", "--say", "more")).out, /Next:/);
+});
+
+test("record in a running session prints only what it recorded and who is next, because the host loop reads it every turn", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "x", "--name", "rc1");
+  const out = (await run(dir, "record", "--as", "pm", "--file", writeReply(dir, "[SAY to=user-garcia] hi\n[ASK_HUMAN] Which one? Default: A."))).split("\n");
+  assert.equal(out.length, 2);
+  assert.match(out[0], /^recorded 2 action\(s\) from pm: /);
+  assert.match(out[1], /^next: user-garcia \(phase discovery, round \d+\)$/);
+});
+
+test("run that stops before the end says how to go on, and one that finishes says how to continue", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "x", "--name", "rn1");
+  const stopped = (await run(dir, "run", "--backend", "mock", "--turns", "2")).split("\n");
+  assert.match(stopped.at(-2)!, /^stopped after 2 turn\(s\)\.$/);
+  assert.match(stopped.at(-1)!, /^Next: team run \(auto mode\), or in Claude Code: "continue the rn1 session"/);
+  const finished = (await run(dir, "run", "--backend", "mock")).split("\n");
+  assert.equal(finished.at(-2), "session is done.");
+  assert.match(finished.at(-1)!, /^Next: team continue "<what to add or change>"/);
+});
+
+test("continue ends with the same next steps as everything else, not a line of its own", async () => {
+  const dir = sandbox();
+  await finishedSession(dir, "ct1");
+  setWorkspace(dir, "ct1", { "app.js": "// built before\n" });
+  const out = await run(dir, "continue", "more");
+  assert.match(out, /^continued session "ct1": iteration 2\/2 begins at phase "planning"\.\nnext: .*\(pm\)\nNext: team run /);
+  assert.doesNotMatch(out, /Go on with/);
+});
+
+test("the help lists status with --full, sessions with what it shows, and the default name init gives", async () => {
+  const help = await run(sandbox(), "help");
+  assert.match(help, /status \[--full\] \[--json\]\n.*\n.*--full: /);
+  assert.match(help, /sessions +セッション一覧 \(1 行ずつ: 状態.*結果・最終更新・brief/);
+  assert.match(help, /--name を省くとローカルの日時 YYYYMMDD-HHmm/);
+});
+
+// follow-ups from review: what status and sessions agree on, what they never print, and what a damaged session does to them
+
+const UNSAFE_TEXT = /[\u0000-\u0008\u000b-\u001f\u007f-\u009f\u061c\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/;
+
+test("a finished session with no verdict in its last iteration reads the same in status and sessions", async () => {
+  const dir = sandbox();
+  await finishedSession(dir, "nv1");
+  const state = stateOf(dir, "nv1");
+  state.iteration = 2; // the earlier iteration's users accepted; the last one, in which none could speak, has no verdict
+  fs.writeFileSync(path.join(dir, ".team/sessions/nv1/state.json"), JSON.stringify(state));
+  const status = await run(dir, "status");
+  assert.match(status, /^no verdicts in iteration 2 \(last given in iteration 1\)$/m);
+  assert.doesNotMatch(status, /^verdicts/m, "the earlier accepts are not shown as the result");
+  assert.match((await run(dir, "sessions")).split("\n")[1], / no verdict /);
+});
+
+test("sessions names a session by its folder, which is what use and --session take, and points out a state that says another name", async () => {
+  const dir = sandbox();
+  await finishedSession(dir, "orig");
+  fs.cpSync(path.join(dir, ".team/sessions/orig"), path.join(dir, ".team/sessions/orig-copy"), { recursive: true });
+  const rows = (await run(dir, "sessions")).split("\n");
+  assert.equal(rows.length, 3, "two sessions, not one name twice");
+  assert.match(rows.find((l) => /orig-copy/.test(l))!, /^ {2}orig-copy +done .*\(state\.json says "orig"\) 割り勘CLI$/);
+  assert.match(rows.find((l) => /orig /.test(l) && !/orig-copy/.test(l))!, /^\* orig +done .*割り勘CLI$/);
+
+  await run(dir, "use", "orig-copy");
+  assert.match(await run(dir, "sessions"), /^\* orig-copy /m);
+  await run(dir, "use", "orig");
+  const via = (await run(dir, "status", "--session", "orig-copy")).split("\n").at(-1)!;
+  assert.match(via, /team continue --session orig-copy "<what/, "the command reaches the folder asked for, not the session the copy's state names");
+});
+
+test("a broken line in the middle of a transcript, or no transcript at all, does not make a session unreadable in sessions", async () => {
+  const dir = sandbox();
+  await finishedSession(dir, "cm1");
+  setLastEntryTime(dir, "cm1", new Date(2026, 10, 15, 13, 55));
+  const file = path.join(dir, ".team/sessions/cm1/transcript.jsonl");
+  const lines = fs.readFileSync(file, "utf8").trim().split("\n");
+  lines[1] = "{ broken";
+  fs.writeFileSync(file, lines.join("\n") + "\n");
+  assert.match((await run(dir, "sessions")).split("\n")[1], /^\* cm1 +done .* 2026-11-15 13:55 /);
+
+  const state = stateOf(dir, "cm1");
+  state.createdAt = new Date(2026, 10, 14, 8, 0).toISOString();
+  fs.writeFileSync(path.join(dir, ".team/sessions/cm1/state.json"), JSON.stringify(state));
+  fs.rmSync(file);
+  assert.match((await run(dir, "sessions")).split("\n")[1], /^\* cm1 +done .* 2026-11-14 08:00 /, "dated by when it was created");
+});
+
+test("nothing from a brief, a task, a reason or a question can send control characters to the terminal through status or sessions", async () => {
+  const dir = sandbox();
+  const bad = "\u001b[31mred\u202ereversed\u0007";
+  await run(dir, "init", `brief ${bad}`, "--name", "ev1");
+  const state = stateOf(dir, "ev1");
+  const task = { acceptance: "", owner: "eng-backend", createdBy: "pm" };
+  state.tasks = [
+    { ...task, id: "T1", title: `title ${bad}`, status: "done", checks: [`check ${bad}`] },
+    { ...task, id: "T2", title: "Publish", status: "blocked", handoff: `hand-off ${bad}` },
+  ];
+  state.verdicts = [{ by: "user-yamada", verdict: "reject", reason: `reason ${bad}`, iteration: 1 }];
+  state.questions = [{ by: "pm", text: `question ${bad}`, phase: "planning", iteration: 1 }];
+  fs.writeFileSync(path.join(dir, ".team/sessions/ev1/state.json"), JSON.stringify(state));
+  for (const args of [["status"], ["sessions"]]) {
+    const out = await run(dir, ...args);
+    assert.doesNotMatch(out, UNSAFE_TEXT, args.join(" "));
+    assert.match(out, /\[31mredreversed/, args.join(" "));
+  }
+});
+
+test("status --full prints what status printed before there was a summary, byte for byte", async () => {
+  const dir = sandbox();
+  fs.mkdirSync(path.join(dir, "wt"));
+  await run(dir, "init", "--name", "f1", "--brief", "Invoice tool\nfor freelancers", "--workspace", "wt");
+  const state = stateOf(dir, "f1");
+  const task = { owner: "eng-backend", createdBy: "pm" };
+  state.tasks = [
+    { ...task, id: "T1", title: "Save entry", acceptance: "- saves\n- lists", status: "done", summary: "built in app.js\nsecond line", checks: ["Enter saves on a real phone"] },
+    { ...task, id: "T2", title: "Publish", acceptance: "", status: "blocked", summary: "works locally", handoff: "needs the owner's account" },
+    { ...task, id: "T3", title: "Old idea", acceptance: "- x", status: "dropped", summary: "not needed" },
+    { id: "T4", title: "Later", acceptance: "", status: "todo", createdBy: "pm" },
+  ];
+  state.questions = [
+    { by: "eng-backend", text: "May we publish?\nDefault: no.", phase: "build", iteration: 1 },
+    { by: "pm", text: "Budget? Default: 10k", phase: "planning", iteration: 1 },
+  ];
+  fs.writeFileSync(path.join(dir, ".team/sessions/f1/state.json"), JSON.stringify(state));
+  await run(dir, "answer", "Q2", "5k at most");
+  const goal = state.phases[state.phaseIndex].goal;
+  // written out from what the engine printed for this very session before `status` became a summary
+  assert.equal(
+    await run(dir, "status", "--full"),
+    [
+      "session: f1  status: running  iteration: 1/2",
+      "workspace: wt (existing codebase)",
+      `phase: discovery (round 1/3, round-robin) — ${goal}`,
+      "next: 佐藤 美咲 (pm)",
+      "backlog:",
+      "- T1 [done] owner=eng-backend Save entry",
+      "    acceptance: - saves",
+      "    - lists",
+      "    result: built in app.js",
+      "    second line",
+      "    check by a person: Enter saves on a real phone",
+      "- T2 [blocked] owner=eng-backend Publish",
+      "    result: works locally",
+      "    needs a person: needs the owner's account",
+      "- T3 [dropped] owner=eng-backend Old idea",
+      "    acceptance: - x",
+      "    dropped: not needed",
+      "- T4 [todo] owner=- Later",
+      "open questions for the human (the team proceeds on the stated defaults; answer with: team answer <Qn> <text>):",
+      "- Q1 (build, 田中 健 (eng-backend)) May we publish?",
+      "  Default: no.",
+      "answered questions:",
+      "- Q2 (planning, 佐藤 美咲 (pm)) Budget? Default: 10k",
+      "  answer: 5k at most",
+    ].join("\n"),
+  );
+});
+
+test("answer on a finished session with more questions open points to the next one, then to continue and why", async () => {
+  const dir = sandbox();
+  await finishedSession(dir, "aq1");
+  const state = stateOf(dir, "aq1");
+  state.questions = [
+    { by: "eng-backend", text: "May we publish? Default: no.", phase: "build", iteration: 1 },
+    { by: "pm", text: "Budget? Default: 10k", phase: "planning", iteration: 1 },
+  ];
+  fs.writeFileSync(path.join(dir, ".team/sessions/aq1/state.json"), JSON.stringify(state));
+  const lines = (await run(dir, "answer", "Q1", "Yes")).split("\n");
+  assert.equal(lines.length, 3);
+  assert.equal(lines[0], "ok");
+  assert.match(lines[1], /^Next: answer the open question \(Q2\): team answer Q2 /);
+  assert.match(lines[2], /^Next: team continue .*\(the team reads your answer only after this\)/);
 });

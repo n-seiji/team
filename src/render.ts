@@ -76,26 +76,51 @@ export function formatEmptyWorkspace(workspace: string): string {
   return `warning: ${workspace} does not exist or is empty, so the team will not see what the earlier iterations built, and the trial run before acceptance fails too unless the team rebuilds it. The files are not part of the session (.team/); restore them if you want the team to build on them.`;
 }
 
-/**
- * What `continue` prints: which iteration the session restarted as, and who speaks first. `via` is what the commands to
- * run next need to reach this session (see `sessionFlag` in cli.ts): empty when it is the current one.
- */
-export function formatContinued(s: SessionState, next: readonly string[], via: string): string {
+/** What `continue` prints: which iteration the session restarted as, and who speaks first. */
+export function formatContinued(s: SessionState, next: readonly string[]): string {
   return [
     `continued session "${s.name}": iteration ${s.iteration}/${s.maxIterations} begins at phase "${currentPhase(s).id}".`,
     `next: ${next.map((id) => displayName(s, id)).join(", ") || "-"}`,
-    `Go on with: team next${via} (host mode) or team run${via} (auto mode).`,
   ].join("\n");
 }
 
-/** `first`, the line saying a session is done, plus the way to give it another iteration. For text output only: JSON stays as it is. */
-export function withContinueHint(first: string, via: string): string {
-  return `${first}\nTo go on with another iteration: team continue${via} [--iterations N] ["<text>"]`;
+/** The ids (Q1, Q2, ...) of the questions for the human that `answered` holds no answer for. */
+export function openQuestionIds(s: SessionState, answered: { has(id: string): boolean }): readonly string[] {
+  return (s.questions ?? []).map((_, i) => questionId(i)).filter((id) => !answered.has(id));
 }
 
-/** What `answer` adds on a finished session: the answer is recorded, but only a continued session reads it. */
-export function formatAnswerAfterDone(via: string): string {
-  return `The session is done, so the team acts on this answer only after you run: team continue${via}`;
+/**
+ * The commands to run next, which the text output of `status`, `init`, `run` and `continue` ends with, and that of
+ * `record` and `next` once the session is done (JSON stays as it is): a line to answer the open questions, if any,
+ * and a line to go on. `via` is what those commands need to reach this session (see `sessionFlag` in cli.ts), empty
+ * when it is the current one. The engine cannot tell host mode from auto mode, so a running session is offered both.
+ * `afterAnswer` is for the line `team answer` prints on a finished session.
+ */
+export function formatNextSteps(s: SessionState, open: readonly string[], via: string, afterAnswer = false): string {
+  const done = s.status === "done";
+  const lines: string[] = [];
+  if (open.length) {
+    const later = done && !afterAnswer ? " (the team reads answers only after team continue)" : "";
+    lines.push(`Next: answer the open question${open.length > 1 ? "s" : ""} (${open.join(", ")}): team answer${via} ${open[0]} "<answer>"${later}`);
+  }
+  // `team answer` on a finished session only records the answer, so the line to continue is where that is said
+  const reached = afterAnswer ? " (the team reads your answer only after this)" : "";
+  lines.push(
+    done
+      ? `Next: team continue${via} "<what to add or change>" for another iteration${reached}, or read the conversation: team log${via} --html`
+      : `Next: team run${via} (auto mode), or in Claude Code: "continue the ${s.name} session" (host mode, /team-dev)`,
+  );
+  return lines.join("\n");
+}
+
+/** The first lines of `status` in both forms: the session, the existing codebase it works in (if any) and the phase, which `--full` gives with its goal. */
+export function formatStatusHead(s: SessionState, withGoal: boolean): readonly string[] {
+  const phase = currentPhase(s);
+  return [
+    `session: ${s.name}  status: ${s.status}  iteration: ${s.iteration}/${s.maxIterations}`,
+    ...(s.externalWorkspace ? [`workspace: ${s.workspace} (existing codebase)`] : []),
+    `phase: ${phase.id} (round ${s.round}/${phase.maxRounds}, ${phase.mode})${withGoal ? ` — ${phase.goal}` : ""}`,
+  ];
 }
 
 export function formatTask(t: Task): string {

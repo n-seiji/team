@@ -1,5 +1,6 @@
 // A session name becomes a folder name under .team/sessions/ (and is deleted along with it), so it is one plain
 // path segment that every OS accepts: no "." or "..", nothing that starts or ends with a dot, no Windows device names.
+import { localParts } from "./local-time.ts";
 
 const NAME = /^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*$/;
 
@@ -19,4 +20,13 @@ export function assertSessionName(name: string): string {
     );
   }
   return name;
+}
+
+/**
+ * The name `init` gives a session when none is passed: the local date and time to the minute (20261115-1355), so it
+ * matches the clock the person reads, not UTC. It says nothing about the product; `--name` is for that.
+ */
+export function defaultSessionName(at: Date): string {
+  const t = localParts(at);
+  return `${t.year}${t.month}${t.day}-${t.hour}${t.minute}`;
 }
