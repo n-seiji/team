@@ -101,7 +101,7 @@ test("record --json returns the next turn in the same call", async () => {
 });
 
 function git(dir: string, ...args: string[]) {
-  execFileSync("git", ["-C", dir, ...args], { stdio: "ignore" });
+  execFileSync("git", ["-C", dir, "-c", "commit.gpgsign=false", ...args], { stdio: "ignore" });
 }
 
 /** A repository with two worktrees inside the sandbox, like villa checked out for two issues. */
