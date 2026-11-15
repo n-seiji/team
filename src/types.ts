@@ -208,7 +208,7 @@ export interface ReplyUsage {
 
 /** One line of usage.jsonl: what one recorded reply cost. */
 export interface TurnUsage extends ReplyUsage {
-  /** `state.turn` after the reply was recorded. */
+  /** `state.turn` after the reply was recorded. For a reply `run` stopped on without recording it: the number it would have got, which the same member's line of the later, recorded turn then shares. */
   turn: number;
   member: string;
   role: Role;

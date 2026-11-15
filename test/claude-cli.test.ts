@@ -629,3 +629,129 @@ test("when another listener survives the signal, the next turn is guarded again"
     }
   });
 });
+
+// preflight: is there a claude to start? It looks the way spawn would, and never starts it.
+const CLAUDE_FILE = process.platform === "win32" ? "claude.cmd" : "claude";
+const WINDOWS_PATHEXT = ".COM;.EXE;.BAT;.CMD";
+
+/** A folder holding a claude that leaves a file named `ran` next to itself if anything ever starts it. */
+function installedClaude(
+  where: string = fs.mkdtempSync(path.join(os.tmpdir(), "team-preflight-")),
+  name: string = CLAUDE_FILE,
+): { dir: string; file: string; ran: string } {
+  const file = path.join(where, name);
+  fs.mkdirSync(where, { recursive: true });
+  fs.writeFileSync(file, process.platform === "win32" ? '@echo off\r\ntype nul > "%~dp0ran"\r\n' : '#!/bin/sh\ntouch "$(dirname "$0")/ran"\n');
+  fs.chmodSync(file, 0o755);
+  return { dir: where, file, ran: path.join(where, "ran") };
+}
+
+const preflightOf = (root: string) => claudeCli().preflight(contextOf(root));
+
+test("preflight finds claude on PATH, trying PATHEXT on Windows, without starting it", async () => {
+  const { dir, ran } = installedClaude();
+  await withEnv({ TEAM_CLAUDE_BIN: undefined, PATH: dir, PATHEXT: WINDOWS_PATHEXT }, () => preflightOf(dir));
+  assert.ok(!fs.existsSync(ran), "claude was not started");
+});
+
+test("preflight says what to do when claude is not on PATH", async () => {
+  const empty = fs.mkdtempSync(path.join(os.tmpdir(), "team-preflight-"));
+  await withEnv({ TEAM_CLAUDE_BIN: undefined, PATH: empty, PATHEXT: WINDOWS_PATHEXT }, () => {
+    assert.throws(() => preflightOf(empty), /"claude" is not on PATH.*TEAM_CLAUDE_BIN.*--backend mock/s);
+  });
+});
+
+test("preflight checks TEAM_CLAUDE_BIN itself, not PATH, when it names a path", async () => {
+  const { dir, file } = installedClaude();
+  const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), "team-preflight-"));
+  await withEnv({ TEAM_CLAUDE_BIN: file, PATH: elsewhere, PATHEXT: WINDOWS_PATHEXT }, () => preflightOf(dir));
+  const missing = path.join(dir, "no-such-claude");
+  await withEnv({ TEAM_CLAUDE_BIN: missing, PATH: dir, PATHEXT: WINDOWS_PATHEXT }, () => {
+    assert.throws(() => preflightOf(dir), (e: Error) => e.message.includes(missing) && /TEAM_CLAUDE_BIN/.test(e.message) && /--backend mock/.test(e.message));
+  });
+});
+
+test("preflight does not take a folder for the claude command", async () => {
+  const { dir } = installedClaude();
+  const folder = path.join(dir, "folder");
+  fs.mkdirSync(folder);
+  await withEnv({ TEAM_CLAUDE_BIN: folder }, () => assert.throws(() => preflightOf(dir), /TEAM_CLAUDE_BIN/));
+});
+
+test("preflight resolves a relative TEAM_CLAUDE_BIN from the folder the turn would run in", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "team-preflight-"));
+  installedClaude(path.join(root, "tools"));
+  await withEnv({ TEAM_CLAUDE_BIN: path.join("tools", CLAUDE_FILE) }, () => preflightOf(root));
+  const other = fs.mkdtempSync(path.join(os.tmpdir(), "team-preflight-"));
+  await withEnv({ TEAM_CLAUDE_BIN: path.join("tools", CLAUDE_FILE) }, () => assert.throws(() => preflightOf(other), /TEAM_CLAUDE_BIN/));
+});
+
+test("preflight rejects a claude that is not executable", { skip }, async () => {
+  const { dir, file } = installedClaude();
+  fs.chmodSync(file, 0o644);
+  await withEnv({ TEAM_CLAUDE_BIN: undefined, PATH: dir }, () => assert.throws(() => preflightOf(dir), /not executable/));
+  await withEnv({ TEAM_CLAUDE_BIN: file }, () => assert.throws(() => preflightOf(dir), /not executable/));
+});
+
+test("creating the backend never fails for a missing claude: only preflight and the turn say so", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "team-preflight-"));
+  await withEnv({ TEAM_CLAUDE_BIN: path.join(dir, "missing") }, () => assert.doesNotThrow(claudeCli));
+});
+
+test("preflight goes on past a PATH folder it may not search, as spawn does", { skip }, async () => {
+  const blocked = fs.mkdtempSync(path.join(os.tmpdir(), "team-preflight-"));
+  const { dir } = installedClaude();
+  fs.chmodSync(blocked, 0o000);
+  try {
+    await withEnv({ TEAM_CLAUDE_BIN: undefined, PATH: [blocked, dir].join(path.delimiter) }, () => preflightOf(dir));
+  } finally {
+    fs.chmodSync(blocked, 0o755);
+  }
+});
+
+test("preflight goes on past a claude that is not executable to one that is, further along PATH", { skip }, async () => {
+  const first = installedClaude();
+  fs.chmodSync(first.file, 0o644);
+  const second = installedClaude();
+  await withEnv({ TEAM_CLAUDE_BIN: undefined, PATH: [first.dir, second.dir].join(path.delimiter) }, () => preflightOf(second.dir));
+});
+
+const cmdLooksInTheCurrentFolderFirst = process.platform === "win32" && "cmd.exe looks in the current folder before PATH";
+
+test("preflight does not search the turn's folder when PATH is unset, empty or has an empty entry", { skip: cmdLooksInTheCurrentFolderFirst }, async () => {
+  const { dir } = installedClaude(); // sits in the folder the turn runs in
+  const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), "team-preflight-"));
+  for (const PATH of [undefined, "", `${path.delimiter}${elsewhere}`, `${elsewhere}${path.delimiter}`]) {
+    await withEnv({ TEAM_CLAUDE_BIN: undefined, PATH }, () => assert.throws(() => preflightOf(dir), /"claude" is not on PATH/));
+  }
+});
+
+/**
+ * Runs `fn` with `process.platform` saying win32, to check the lookup rules that follow cmd.exe (`shell: true` on Windows) on any machine.
+ * Synchronous on purpose: nothing else may run while the platform is changed. On Windows itself it changes nothing.
+ */
+function asWindows<T>(fn: () => T): T {
+  const original = Object.getOwnPropertyDescriptor(process, "platform")!;
+  Object.defineProperty(process, "platform", { ...original, value: "win32" });
+  try {
+    return fn();
+  } finally {
+    Object.defineProperty(process, "platform", original);
+  }
+}
+
+test("on Windows a bare claude is looked for in the turn's folder first, as cmd.exe does", async () => {
+  const { dir } = installedClaude(undefined, "claude.CMD"); // PATHEXT's own case: this also runs on case-sensitive file systems
+  const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), "team-preflight-"));
+  await withEnv({ TEAM_CLAUDE_BIN: undefined, PATH: elsewhere, PATHEXT: WINDOWS_PATHEXT }, () => asWindows(() => preflightOf(dir)));
+});
+
+test("on Windows a bare claude is not satisfied by a file with no extension, such as an npm shell script", async () => {
+  const { dir, file } = installedClaude(undefined, "claude");
+  const env = { TEAM_CLAUDE_BIN: undefined, PATH: dir, PATHEXT: WINDOWS_PATHEXT };
+  await withEnv(env, () => asWindows(() => assert.throws(() => preflightOf(dir), /"claude" is not on PATH/)));
+  // named by its path, or with an extension of its own, a file is taken as it is
+  await withEnv({ ...env, TEAM_CLAUDE_BIN: file }, () => asWindows(() => preflightOf(dir)));
+  const withExtension = installedClaude(undefined, "claude.cmd");
+  await withEnv({ ...env, TEAM_CLAUDE_BIN: "claude.cmd", PATH: withExtension.dir }, () => asWindows(() => preflightOf(dir)));
+});

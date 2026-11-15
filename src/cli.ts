@@ -7,7 +7,7 @@ import { Store, loadConfig, loadPersona } from "./store.ts";
 import { World, answersByQuestion, isPrivate, questionId } from "./world.ts";
 import { DEFAULT_PHASES, subagentFor } from "./sop.ts";
 import { buildPrompt, listWorkspace, promptAsText } from "./prompt.ts";
-import { formatBacklog, formatEntry, formatQuestions, displayName } from "./render.ts";
+import { formatBacklog, formatBackendLine, formatEntry, formatQuestions, formatSkipStop, displayName } from "./render.ts";
 import { createBackend } from "./backends/index.ts";
 import type { BackendReply } from "./backends/index.ts";
 import { findOverlaps, formatOverlap, otherSessionChanges, sameRepoChanges } from "./overlap.ts";
@@ -15,6 +15,9 @@ import { runTrialIfDue } from "./verify.ts";
 import { renderHtml } from "./html.ts";
 import { ReplyError, TurnTimeoutError, addUsage, formatStats, summarizeUsage } from "./usage.ts";
 import type { BackendConfig, ReplyUsage, TurnUsage } from "./types.ts";
+
+/** Turns skipped one after the other, with no reply in between, after which `run` stops instead of finishing the session on skips. */
+const MAX_SKIPPED_IN_A_ROW = 3;
 
 const HELP = `team — PM・エンジニア・ペルソナ(ユーザー)が会話しながら開発するシミュレーター
 
@@ -45,6 +48,9 @@ Host mode (Claude Code などの外部オーケストレーターが各エージ
 
 Auto mode (このプロセスが LLM を呼ぶ)
   run [--backend anthropic|claude-cli|mock] [--model <m>] [--turns N]
+                       claude コマンドや API キーが無いなど、動かない設定なら何も変えずに止まる。
+                       ターンが ${MAX_SKIPPED_IN_A_ROW} 回続けて失敗 (スキップ) したら、その step は記録せずに止まる。原因を直して run すれば続きから再開できる
+                       (連続数は 1 回の run の中で数える。再開や --turns の短い実行では 0 から)
 
 Global options
   --root <dir>         リポジトリルート (default: cwd)
@@ -296,22 +302,35 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
       const maxTurns = Number(flags.turns ?? 200);
       let turns = 0;
       const w = load();
+      const ctx = { state: w.state, root };
+      out(formatBackendLine(bcfg.type, backend.model));
+      // Before anything changes: a backend that can never answer would skip every turn and finish a session that cannot be continued.
+      if (w.state.status === "running") backend.preflight?.(ctx);
       const es = store.transcript(w.state.name); // kept in memory for the whole run
+      let skippedInARow = 0;
       while (w.state.status === "running" && turns < maxTurns) {
         const ids = w.next();
         if (runTrialIfDue(w, root, out)) out(`[${w.phase.id}] ${formatEntry(w.state, w.emitted.at(-1)!)}`);
         const view = es.concat(w.emitted);
         const files = listWorkspace(w.state, root);
         const others = otherSessionChanges(store, w.state);
-        const ctx = { state: w.state, root };
         const prompts = ids.map((id) => buildPrompt(w.state, id, view, files, { others }));
         // Members scheduled in the same step act in parallel (like TinyWorld steps).
         const replies = await Promise.all(prompts.map((p) => respondWithRetry(() => backend.respond(p, ctx), p.member, out)));
+        // Judged once the whole step has answered: one reply that is not a skip shows the backend works.
+        const failures = replies.filter((r) => r.skipped === true);
+        skippedInARow = failures.length === replies.length ? skippedInARow + ids.length : 0;
+        const giveUp = skippedInARow >= MAX_SKIPPED_IN_A_ROW;
         const usage: TurnUsage[] = [];
         ids.forEach((id, i) => {
           const before = w.emitted.length;
           const { usage: spent, skipped } = replies[i];
           const measured = { ...spent, source: bcfg.type, promptChars: promptAsText(prompts[i]).length, skipped };
+          if (giveUp) {
+            // what the failed attempts cost is still owed, but the turn itself is left for the next run
+            usage.push(usageLine(w, id, replies[i].text, measured, { phase: w.phase.id, iteration: w.state.iteration, turn: w.state.turn + 1 + i }));
+            return;
+          }
           usage.push(recordTurn(w, id, replies[i].text, measured).usage);
           for (const e of w.emitted.slice(before)) out(`[${e.phase}] ${formatEntry(w.state, e)}`);
         });
@@ -319,6 +338,7 @@ export async function main(argv: string[], out: (s: string) => void = (s) => pro
         store.save(w, es);
         store.appendUsage(w.state.name, usage);
         es.push(...fresh);
+        if (giveUp) throw new Error(formatSkipStop(skippedInARow, failures[failures.length - 1].reason));
         turns += ids.length;
       }
       out(w.state.status === "done" ? "session is done." : `stopped after ${turns} turn(s); run again to continue.`);
@@ -365,11 +385,20 @@ function recordTurn(
   measured: ReplyUsage & Pick<TurnUsage, "source" | "promptChars" | "reportedTokens" | "skipped">,
   force = false,
 ) {
-  const phase = w.phase.id;
-  const iteration = w.state.iteration;
+  const where = { phase: w.phase.id, iteration: w.state.iteration };
   const actions = w.record(id, raw, { force });
-  const usage: TurnUsage = {
-    turn: w.state.turn,
+  return { actions, usage: usageLine(w, id, raw, measured, { ...where, turn: w.state.turn }) };
+}
+
+function usageLine(
+  w: World,
+  id: string,
+  raw: string,
+  measured: ReplyUsage & Pick<TurnUsage, "source" | "promptChars" | "reportedTokens" | "skipped">,
+  { phase, iteration, turn }: Pick<TurnUsage, "phase" | "iteration" | "turn">,
+): TurnUsage {
+  return {
+    turn,
     member: id,
     role: w.member(id)!.role,
     phase,
@@ -378,23 +407,25 @@ function recordTurn(
     replyChars: raw.length,
     ...measured,
   };
-  return { actions, usage };
 }
+
+/** A member's answer for one step. A skipped one says why, so `run` can name the last failure when it stops. */
+type StepReply = BackendReply & ({ skipped?: false } | { skipped: true; reason: string });
 
 /**
  * One retry per turn; if that also fails, the member skips the turn so a single bad call does not stop the run. A turn that timed out
  * is skipped at once: it would only hang for the whole limit again, and the members of its step are waiting for it.
  * The usage of the reply is what every attempt cost, failed ones included.
  */
-async function respondWithRetry(call: () => Promise<BackendReply>, id: string, out: (s: string) => void): Promise<BackendReply & { skipped?: boolean }> {
+async function respondWithRetry(call: () => Promise<BackendReply>, id: string, out: (s: string) => void): Promise<StepReply> {
   const spentOn = (e: unknown) => (e instanceof ReplyError ? e.usage : undefined);
-  const skipped = (usage?: ReplyUsage) => ({ text: "[SAY to=all] (could not attend this turn)", usage, skipped: true });
+  const skipped = (usage: ReplyUsage | undefined, reason: string) => ({ text: "[SAY to=all] (could not attend this turn)", usage, skipped: true, reason });
   try {
     return await call();
   } catch (first) {
     if (first instanceof TurnTimeoutError) {
       out(`warning: ${id} skips this turn without a retry: ${first.message}`);
-      return skipped(first.usage);
+      return skipped(first.usage, first.message);
     }
     out(`warning: ${id}'s turn failed, retrying once: ${(first as Error).message.split("\n")[0]}`);
     try {
@@ -403,7 +434,7 @@ async function respondWithRetry(call: () => Promise<BackendReply>, id: string, o
     } catch (e) {
       const reason = (e as Error).message.split("\n")[0].slice(0, 200);
       out(`warning: ${id} skips this turn: ${reason}`);
-      return skipped(addUsage(spentOn(first), spentOn(e)));
+      return skipped(addUsage(spentOn(first), spentOn(e)), reason);
     }
   }
 }
