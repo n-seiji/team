@@ -7,6 +7,7 @@ import { execFileSync } from "node:child_process";
 import { main } from "../src/cli.ts";
 import { Store } from "../src/store.ts";
 import { ReplyError } from "../src/usage.ts";
+import { withEnv } from "./with-env.ts";
 
 const repo = path.resolve(import.meta.dirname, "..");
 
@@ -601,12 +602,16 @@ test("stats on a session saved before usage was recorded says so", async () => {
 /** Runs the mock backend with `respond` wrapped, so a test can add usage to a reply or fail an attempt. */
 async function runWithBackend(
   dir: string,
-  wrap: (p: { member: string }, original: () => Promise<{ text: string; usage?: object }>) => Promise<{ text: string; usage?: object }>,
+  wrap: (
+    p: { member: string },
+    original: () => Promise<{ text: string; usage?: object }>,
+    ctx: { state: { turn: number; phase?: string } },
+  ) => Promise<{ text: string; usage?: object }>,
 ): Promise<string> {
   const { MockBackend } = await import("../src/backends/mock.ts");
   const orig = MockBackend.prototype.respond;
   MockBackend.prototype.respond = function (p, ctx) {
-    return wrap(p, () => orig.call(this, p, ctx));
+    return wrap(p, () => orig.call(this, p, ctx), ctx);
   };
   try {
     return await run(dir, "run", "--backend", "mock");
@@ -798,4 +803,142 @@ test("the transcript is still read strictly: a half-written last line is an erro
   await run(dir, "next", "--json");
   fs.appendFileSync(path.join(dir, ".team/sessions/t2/transcript.jsonl"), '{"turn":1,"at":"t');
   await assert.rejects(run(dir, "log"), SyntaxError);
+});
+
+const stateOf = (dir: string, name: string) => JSON.parse(fs.readFileSync(path.join(dir, ".team/sessions", name, "state.json"), "utf8"));
+
+/** Every file in a session's folder, by name, so a test can tell that a command left the session exactly as it was. */
+function sessionFiles(dir: string, name: string): Record<string, string | null> {
+  const folder = path.join(dir, ".team/sessions", name);
+  return Object.fromEntries(fs.readdirSync(folder).map((n) => [n, fs.statSync(path.join(folder, n)).isFile() ? fs.readFileSync(path.join(folder, n), "utf8") : null]));
+}
+
+test("run stops before the first turn when the claude command is missing, and the session stays as it was", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "p1", "--brief", "x");
+  const before = sessionFiles(dir, "p1");
+  await withEnv({ TEAM_CLAUDE_BIN: path.join(dir, "no-such-claude") }, async () => {
+    await assert.rejects(run(dir, "run", "--backend", "claude-cli"), (e: Error) => /no-such-claude/.test(e.message) && /TEAM_CLAUDE_BIN/.test(e.message) && /--backend mock/.test(e.message));
+  });
+  assert.deepEqual(sessionFiles(dir, "p1"), before);
+  assert.equal(stateOf(dir, "p1").status, "running");
+  assert.match(await run(dir, "run", "--backend", "mock"), /session is done/, "the same session runs once the backend works");
+});
+
+test("run stops before the first turn when ANTHROPIC_API_KEY is not set, and the session stays as it was", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "p2", "--brief", "x");
+  const before = sessionFiles(dir, "p2");
+  await withEnv({ ANTHROPIC_API_KEY: undefined }, async () => {
+    await assert.rejects(run(dir, "run", "--backend", "anthropic"), /ANTHROPIC_API_KEY.*--backend claude-cli.*mock/s);
+  });
+  assert.deepEqual(sessionFiles(dir, "p2"), before);
+});
+
+test("run begins with the backend and the model it applies, and a finished session needs no working backend", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "m1", "--brief", "x");
+  await withEnv({ TEAM_MODEL: undefined, ANTHROPIC_API_KEY: undefined }, async () => {
+    const first = (await run(dir, "run", "--backend", "mock")).split("\n")[0];
+    assert.equal(first, "backend=mock model=default");
+    const done = await run(dir, "run", "--backend", "anthropic", "--model", "m2");
+    assert.equal(done.split("\n")[0], "backend=anthropic model=m2");
+    assert.match(done, /session is done/);
+  });
+  // the environment variable wins over --model, as it does in the backend: the line shows what is really used
+  await withEnv({ TEAM_MODEL: "m3", ANTHROPIC_API_KEY: undefined }, async () => {
+    assert.equal((await run(dir, "run", "--backend", "anthropic", "--model", "m2")).split("\n")[0], "backend=anthropic model=m3");
+  });
+});
+
+const flagged = (costUsd = 0.25) => Promise.reject(new ReplyError("API Error: flagged", { costUsd }));
+
+test("three steps in a row in which everyone skips stop the run; the third is only counted in usage.jsonl", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "k1", "--brief", "x");
+  await assert.rejects(runWithBackend(dir, () => flagged()), /last 3 turns.*API Error: flagged.*not recorded.*team run/s);
+
+  const state = stateOf(dir, "k1");
+  assert.equal(state.status, "running", "a stopped session can still be continued");
+  assert.equal(state.turn, 2, "two skipped turns were recorded, the third step was not");
+  assert.equal(state.pending.length, 1);
+  assert.equal(logged(dir, "k1").filter((e) => /could not attend this turn/.test(e.text)).length, 2);
+
+  const lines = usageLines(dir, "k1");
+  assert.equal(lines.length, 3);
+  for (const l of lines) {
+    assert.equal(l.skipped, true);
+    assert.equal(l.costUsd, 0.5, "both attempts of every skipped turn are paid for in usage.jsonl");
+  }
+  assert.equal(lines[2].member, state.pending[0], "the unrecorded turn is the one still pending");
+  assert.deepEqual(lines.map((l) => l.turn), [1, 2, 3], "the unrecorded turn is numbered as it will be once it is recorded");
+  const { total } = JSON.parse(await run(dir, "stats", "--json"));
+  assert.equal(total.skippedTurns, 3);
+  assert.equal(total.costUsd, 1.5);
+  const status = JSON.parse(await run(dir, "status", "--json"));
+  assert.equal(status.status, "running");
+  assert.deepEqual(status.pending, state.pending);
+
+  assert.match(await run(dir, "run", "--backend", "mock"), /session is done/, "run goes on from where it stopped");
+  assert.equal(stateOf(dir, "k1").status, "done");
+});
+
+/** Gives the sandbox one phase in which all five members speak at once, for `maxRounds` steps. */
+function useOneParallelPhase(dir: string, maxRounds: number, extra: object = {}): void {
+  const config = JSON.parse(fs.readFileSync(path.join(dir, "team.config.json"), "utf8"));
+  config.phases = [{ id: "discovery", goal: "g", speakers: ["pm", "engineer", "user"], mode: "parallel", maxRounds, ...extra }];
+  fs.writeFileSync(path.join(dir, "team.config.json"), JSON.stringify(config));
+}
+
+test("a step where everyone skips counts one per member, and stopping on the first step still saves what ran before it", async () => {
+  const dir = sandbox();
+  useOneParallelPhase(dir, 2, { trial: true }); // the runtime's trial run comes before the step
+  await run(dir, "init", "--name", "k2", "--brief", "x");
+  await assert.rejects(runWithBackend(dir, () => flagged()), /last 5 turns/);
+
+  const state = stateOf(dir, "k2");
+  assert.equal(state.turn, 0, "nothing of the step was recorded");
+  assert.deepEqual([...state.pending].sort(), ["eng-backend", "eng-frontend", "pm", "user-garcia", "user-yamada"]);
+  assert.equal(state.trials.length, 1, "the trial that ran just before the step was saved");
+  assert.ok(logged(dir, "k2").some((e) => /No verification command/.test(e.text)));
+  assert.ok(!logged(dir, "k2").some((e) => /could not attend/.test(e.text)));
+  const lines = usageLines(dir, "k2");
+  assert.deepEqual(lines.map((l) => [l.member, l.turn]), state.pending.map((member: string, i: number) => [member, i + 1]), "numbered as they will be once recorded");
+  assert.ok(lines.every((l) => l.skipped && l.phase === "discovery" && l.iteration === 1));
+});
+
+test("a step with any reply that is not a skip clears the count, so skips that are not in a row never stop the run", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "k3", "--brief", "x");
+  // steps 0 and 1 skip, 2 answers, 3 and 4 skip, 5 answers: four skips, never three in a row
+  const failing = new Set([0, 1, 3, 4]);
+  const out = await runWithBackend(dir, (_p, original, ctx) => (failing.has(ctx.state.turn) ? flagged() : original()));
+  assert.match(out, /session is done/);
+  assert.equal(usageLines(dir, "k3").filter((l) => l.skipped).length, 4);
+});
+
+test("a member who fails every time never stops the run: steps in which the others answer clear the count", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "--name", "k4", "--brief", "x");
+  const out = await runWithBackend(dir, (p, original) => (p.member === "eng-backend" ? flagged() : original()));
+  assert.match(out, /eng-backend skips this turn/);
+  assert.match(out, /session is done/);
+  const skipped = usageLines(dir, "k4").filter((l) => l.skipped);
+  assert.ok(skipped.length > 0);
+  assert.ok(skipped.every((l) => l.member === "eng-backend"));
+  assert.ok(usageLines(dir, "k4").some((l) => l.phase === "build" && l.member === "eng-frontend" && !l.skipped), "the other engineer's build turn was recorded as usual");
+});
+
+test("a step in which only some members are skipped is recorded in full and adds nothing to the count", async () => {
+  const dir = sandbox();
+  useOneParallelPhase(dir, 3);
+  await run(dir, "init", "--name", "k5", "--brief", "x");
+  const out = await runWithBackend(dir, (p, original) => (p.member === "eng-backend" ? flagged() : original()));
+  assert.match(out, /session is done/);
+  const lines = usageLines(dir, "k5");
+  const skipped = lines.filter((l) => l.skipped);
+  assert.ok(skipped.length >= 3, "more skips than the limit, each in a step where the other members answered");
+  assert.ok(skipped.every((l) => l.member === "eng-backend"));
+  assert.equal(stateOf(dir, "k5").turn, lines.length, "every reply of every step was recorded");
+  assert.equal(logged(dir, "k5").filter((e) => /could not attend this turn/.test(e.text)).length, skipped.length, "the skips were recorded like any reply");
 });

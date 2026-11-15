@@ -7,8 +7,16 @@ import type { Backend, BackendReply } from "./index.ts";
 
 const DEFAULT_MODEL = "claude-sonnet-5-5";
 
+function apiKey(): string {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) {
+    throw new Error("ANTHROPIC_API_KEY is not set: set it, or use --backend claude-cli (no API key needed) or --backend mock (no LLM), or host mode");
+  }
+  return key;
+}
+
 export class AnthropicBackend implements Backend {
-  private model: string;
+  readonly model: string;
   private maxTokens: number;
 
   constructor(cfg: BackendConfig) {
@@ -16,9 +24,12 @@ export class AnthropicBackend implements Backend {
     this.maxTokens = cfg.maxTokens ?? 2048;
   }
 
+  preflight(): void {
+    apiKey();
+  }
+
   async respond(p: TurnPrompt): Promise<BackendReply> {
-    const key = process.env.ANTHROPIC_API_KEY;
-    if (!key) throw new Error("ANTHROPIC_API_KEY is not set (or use --backend claude-cli / host mode)");
+    const key = apiKey();
     const base = (process.env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com").replace(/\/$/, "");
     for (let attempt = 0; ; attempt++) {
       const res = await fetch(`${base}/v1/messages`, {

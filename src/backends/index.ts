@@ -17,6 +17,13 @@ export interface BackendReply {
 
 /** Something that can produce an agent's reply for one turn. A failed attempt that still cost something rejects with a `ReplyError` that carries its usage. */
 export interface Backend {
+  /** The model it will ask for, once TEAM_MODEL and its own default are applied; none when it leaves the choice to something else. */
+  readonly model?: string;
+  /**
+   * Throws, saying what is wrong and what to do, when no turn could ever get a reply (no claude command, no API key).
+   * Only looks: it starts nothing and spends nothing. `run` calls it before it changes anything; creating the backend never does.
+   */
+  preflight?(ctx: TurnContext): void;
   respond(prompt: TurnPrompt, ctx: TurnContext): Promise<BackendReply>;
 }
 

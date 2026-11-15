@@ -28,6 +28,20 @@ export function formatEntry(s: SessionState, e: Entry): string {
   }
 }
 
+/** The first line `run` prints: what it will talk to. "default" is the choice the backend makes itself. */
+export function formatBackendLine(type: string, model: string | undefined): string {
+  return `backend=${type} model=${model ?? "default"}`;
+}
+
+/** What `run` stops with once turns have been skipped this many times in a row: the setup is more likely broken than one call unlucky. */
+export function formatSkipStop(skippedInARow: number, lastFailure: string): string {
+  return [
+    `stopped: the last ${skippedInARow} turns in a row were skipped because they failed (last failure: ${lastFailure}).`,
+    "The step that reached the limit was not recorded and the session is still running.",
+    "Fix the cause and run `team run` to continue from here.",
+  ].join("\n");
+}
+
 export function formatTask(t: Task): string {
   const acc = t.acceptance ? `\n    acceptance: ${indent(t.acceptance, "    ")}` : "";
   // Sessions saved before `handoff` existed kept a blocked task's hand-off in its summary.

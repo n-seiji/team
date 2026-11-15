@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import * as http from "node:http";
 import type { AddressInfo } from "node:net";
 import { AnthropicBackend } from "../src/backends/anthropic.ts";
+import { withEnv } from "./with-env.ts";
 const turn = { member: "pm", role: "pm", canEdit: false, system: "s", user: "u", sections: [] };
 
 async function replyTo(body: object) {
@@ -40,4 +41,19 @@ test("a response without usage returns only the text", async () => {
   const reply = await replyTo({ content: [{ type: "text", text: "x" }] });
   assert.equal(reply.text, "x");
   assert.equal(reply.usage, undefined);
+});
+
+test("preflight asks for ANTHROPIC_API_KEY before any turn, and names the alternatives", async () => {
+  const backend = new AnthropicBackend({ type: "anthropic" });
+  await withEnv({ ANTHROPIC_API_KEY: undefined }, () => assert.throws(() => backend.preflight(), /ANTHROPIC_API_KEY.*--backend claude-cli.*mock/s));
+  await withEnv({ ANTHROPIC_API_KEY: "" }, () => assert.throws(() => backend.preflight(), /ANTHROPIC_API_KEY/));
+  await withEnv({ ANTHROPIC_API_KEY: "test-key" }, () => backend.preflight());
+});
+
+test("the model is TEAM_MODEL, then the configured one, then the default", async () => {
+  await withEnv({ TEAM_MODEL: undefined }, () => {
+    assert.equal(new AnthropicBackend({ type: "anthropic" }).model, "claude-sonnet-5-5");
+    assert.equal(new AnthropicBackend({ type: "anthropic", model: "m1" }).model, "m1");
+  });
+  await withEnv({ TEAM_MODEL: "m2" }, () => assert.equal(new AnthropicBackend({ type: "anthropic", model: "m1" }).model, "m2"));
 });

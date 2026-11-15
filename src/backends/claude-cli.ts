@@ -76,8 +76,51 @@ function turnTimeoutSeconds(): number {
   return seconds;
 }
 
+/** Where a turn runs. In an existing codebase, inside it so its own CLAUDE.md and project settings (.claude/settings.json and settings.local.json: rules, hooks, permissions) apply to the turn. */
+function turnCwd(ctx: TurnContext): string {
+  return ctx.state.externalWorkspace ? path.resolve(ctx.root, ctx.state.workspace) : ctx.root;
+}
+
+const isPath = (bin: string) => (process.platform === "win32" ? /[\\/]/ : /\//).test(bin);
+
+function isFile(file: string): boolean {
+  try {
+    return fs.statSync(file).isFile();
+  } catch {
+    return false; // a folder on PATH that may not be searched (EACCES) is passed over by spawn, not an error
+  }
+}
+
+function isExecutable(file: string): boolean {
+  if (process.platform === "win32") return true; // no execute bit; what runs is decided by the extension
+  try {
+    fs.accessSync(file, fs.constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The files `spawn` would try for `bin`: the path itself, or `bin` in each PATH folder (none when PATH is unset; an empty entry is not the
+ * current folder). Relative ones are taken from `cwd`, as the turn's process is.
+ * On Windows `shell: true` hands the name to cmd.exe, which looks in the current folder before PATH and starts only what PATHEXT names:
+ * `claude` finds claude.cmd, never the extensionless shell script npm puts next to it.
+ */
+function candidatesFor(bin: string, cwd: string): readonly string[] {
+  const windows = process.platform === "win32";
+  const bare = !isPath(bin);
+  const unquoted = (dir: string) => dir.replace(/^"(.*)"$/, "$1");
+  const onPath = (process.env.PATH ?? "").split(path.delimiter).map(unquoted).filter(Boolean);
+  const files = bare ? [...(windows ? [cwd] : []), ...onPath].map((dir) => path.resolve(cwd, dir, bin)) : [path.resolve(cwd, bin)];
+  if (!windows) return files;
+  const extensions = (process.env.PATHEXT ?? ".COM;.EXE;.BAT;.CMD").split(";").filter(Boolean);
+  const asNamed = !bare || path.extname(bin) !== "";
+  return files.flatMap((file) => [...(asNamed ? [""] : []), ...extensions].map((extension) => file + extension));
+}
+
 export class ClaudeCliBackend implements Backend {
-  private model?: string;
+  readonly model?: string;
   private bin: string;
   private userSettings?: string;
   private timeoutSeconds: number;
@@ -87,6 +130,15 @@ export class ClaudeCliBackend implements Backend {
     this.bin = process.env.TEAM_CLAUDE_BIN ?? "claude";
     this.userSettings = userSettingsToForward();
     this.timeoutSeconds = turnTimeoutSeconds();
+  }
+
+  preflight(ctx: TurnContext): void {
+    const found = candidatesFor(this.bin, turnCwd(ctx)).filter(isFile);
+    if (found.some(isExecutable)) return;
+    const instead = "or try --backend mock to walk the flow without an LLM";
+    if (found.length > 0) throw new Error(`"${found[0]}" is not executable: chmod +x it, set TEAM_CLAUDE_BIN to a working claude, ${instead}`);
+    if (isPath(this.bin)) throw new Error(`TEAM_CLAUDE_BIN is "${this.bin}", which is not an existing file: fix the path, unset it to use claude from PATH, ${instead}`);
+    throw new Error(`"${this.bin}" is not on PATH: install Claude Code, set TEAM_CLAUDE_BIN to its path, ${instead}`);
   }
 
   respond(p: TurnPrompt, ctx: TurnContext): Promise<BackendReply> {
@@ -99,9 +151,7 @@ export class ClaudeCliBackend implements Backend {
     if (this.userSettings) args.push("--settings", this.userSettings);
     if (p.canEdit) args.push("--permission-mode", "acceptEdits");
     if (this.model) args.push("--model", this.model);
-    // In an existing codebase, run inside it so its own CLAUDE.md and project settings (.claude/settings.json and settings.local.json:
-    // rules, hooks, permissions) apply to the turn.
-    const cwd = ctx.state.externalWorkspace ? path.resolve(ctx.root, ctx.state.workspace) : ctx.root;
+    const cwd = turnCwd(ctx);
     const where =
       cwd === ctx.root ? "" : `\nYour current directory is the workspace itself (${cwd}); workspace paths above are relative to it.`;
     const input =
