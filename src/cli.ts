@@ -51,7 +51,7 @@ Host mode (Claude Code などの外部オーケストレーターが各エージ
                        次に行動すべきメンバーと、そのメンバー用プロンプトを出力
                        (プロンプトは .team/sessions/<s>/turns/*.prompt.md にも保存)
   record --as <id> [--file <f>] [--force] [--tokens N] [--duration-ms N] [--json]
-                       メンバーの返答(stdin か --file)を記録して次へ進める (--json は next --json と同じ出力)
+                       メンバーの返答(stdin か --file)を記録して次へ進める (--json は next --json の出力に recorded: { member, actions } を足したもの)
                        返答が空 (空白だけも含む) なら何も記録せず exit 1 (--force でも同じ)。返答できなかったメンバーは ${SKIPPED_TURN_REPLY} を記録する
                        --tokens / --duration-ms: オーケストレーターが報告したそのターンのトークン数・所要時間
                        (usage.jsonl に記録。トークン数は報告値のまま、測定したトークン数とは別に集計される)
@@ -140,8 +140,8 @@ export async function main(
   const summaryOf = (w: World, answers: ReadonlyMap<string, string>, overlaps: readonly string[]) =>
     formatStatusSummary(w.state, { answers, next: w.next(), overlaps, via: sessionFlag() });
 
-  /** Schedule the next speaker(s) and print their turn prompts (`next`, and `init --json`). */
-  function next(w: World) {
+  /** Schedule the next speaker(s) and print their turn prompts (`next`, and `init --json`). `recorded` is what `record --json` adds to that JSON. */
+  function next(w: World, recorded?: { member: string; actions: string[] }) {
     const ids = w.next();
     // stderr, so `next --json` stays parseable
     runTrialIfDue(w, root, warn);
@@ -175,7 +175,7 @@ export async function main(
       const openQuestions = (w.state.questions ?? [])
         .map((q, i) => ({ id: questionId(i), by: q.by, text: q.text }))
         .filter((q) => !answers.has(q.id));
-      out(JSON.stringify({ status: w.state.status, phase: w.phase.id, iteration: w.state.iteration, round: w.state.round, openQuestions, pending }, null, 2));
+      out(JSON.stringify({ status: w.state.status, phase: w.phase.id, iteration: w.state.iteration, round: w.state.round, openQuestions, pending, ...(recorded && { recorded }) }, null, 2));
     } else if (w.state.status === "done") {
       out(`session is done.\n${nextSteps(w)}`);
     } else {
@@ -365,7 +365,7 @@ export async function main(
       store.save(w);
       store.appendUsage(w.state.name, [usage]);
       // With --json, answer like `next --json` so the orchestrator saves a call per turn.
-      if (flags.json) return next(w);
+      if (flags.json) return next(w, { member: id, actions: actions.map((a) => a.type) });
       const ids = w.next();
       store.save(w);
       out(`recorded ${actions.length} action(s) from ${id}: ${actions.map((a) => a.type).join(", ") || "-"}`);

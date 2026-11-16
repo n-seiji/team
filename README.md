@@ -8,6 +8,55 @@
 - several **engineers** who design, implement and review each other's work, writing real code in `workspace/<session>/`
 - several **user personas** who are outside the team: they answer interviews, then try what was built and accept or reject it
 
+## Quickstart
+
+You need Node.js ≥ 22.18 (`node --version`). There is nothing to install: the engine has no runtime dependencies. Run every command from the repository root.
+
+**See the flow first, for free.** The `mock` backend calls no LLM and takes a few seconds. It only replays the shape of a conversation with fixed lines (always Japanese, whatever the brief, and the backlog and verdicts below are fixed too) and writes no files: `workspace/demo/` stays empty.
+
+```bash
+node src/main.ts init "A tool that lets freelancers create an invoice from the terminal in under a minute" --name demo
+node src/main.ts run --backend mock
+node src/main.ts status
+node src/main.ts log --html      # prints the path of the transcript to open in a browser
+```
+
+When the session has finished, `status` looks like this:
+
+```
+session: demo  status: done  iteration: 1/2
+phase: wrapup (round 0/1, round-robin)
+brief: A tool that lets freelancers create an invoice from the terminal in under a minute
+backlog:
+- T1 [done] owner=eng-backend 機能1を実装する
+- T2 [done] owner=eng-frontend 機能2を実装する
+verdicts (iteration 1):
+- 山田 恵子 (user-yamada): accept — 手作業が減りそうなので使ってみたいです。
+- Daniel García (user-garcia): accept — 手作業が減りそうなので使ってみたいです。
+Next: team continue "<what to add or change>" for another iteration, or read the conversation: team log --html
+```
+
+To run it again, add `--force` to the `init` line (it replaces `demo`). To clean up, run `rm -rf .team/sessions/demo workspace/demo` and `git restore .team/current` (`.team/current` names the current session and is tracked by git).
+
+**The real thing.** Open this repository in Claude Code and run the command below. No API key is needed.
+
+```text
+/team-dev A tool that lets freelancers create an invoice from the terminal in under a minute
+```
+
+It takes a while. The sessions kept in this repository (time is from the first to the last entry of the transcript): building a new product (6 sessions) took 14 to 82 minutes and 22 to 40 turns, and 5 of the 6 took 71 to 82 minutes; working on an issue in an existing repository (6 `villa-*` sessions) took 6 to 27 minutes and 17 to 35 turns. While it runs, open `.team/sessions/<session>/transcript.html` in a browser to read the conversation (it is rewritten each time a reply is recorded), and tell Claude Code anything you want the team to hear.
+
+**Coming back later.** `sessions` lists the sessions and `status` shows the current one's state and what to do next:
+
+```bash
+node src/main.ts sessions                           # one line per session; * is the current one
+node src/main.ts status                             # state and next steps of the current session
+```
+
+Switch to another session with `node src/main.ts use <name>`. When a real session has finished and you want more, `node src/main.ts continue "Also export CSV"` gives it one more iteration with your request (it costs about as many tokens as the first one did).
+
+**Where things are.** The product is in `workspace/<session>/`. The conversation is in `.team/sessions/<session>/transcript.html`.
+
 Key properties:
 
 - **Runs anywhere.** It is written in TypeScript, but Node.js ≥ 22.18 runs `.ts` files directly, so there is no build step and no runtime dependency. It behaves the same on Linux, macOS and Windows, locally or in the cloud (CI tests all three OSes).
@@ -71,13 +120,7 @@ Each role has its own set of allowed actions (for example, users cannot create t
 
 ### In Claude Code (Web / CLI / Desktop) — recommended
 
-Open this repository in Claude Code and run:
-
-```
-/team-dev A tool that lets freelancers create an invoice from the terminal in under a minute
-```
-
-Claude Code then repeats `team next` → subagent → `team record`. Anything you say mid-session that is meant for the team ("tell them the budget is small") is shared with every member through `team say`. When a member asks you something with `[ASK_HUMAN]`, the team goes ahead on the default it stated; the question shows up with an id (`Q1`, `Q2`, ...) in `team status`, and `team answer Q2 "..."` answers that one question (the answer overrides the default in every later prompt). You can also set a stopping point, such as "just discovery" or "up to the next phase". When the session has finished, ask for another round ("one more iteration, and add CSV export"): Claude Code checks with you first, because an iteration costs about as many tokens as the first one did, and then runs `team continue "..."`.
+Open this repository in Claude Code and run `/team-dev <what to build>` (see [Quickstart](#quickstart)). Claude Code then repeats `team next` → subagent → `team record`. Anything you say mid-session that is meant for the team ("tell them the budget is small") is shared with every member through `team say`. When a member asks you something with `[ASK_HUMAN]`, the team goes ahead on the default it stated; the question shows up with an id (`Q1`, `Q2`, ...) in `team status`, and `team answer Q2 "..."` answers that one question (the answer overrides the default in every later prompt). You can also set a stopping point, such as "just discovery" or "up to the next phase". When the session has finished, ask for another round ("one more iteration, and add CSV export"): Claude Code checks with you first, because an iteration costs about as many tokens as the first one did, and then runs `team continue "..."`.
 
 - Full conversation, including each member's private thoughts: `.team/sessions/<name>/transcript.md`, or `transcript.html` to read it in a browser (grouped by phase, filter by member, private memos hidden by default; `team log --html` prints its path and renders it for older sessions)
 - Trial runs and evidence files: `.team/sessions/<name>/artifacts/`
@@ -94,19 +137,24 @@ It works the same in cloud sessions. A few things differ because the container i
 
 ### From the command line
 
+The [Quickstart](#quickstart) covers `init`, `run --backend mock`, `status`, `log --html`, `sessions`, `use` and `continue`. The rest, in the order you would use it:
+
 ```bash
-node src/main.ts init --brief "what to build" --name my-session   # create a session
-node src/main.ts status                                          # summary: tasks, what needs a person, verdicts, questions, next steps (--full: everything)
-node src/main.ts sessions                                        # one line per session: state, result, last activity, brief (* is current)
-node src/main.ts use my-session                                  # make another session the current one
-node src/main.ts run --backend claude-cli                        # auto mode: each turn via claude -p
-ANTHROPIC_API_KEY=... node src/main.ts run --backend anthropic   # auto mode: Messages API directly
-node src/main.ts run --backend mock                              # walk the flow without any LLM
-node src/main.ts log --tail 20 --no-thoughts                     # transcript
+# create a session with a name you choose (--brief-file <f> reads the brief from a file)
+node src/main.ts init --brief "what to build" --name my-session
+
+# run it (auto mode)
+node src/main.ts run --backend claude-cli                        # each turn via claude -p
+ANTHROPIC_API_KEY=... node src/main.ts run --backend anthropic   # Messages API directly
+
+# look at it
+node src/main.ts status --full                                   # everything: goals, every task's acceptance and result
+node src/main.ts log --tail 20 --no-thoughts                     # the last 20 entries of the transcript
 node src/main.ts stats                                           # real tokens and cost per phase and role (--json for scripts)
-node src/main.ts say "Let's focus on sole proprietors"           # speak to the team as the human
+
+# speak as the human
+node src/main.ts say "Let's focus on sole proprietors"           # tell the whole team
 node src/main.ts answer Q2 "Yes, publish it"                     # answer one of the team's questions (ids are in status)
-node src/main.ts continue "Also export CSV"                      # a finished session: one more iteration (--iterations N for N more)
 ```
 
 `team status` is a summary that fits a screen: the session's state, phase, iteration and round, the start of the brief, one line per task, **what a real person has to do** (tasks handed over with `[TASK_BLOCKED]`, and the checks asked for with `[CHECK]`, in full), the users' verdicts (accept or reject, with the start of the reason; the latest iteration that has any), the questions for the human (open ones in full, answered ones in a line), overlaps with other sessions, who speaks next, and the next steps. `team status --full` is the whole text instead: the phase's goal and every task's acceptance and result. `team status --json` is the session state with `phase`, `next` and `overlaps`, as before.
@@ -149,6 +197,8 @@ node src/main.ts next --json          # → pending: [{ member, role, subagent, 
 # give promptFile to an LLM and collect its reply
 node src/main.ts record --as pm --file reply.txt [--tokens N] [--duration-ms N]   # optional: the token total and duration the orchestrator reported for the turn, for team stats
 ```
+
+`record --json` prints the same JSON as `next --json` plus `recorded: { member, actions }`: the member and the kinds of action found in the reply just recorded, such as `["SAY", "TASK"]`. That list includes actions the member's role may not use, which the engine ignores, so it tells you what the reply contained, not what took effect.
 
 | Backend | Requires | Notes |
 |---|---|---|
