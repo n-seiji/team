@@ -1,4 +1,4 @@
-import type { Entry, SessionState, Task } from "./types.ts";
+import type { Entry, PersonaSpec, PhaseDef, SessionState, Task } from "./types.ts";
 import { answersByQuestion, currentPhase, decisionId, findMember, isPrivate, questionId } from "./world.ts";
 
 const indent = (text: string, pad: string) => text.replace(/\n/g, "\n" + pad);
@@ -40,6 +40,35 @@ export function formatSkipStop(skippedInARow: number, lastFailure: string): stri
     "The step that reached the limit was not recorded and the session is still running.",
     "Fix the cause and run `team run` to continue from here.",
   ].join("\n");
+}
+
+/** What `record` writes down for a member who could not answer, and what `run` writes for a turn it skips. */
+export const SKIPPED_TURN_REPLY = "[SAY to=all] (could not attend this turn)";
+
+/** What `record` says when it is given nothing: an empty reply would use up a member's turn without anyone having spoken. */
+export function formatEmptyReply(member: string): string {
+  return [
+    `the reply for ${member} is empty, so nothing was recorded.`,
+    "Pass the member's reply on stdin or with --file.",
+    `If the member could not answer (an error or empty output, even after one retry), record this instead: ${SKIPPED_TURN_REPLY}`,
+  ].join("\n");
+}
+
+/** One warning per role that phases list as a speaker but that no member has: that role never gets a turn. */
+export function formatUnstaffedRoles(phases: readonly PhaseDef[], members: readonly PersonaSpec[]): readonly string[] {
+  const staffed = new Set(members.map((m) => m.role));
+  // a config is not validated, and a phase that has no speakers is not this warning's business
+  const speakers = (p: PhaseDef) => p.speakers ?? [];
+  const missing = [...new Set(phases.flatMap(speakers))].filter((role) => !staffed.has(role));
+  return missing.map((role) => {
+    const where = phases.filter((p) => speakers(p).includes(role)).map((p) => p.id);
+    return `warning: no member has the role "${role}", yet it is a speaker in: ${where.join(", ")}. It never speaks there.`;
+  });
+}
+
+/** `init --force` keeps what the earlier session built, and the new team is shown it like any file in its workspace. */
+export function formatLeftoverWorkspace(workspace: string): string {
+  return `warning: ${workspace} already has files from before. They were not deleted, so the new team will see them; delete the folder yourself if you want a clean start.`;
 }
 
 export function formatTask(t: Task): string {
