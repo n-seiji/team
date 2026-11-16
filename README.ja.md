@@ -94,7 +94,9 @@ reject が1件でもあり、イテレーション上限 (`maxIterations`) に�
 
 ```bash
 node src/main.ts init --brief "作りたいもの" --name my-session   # セッション作成
-node src/main.ts status                                          # フェーズ・次の話者・backlog
+node src/main.ts status                                          # 要約: task・人の作業・verdict・質問・次の一手 (--full で全文)
+node src/main.ts sessions                                        # セッション 1 つにつき 1 行: 状態・結果・最終更新・brief (* が current)
+node src/main.ts use my-session                                  # 別のセッションを current にする
 node src/main.ts run --backend claude-cli                        # 自動実行 (claude -p で各ターンを実行)
 ANTHROPIC_API_KEY=... node src/main.ts run --backend anthropic   # 自動実行 (Messages API を直接呼ぶ)
 node src/main.ts run --backend mock                              # LLM なしで流れだけ確認
@@ -107,7 +109,13 @@ node src/main.ts continue "CSV 出力も欲しい"                      # 終了
 
 `pnpm team <command>` や、`pnpm link --global` して `team <command>` でも同じです。
 
-セッション名は ASCII の英数字・`_`・`-` で、単独の `.` でつなげられます（`villa-57`、`v1.2`）。`init` は同名のセッションがあると作らずに、別の `--name` を付ける・`team use <name>` で続ける・`--force` で作り直す、のいずれかを案内します。`--force` が消すのはそのセッションの保存内容すべて（`.team/sessions/<name>/`）で、`workspace/<name>/` のファイルは消しません。残っていれば、新しいチームから見えるので警告します。また、フェーズの `speakers` に、どのメンバーも持たないロールがあれば警告します。警告は stderr に出るので、`--json` の出力はそのまま読めます。
+`team status` は 1 画面に収まる要約です。セッションの状態・フェーズ・イテレーション・ラウンド、brief の先頭、task を 1 行ずつ、**本物の人がやること**（`[TASK_BLOCKED]` で引き継がれた task と、`[CHECK]` で頼まれた確認。省略せず全文）、ユーザーの verdict（accept / reject と理由の先頭。verdict がある最後のイテレーション）、人への質問（未回答は全文、回答済みは 1 行）、同じリポジトリを触る他のセッションとの重なり、次の発言者、次の一手を出します。`team status --full` は従来どおりの全文（フェーズの goal と、各 task の acceptance と result まで）です。`team status --json` は、セッションの状態に `phase`・`next`・`overlaps` を足したもので、変わりません。
+
+`team sessions` はセッション 1 つにつき 1 行です。current に `*`、名前、状態（`running` / `done`）、フェーズ、イテレーション（`2/2`）、結果（終了したセッションは最後のイテレーションで何人が accept したか `1/2 accepted`。verdict が無ければ `no verdict`）、最後の会話ログを書いた時刻（ローカル時刻。読めないときはセッションを作った時刻）、brief の先頭が並びます。名前はセッションのフォルダ名で、`team use` や `--session` が受け取るものです。state が別の名前を持つ（フォルダをコピーした）場合は、その行にそう書きます。読めないセッションはその旨の行になり、一覧は止まりません。
+
+`status`・`init`・`run`・`continue` は、テキスト出力の最後に、そのまま打てる次の一手を `Next:` で出します。質問が未回答なら `team answer <Qn> "<回答>"`、実行中ならそのあとに `team run`（または Claude Code に「<name> のセッションを続けて」と頼む。エンジンは host モードか auto モードかを知らないので両方を出します）、終了していれば `team continue "<追加の要望>"` と `team log --html` です。current ではないセッション（`--session <name>`）には、これらのコマンドに `--session <name>` が付きます。`--json` の出力には出ません。`record` と `next` はセッションが終了したときだけ `Next:` を出します。実行中は、`record` は記録した内容と次の話者だけを出し（host のループが返答のたびに読むため）、`next` はターンのプロンプトを出します。終了済みのセッションへの `answer` も `Next:` を出し、答えをチームが読むのは `team continue` のあとだと添えます。
+
+セッション名は ASCII の英数字・`_`・`-` で、単独の `.` でつなげられます（`villa-57`、`v1.2`）。`--name` を省くと、`init` はローカルの日時を分まで使って名前を付けます（`20261115-1554`。brief からは付けません）。同じ分に 2 つ作ると、次の「同名」の案内が出ます。この時計と `team sessions` の UPDATED 列は、コマンドを実行したマシンのローカル時刻です（クラウドのコンテナでは通常 UTC）。`init` は同名のセッションがあると作らずに、別の `--name` を付ける・`team use <name>` で続ける・`--force` で作り直す、のいずれかを案内します。`--force` が消すのはそのセッションの保存内容すべて（`.team/sessions/<name>/`）で、`workspace/<name>/` のファイルは消しません。残っていれば、新しいチームから見えるので警告します。また、フェーズの `speakers` に、どのメンバーも持たないロールがあれば警告します。警告は stderr に出るので、`--json` の出力はそのまま読めます。
 
 `team continue [<text> | --say <text>] [--iterations N] [--json]` は、`done` のセッションにもう1イテレーション足します。実行中のセッションは exit 1 で止まり、`team next` / `team run` を案内します。
 
@@ -116,7 +124,7 @@ node src/main.ts continue "CSV 出力も欲しい"                      # 終了
 - フェーズはセッションに保存してあるものをそのまま使います。あとから `team.config.json` や `DEFAULT_PHASES` を変えても反映されません。
 - text は `team say` と同じく人間の発言として記録します。引数でも `--say` でも渡せますが、両方は不可です（空も不可）。text が無いときは、人間が何を変えるかを言っていないことをログで PM に伝え、PM がユーザーの verdict の理由・open なタスク・人の確認待ちから次の改善を選びます。発言がプロンプトに載るのは直近の `historyWindow` 件に入っている間だけなので、恒久的な方針は PM に `[DECISION]` にしてもらってください。
 - プロダクトのファイルはセッションに含まれません。`workspace/<name>/` が無い・空なら、stderr に警告したうえで続けます（チームが前回の成果物を見られず、受け入れ前の試行も失敗します）。
-- `--json` は `next --json` と同じ出力です。終了済みのセッションへの `say` は、誰も読まないので拒否します。`answer` は使え、チームが答えを踏まえて動くのは continue したあとです。`run`・`record`・`next` は、セッションの終了を伝えるときに `continue` を案内します。
+- `--json` は `next --json` と同じ出力です。終了済みのセッションへの `say` は、誰も読まないので拒否します。`answer` は使え、チームが答えを踏まえて動くのは continue したあとです。`run`・`record`・`next` は、セッションの終了を伝えるときに、次の一手に `continue` を出します。
 
 `.team` はカレントディレクトリ（か `--root`）だけを見ます。親ディレクトリは探しません。`--turns`・`--tail`・`--tokens`・`--duration-ms` は 0 以上の整数だけを受け付けます。`say` と `record` は空の入力を受け付けず、exit 1 で止まって何も記録しません。返答できなかったメンバーには `[SAY to=all] (could not attend this turn)` を記録してください。
 
@@ -171,7 +179,11 @@ src/
   protocol.ts   返答タグのパーサ
   prompt.ts     ターンごとのプロンプト生成（ペルソナ・共有状態・記憶）
   store.ts      .team/ への保存
-  render.ts     ログ・transcript.md の整形
+  render.ts     ログ・transcript.md の整形、`status` の先頭部分、`Next:` の行
+  summary.ts    既定の `team status` の要約（`--full` が全文）
+  session-list.ts  `team sessions` の一覧表
+  text.ts       長い文章の 1 行プレビューと、制御文字を出力に通さない処理
+  local-time.ts ローカル日時の部品（既定のセッション名と `team sessions` 用）
   html.ts       transcript.html（ブラウザで読む用）
   verify.ts     受け入れ前に [VERIFY] コマンドを実行する試用
   usage.ts      バックエンドのトークン数と、team stats の集計

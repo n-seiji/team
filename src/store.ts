@@ -53,10 +53,36 @@ export class Store {
 
   load(name = this.current()): World {
     this.requireSession(name);
-    const w = new World(readJson<SessionState>(path.join(this.sessionDir(name), "state.json")));
+    const w = new World(this.readState(name));
     // Answers live only in the transcript; the world needs to know which questions they settled.
     for (const id of answersByQuestion(this.transcript(name)).keys()) w.answered.add(id);
     return w;
+  }
+
+  /** A session's state alone, without the transcript that `load` reads along with it. */
+  readState(name: string): SessionState {
+    return readJson<SessionState>(path.join(this.sessionDir(name), "state.json"));
+  }
+
+  /**
+   * When the session's last transcript entry was written. State has no such time, and file times say when a folder was
+   * copied, not when it was worked on. Only the end of the file is read, so listing sessions does not parse every
+   * transcript, and a line that is broken (or half written, while `run` appends) is passed over: a time that cannot
+   * be read is `undefined`, never an error.
+   */
+  lastActivity(name: string): string | undefined {
+    try {
+      const { text, whole } = readTail(path.join(this.sessionDir(name), "transcript.jsonl"), TAIL_BYTES);
+      const lines = text.split("\n");
+      if (!whole) lines.shift(); // it starts in the middle of a line
+      for (const line of lines.reverse()) {
+        const at = parseEntryTime(line);
+        if (at !== undefined) return at;
+      }
+    } catch {
+      // no transcript (a session from before it existed), or one that cannot be opened: the session has no time of its own
+    }
+    return undefined;
   }
 
   /**
@@ -136,6 +162,33 @@ export class Store {
     const d = path.join(this.teamDir, "sessions");
     // what else is in the folder (.DS_Store, a half-written new session) must not stop anything
     return fs.existsSync(d) ? fs.readdirSync(d).filter((n) => isSessionName(n) && this.exists(n)) : [];
+  }
+}
+
+/** How much of the end of a transcript is looked at for the time of its last entry. */
+const TAIL_BYTES = 64 * 1024;
+
+/** The last `bytes` bytes of a file as text, and whether that is all of it. */
+function readTail(file: string, bytes: number): Readonly<{ text: string; whole: boolean }> {
+  const fd = fs.openSync(file, "r");
+  try {
+    const size = fs.fstatSync(fd).size;
+    const length = Math.min(size, bytes);
+    const buffer = Buffer.alloc(length);
+    const read = fs.readSync(fd, buffer, 0, length, size - length);
+    return { text: buffer.subarray(0, read).toString("utf8"), whole: length === size };
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+/** The `at` of one transcript line, if the line is a whole entry that has one. */
+function parseEntryTime(line: string): string | undefined {
+  try {
+    const at = (JSON.parse(line) as Partial<Entry> | null)?.at;
+    return typeof at === "string" ? at : undefined;
+  } catch {
+    return undefined; // an empty, broken or half written line
   }
 }
 

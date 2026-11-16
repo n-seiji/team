@@ -96,7 +96,9 @@ It works the same in cloud sessions. A few things differ because the container i
 
 ```bash
 node src/main.ts init --brief "what to build" --name my-session   # create a session
-node src/main.ts status                                          # phase, next speaker, backlog
+node src/main.ts status                                          # summary: tasks, what needs a person, verdicts, questions, next steps (--full: everything)
+node src/main.ts sessions                                        # one line per session: state, result, last activity, brief (* is current)
+node src/main.ts use my-session                                  # make another session the current one
 node src/main.ts run --backend claude-cli                        # auto mode: each turn via claude -p
 ANTHROPIC_API_KEY=... node src/main.ts run --backend anthropic   # auto mode: Messages API directly
 node src/main.ts run --backend mock                              # walk the flow without any LLM
@@ -107,7 +109,13 @@ node src/main.ts answer Q2 "Yes, publish it"                     # answer one of
 node src/main.ts continue "Also export CSV"                      # a finished session: one more iteration (--iterations N for N more)
 ```
 
-Session names are ASCII letters, digits, `_` and `-`, which may be joined by single dots (`villa-57`, `v1.2`). `init` refuses a name that is already taken: pass another `--name`, continue it with `team use <name>`, or start it over with `--force`. `--force` deletes everything saved for that session (`.team/sessions/<name>/`) but not the files in `workspace/<name>/`; if some are left it warns, because the new team will see them. It also warns when a phase's `speakers` lists a role that no member has. Warnings go to stderr, so `--json` output stays parseable.
+`team status` is a summary that fits a screen: the session's state, phase, iteration and round, the start of the brief, one line per task, **what a real person has to do** (tasks handed over with `[TASK_BLOCKED]`, and the checks asked for with `[CHECK]`, in full), the users' verdicts (accept or reject, with the start of the reason; the latest iteration that has any), the questions for the human (open ones in full, answered ones in a line), overlaps with other sessions, who speaks next, and the next steps. `team status --full` is the whole text instead: the phase's goal and every task's acceptance and result. `team status --json` is the session state with `phase`, `next` and `overlaps`, as before.
+
+`team sessions` prints one line per session: `*` for the current one, name, state (`running` / `done`), phase, iteration (`2/2`), the result (for a finished session, how many users accepted in the last iteration, as `1/2 accepted`, or `no verdict`), when its last transcript entry was written (local time; when that cannot be read, when the session was created), and the start of the brief. The name is the session's folder, which is what `team use` and `--session` take; a state that says another name (a copied folder) is pointed out on its line. A session that cannot be read gets a line that says so and does not stop the list.
+
+`status`, `init`, `run` and `continue` end their text output with the next steps, as `Next:` lines you can type: `team answer <Qn> "<answer>"` while questions are open, and then `team run` or, in Claude Code, asking it to continue the session (the engine cannot tell host mode from auto mode, so both are offered) while the session is running, or `team continue "<what to add or change>"` and `team log --html` once it is done. For a session that is not the current one (`--session <name>`) the commands carry `--session <name>`. `--json` output never has them. `record` and `next` print them only when the session is done; while it runs, `record` prints just what it recorded and who is next (the host loop reads it after every reply) and `next` prints the turn prompts. `answer` on a finished session prints them too, with a note that the team reads the answer only after `team continue`.
+
+Session names are ASCII letters, digits, `_` and `-`, which may be joined by single dots (`villa-57`, `v1.2`). Without `--name`, `init` names the session after the local date and time to the minute (`20261115-1554`), never after the brief; starting two in the same minute gets the "already exists" message below. That clock, and the UPDATED column of `team sessions`, are the local time of the machine the command runs on (usually UTC in a cloud container). `init` refuses a name that is already taken: pass another `--name`, continue it with `team use <name>`, or start it over with `--force`. `--force` deletes everything saved for that session (`.team/sessions/<name>/`) but not the files in `workspace/<name>/`; if some are left it warns, because the new team will see them. It also warns when a phase's `speakers` lists a role that no member has. Warnings go to stderr, so `--json` output stays parseable.
 
 `team continue [<text> | --say <text>] [--iterations N] [--json]` gives a session that is `done` another iteration. A running session is refused (exit 1, it points to `team next` / `team run`).
 
@@ -116,7 +124,7 @@ Session names are ASCII letters, digits, `_` and `-`, which may be joined by sin
 - The phases saved with the session are used as they are: later edits to `team.config.json` or `DEFAULT_PHASES` do not apply.
 - The text is logged as a message from the human, like `team say`: give it as arguments or with `--say`, not both (blank is refused). Without it, the log tells the PM that the human did not say what to change, and the PM picks the next improvement from the users' verdicts, the open tasks and the checks waiting for a person. The message is in the prompts only while it is among the last `historyWindow` entries, so ask the PM to record anything lasting as a `[DECISION]`.
 - The product files are not part of the session. If `workspace/<name>/` is missing or empty, `continue` warns on stderr (the team will not see what it built before, and the trial run before acceptance fails too) and goes on.
-- `--json` prints the same as `next --json`. `say` is refused on a finished session (nobody would read it); `answer` still works, and the team acts on the answer once the session is continued. `run`, `record` and `next` point to `continue` when they report a finished session.
+- `--json` prints the same as `next --json`. `say` is refused on a finished session (nobody would read it); `answer` still works, and the team acts on the answer once the session is continued. `run`, `record` and `next` end with `continue` among the next steps when they report a finished session.
 
 `.team` is looked for in the current folder (or `--root`) only, not in parent folders. `--turns`, `--tail`, `--tokens` and `--duration-ms` take a whole number of 0 or more. `say` and `record` refuse empty input (exit 1, nothing recorded); to record that a member could not answer, use `[SAY to=all] (could not attend this turn)`.
 
@@ -190,7 +198,11 @@ src/
   prompt.ts     per-turn prompt (persona, shared state, memory)
   store.ts      persistence under .team/
   overlap.ts    clashes between sessions working on the same repository
-  render.ts     log and transcript.md formatting
+  render.ts     log and transcript.md formatting, the head of `status` and the `Next:` lines
+  summary.ts    the default `team status` (`--full` is the whole text)
+  session-list.ts  the table `team sessions` prints
+  text.ts       one-line previews of long text, and what keeps control characters out of the output
+  local-time.ts local date and time parts, for the default session name and `team sessions`
   html.ts       transcript.html (the browser view)
   verify.ts     trial runs of the team's [VERIFY] command before acceptance
   usage.ts      token counts from backends and the totals behind team stats

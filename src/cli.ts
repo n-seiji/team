@@ -7,7 +7,10 @@ import { Store, loadConfig, loadPersona } from "./store.ts";
 import { World, answersByQuestion, isPrivate, questionId } from "./world.ts";
 import { DEFAULT_PHASES, subagentFor } from "./sop.ts";
 import { buildPrompt, listWorkspace, promptAsText } from "./prompt.ts";
-import { SKIPPED_TURN_REPLY, displayName, formatAnswerAfterDone, formatBackendLine, formatBacklog, formatContinued, formatEmptyReply, formatEmptyWorkspace, formatEntry, formatLeftoverWorkspace, formatQuestions, formatSkipStop, formatUnstaffedRoles, withContinueHint } from "./render.ts";
+import { SKIPPED_TURN_REPLY, displayName, formatBackendLine, formatBacklog, formatContinued, formatEmptyReply, formatEmptyWorkspace, formatEntry, formatLeftoverWorkspace, formatNextSteps, formatQuestions, formatSkipStop, formatStatusHead, formatUnstaffedRoles, openQuestionIds } from "./render.ts";
+import { formatStatusSummary } from "./summary.ts";
+import { formatSessionList, readSessionRows } from "./session-list.ts";
+import { defaultSessionName } from "./session-name.ts";
 import { createBackend } from "./backends/index.ts";
 import type { BackendReply } from "./backends/index.ts";
 import { findOverlaps, formatOverlap, otherSessionChanges, sameRepoChanges } from "./overlap.ts";
@@ -26,12 +29,15 @@ Usage: team <command> [options]
 Session
   init [<brief>] --brief <text> | --brief-file <f>  [--name <n>] [--config <f>] [--workspace <dir>] [--force] [--json]
                        新しいセッションを作成して current にする (--json は next --json と同じ出力)
+                       --name を省くとローカルの日時 YYYYMMDD-HHmm が名前になる (brief からは付けない)
                        --workspace: 既存のコードベース (git worktree など) をそのまま作業場所にする
                        --force: 同名のセッションを作り直す (そのセッションの保存内容すべて (.team/sessions/<name>/) が消える。workspace/<name>/ のファイルは消さず、残っていれば警告する)
-  status [--json]      フェーズ・バックログ・次の発言者を表示
+  status [--full] [--json]
+                       状況と次の一手の要約: フェーズ・task 一覧・人の作業 (引き継ぎと確認待ち)・verdict・質問・次の発言者
+                       --full: 従来の全文 (フェーズの goal と、各 task の acceptance / result まで)
   log [--tail N] [--md] [--html] [--no-thoughts]
                        会話ログを表示 (N は 0 以上の整数。--md / --html は transcript.md / transcript.html のパス。HTML はブラウザで読む用)
-  sessions             セッション一覧 / use <name> で切り替え
+  sessions             セッション一覧 (1 行ずつ: 状態・フェーズ・イテレーション・結果・最終更新・brief。* が current) / use <name> で切り替え
   stats [--json]       ターンごとの実際の使用量 (usage.jsonl) の合計。フェーズ別・ロール別の内訳つき
   overlaps [--json]    同じリポジトリを触る他のセッションと、同じファイル・同じ番号のファイルが重なっていないか確認
   say <text>           人間(あなた)としてチーム全員に発言を差し込む (空は不可。終了済みのセッションには使えない: continue を使う)
@@ -81,6 +87,7 @@ const OPTIONS = {
   "duration-ms": { type: "string" },
   tail: { type: "string" },
   force: { type: "boolean" },
+  full: { type: "boolean" },
   json: { type: "boolean" },
   inline: { type: "boolean" },
   md: { type: "boolean" },
@@ -94,11 +101,15 @@ async function readStdin(missing: string): Promise<string> {
   return text(process.stdin);
 }
 
-/** `warn` is stderr: a warning must not end up in the JSON that `init --json` and `record --json` print. */
+/**
+ * `warn` is stderr: a warning must not end up in the JSON that `init --json` and `record --json` print.
+ * `now` is the clock a new session is named and dated by (an ISO time, like the one a World takes).
+ */
 export async function main(
   argv: string[],
   out: (s: string) => void = (s) => process.stdout.write(s + "\n"),
   warn: (s: string) => void = (s) => process.stderr.write(s + "\n"),
+  now: () => string = () => new Date().toISOString(),
 ) {
   const { values: flags, positionals } = parseArgs({ args: argv, options: OPTIONS, allowPositionals: true });
   const [first = "help", ...pos] = positionals;
@@ -109,15 +120,25 @@ export async function main(
   const load = () => store.load(session);
   const turnsDir = (w: World) => path.join(store.sessionDir(w.state.name), "turns");
 
-  /** ` --session <name>` when a bare command would reach another session than `name`, so the commands we suggest do what they say. */
-  function sessionFlag(name: string): string {
+  /**
+   * ` --session <name>` when a bare command would not reach the session that was asked for, so the commands we suggest do
+   * what they say. The name is the folder's, as `use` takes it: a copied folder's state still holds the old name.
+   */
+  function sessionFlag(): string {
     if (flags.session === undefined) return "";
     let current = "";
     try {
       current = store.current();
     } catch {}
-    return current === name ? "" : ` --session ${name}`;
+    return current === flags.session ? "" : ` --session ${flags.session}`;
   }
+
+  /** The commands to run next in this session, which these text outputs end with. JSON never gets them. */
+  const nextSteps = (w: World, afterAnswer = false) => formatNextSteps(w.state, openQuestionIds(w.state, w.answered), sessionFlag(), afterAnswer);
+
+  /** The default `status` text (`status --full` is `statusText`). */
+  const summaryOf = (w: World, answers: ReadonlyMap<string, string>, overlaps: readonly string[]) =>
+    formatStatusSummary(w.state, { answers, next: w.next(), overlaps, via: sessionFlag() });
 
   /** Schedule the next speaker(s) and print their turn prompts (`next`, and `init --json`). */
   function next(w: World) {
@@ -156,7 +177,7 @@ export async function main(
         .filter((q) => !answers.has(q.id));
       out(JSON.stringify({ status: w.state.status, phase: w.phase.id, iteration: w.state.iteration, round: w.state.round, openQuestions, pending }, null, 2));
     } else if (w.state.status === "done") {
-      out(withContinueHint("session is done. See: team log / team status", sessionFlag(w.state.name)));
+      out(`session is done.\n${nextSteps(w)}`);
     } else {
       for (const it of items) {
         out(`===== NEXT: ${it.member} (${it.role}) → subagent: ${it.subagent} =====`);
@@ -177,7 +198,7 @@ export async function main(
       const briefFile = flags["brief-file"];
       const brief = (briefFile ? fs.readFileSync(path.resolve(root, briefFile), "utf8") : flags.brief ?? pos.join(" ")).trim();
       if (!brief) throw new Error("a product brief is required: --brief \"...\"");
-      const name = flags.name ?? new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "");
+      const name = flags.name ?? defaultSessionName(new Date(now()));
       if (store.exists(name) && !flags.force) {
         throw new Error(`session "${name}" already exists. Pass another --name, continue it with "team use ${name}", or start it over with --force (this deletes everything saved for it in .team/sessions/${name}/).`);
       }
@@ -201,6 +222,7 @@ export async function main(
         externalWorkspace: !!external,
         maxIterations: cfg.maxIterations,
         historyWindow: cfg.historyWindow,
+        now,
       });
       const workspace = path.resolve(root, w.state.workspace);
       const leftovers = !!flags.force && !external && hasFiles(workspace);
@@ -213,7 +235,7 @@ export async function main(
       // With --json, answer like `next --json` so an orchestrator can start the first turn without another call.
       if (flags.json) return next(w);
       out(`created session "${name}" with ${w.state.members.length} members → .team/sessions/${name}/`);
-      out(statusText(w, new Map()));
+      out(summaryOf(w, new Map(), []));
       return;
     }
 
@@ -222,7 +244,7 @@ export async function main(
       try {
         cur = store.current();
       } catch {}
-      for (const n of store.list()) out(`${n === cur ? "*" : " "} ${n}`);
+      out(formatSessionList(readSessionRows(store), cur));
       return;
     }
 
@@ -240,8 +262,12 @@ export async function main(
       const overlaps = findOverlaps(sameRepoChanges(store, w.state)).filter((o) => o.sessions.some((x) => x.session === w.state.name));
       if (flags.json) out(JSON.stringify({ ...w.state, phase: w.phase.id, next: w.next(), overlaps }, null, 2));
       else {
-        out(statusText(w, answersByQuestion(store.transcript(w.state.name))));
-        if (overlaps.length) out(["overlaps with other sessions:", ...overlaps.map((o) => "  " + formatOverlap(o))].join("\n"));
+        const answers = answersByQuestion(store.transcript(w.state.name));
+        if (!flags.full) out(summaryOf(w, answers, overlaps.map(formatOverlap)));
+        else {
+          out(statusText(w, answers));
+          if (overlaps.length) out(["overlaps with other sessions:", ...overlaps.map((o) => "  " + formatOverlap(o))].join("\n"));
+        }
       }
       return;
     }
@@ -297,7 +323,7 @@ export async function main(
       w.answer(id, given);
       store.save(w);
       out("ok");
-      if (w.state.status === "done") out(formatAnswerAfterDone(sessionFlag(w.state.name)));
+      if (w.state.status === "done") out(nextSteps(w, true));
       return;
     }
 
@@ -313,7 +339,8 @@ export async function main(
       if (flags.json) return next(w);
       const ids = w.next();
       store.save(w);
-      out(formatContinued(w.state, ids, sessionFlag(w.state.name)));
+      out(formatContinued(w.state, ids));
+      out(nextSteps(w));
       return;
     }
 
@@ -342,7 +369,9 @@ export async function main(
       const ids = w.next();
       store.save(w);
       out(`recorded ${actions.length} action(s) from ${id}: ${actions.map((a) => a.type).join(", ") || "-"}`);
-      out(w.state.status === "done" ? withContinueHint("session is done.", sessionFlag(w.state.name)) : `next: ${ids.join(", ")} (phase ${w.phase.id}, round ${w.state.round})`);
+      // Only when the session ends: the host loop reads this output after every reply, and a command to run is not for it.
+      if (w.state.status === "done") out(`session is done.\n${nextSteps(w)}`);
+      else out(`next: ${ids.join(", ")} (phase ${w.phase.id}, round ${w.state.round})`);
       return;
     }
 
@@ -395,7 +424,8 @@ export async function main(
         if (giveUp) throw new Error(formatSkipStop(skippedInARow, failures[failures.length - 1].reason));
         turns += ids.length;
       }
-      out(w.state.status === "done" ? withContinueHint("session is done.", sessionFlag(w.state.name)) : `stopped after ${turns} turn(s); run again to continue.`);
+      out(w.state.status === "done" ? "session is done." : `stopped after ${turns} turn(s).`);
+      out(nextSteps(w));
       return;
     }
 
@@ -507,8 +537,7 @@ function statusText(w: World, answers: ReadonlyMap<string, string>): string {
   const s = w.state;
   const next = w.next();
   const lines = [
-    `session: ${s.name}  status: ${s.status}  iteration: ${s.iteration}/${s.maxIterations}`,
-    `phase: ${w.phase.id} (round ${s.round}/${w.phase.maxRounds}, ${w.phase.mode}) — ${w.phase.goal}`,
+    ...formatStatusHead(s, true),
     `next: ${s.status === "done" ? "-" : next.map((id) => displayName(s, id)).join(", ")}`,
     "backlog:",
     formatBacklog(s.tasks, "  (none)"),
@@ -517,6 +546,5 @@ function statusText(w: World, answers: ReadonlyMap<string, string>): string {
   if (open) lines.push("open questions for the human (the team proceeds on the stated defaults; answer with: team answer <Qn> <text>):", open);
   const answered = formatQuestions(s, answers, "answered");
   if (answered) lines.push("answered questions:", answered);
-  if (s.externalWorkspace) lines.splice(1, 0, `workspace: ${s.workspace} (existing codebase)`);
   return lines.join("\n");
 }
