@@ -7,7 +7,7 @@ import { Store, loadConfig, loadPersona } from "./store.ts";
 import { World, answersByQuestion, isPrivate, questionId } from "./world.ts";
 import { DEFAULT_PHASES, subagentFor } from "./sop.ts";
 import { buildPrompt, listWorkspace, promptAsText } from "./prompt.ts";
-import { SKIPPED_TURN_REPLY, displayName, formatBackendLine, formatBacklog, formatEmptyReply, formatEntry, formatLeftoverWorkspace, formatQuestions, formatSkipStop, formatUnstaffedRoles } from "./render.ts";
+import { SKIPPED_TURN_REPLY, displayName, formatAnswerAfterDone, formatBackendLine, formatBacklog, formatContinued, formatEmptyReply, formatEmptyWorkspace, formatEntry, formatLeftoverWorkspace, formatQuestions, formatSkipStop, formatUnstaffedRoles, withContinueHint } from "./render.ts";
 import { createBackend } from "./backends/index.ts";
 import type { BackendReply } from "./backends/index.ts";
 import { findOverlaps, formatOverlap, otherSessionChanges, sameRepoChanges } from "./overlap.ts";
@@ -34,9 +34,11 @@ Session
   sessions             セッション一覧 / use <name> で切り替え
   stats [--json]       ターンごとの実際の使用量 (usage.jsonl) の合計。フェーズ別・ロール別の内訳つき
   overlaps [--json]    同じリポジトリを触る他のセッションと、同じファイル・同じ番号のファイルが重なっていないか確認
-  say <text>           人間(あなた)としてチーム全員に発言を差し込む (空は不可)
+  say <text>           人間(あなた)としてチーム全員に発言を差し込む (空は不可。終了済みのセッションには使えない: continue を使う)
   answer <Qn> <text>   メンバーの質問 Qn (status で一覧) に答える。チーム全員に伝わり、以降のプロンプトでは既定の案より優先される。
-                       同じ Qn に答え直すと置き換わる。text は stdin でも可。終了済みのセッションにも答えられる
+                       同じ Qn に答え直すと置き換わる。text は stdin でも可。終了済みのセッションにも答えられる (チームが読むのは continue したあと)
+  continue [<text> | --say <text>] [--iterations N] [--json]
+                       終了 (done) したセッションをもう N イテレーション (既定 1) 続ける。text は人間としての発言 (空は不可)。実行中のセッションには使えない。--json は next --json と同じ出力
 
 Host mode (Claude Code などの外部オーケストレーターが各エージェントを実行)
   next [--json] [--inline]
@@ -73,6 +75,8 @@ const OPTIONS = {
   backend: { type: "string" },
   model: { type: "string" },
   turns: { type: "string" },
+  iterations: { type: "string" },
+  say: { type: "string" },
   tokens: { type: "string" },
   "duration-ms": { type: "string" },
   tail: { type: "string" },
@@ -104,6 +108,16 @@ export async function main(
   const session = flags.session;
   const load = () => store.load(session);
   const turnsDir = (w: World) => path.join(store.sessionDir(w.state.name), "turns");
+
+  /** ` --session <name>` when a bare command would reach another session than `name`, so the commands we suggest do what they say. */
+  function sessionFlag(name: string): string {
+    if (flags.session === undefined) return "";
+    let current = "";
+    try {
+      current = store.current();
+    } catch {}
+    return current === name ? "" : ` --session ${name}`;
+  }
 
   /** Schedule the next speaker(s) and print their turn prompts (`next`, and `init --json`). */
   function next(w: World) {
@@ -142,7 +156,7 @@ export async function main(
         .filter((q) => !answers.has(q.id));
       out(JSON.stringify({ status: w.state.status, phase: w.phase.id, iteration: w.state.iteration, round: w.state.round, openQuestions, pending }, null, 2));
     } else if (w.state.status === "done") {
-      out("session is done. See: team log / team status");
+      out(withContinueHint("session is done. See: team log / team status", sessionFlag(w.state.name)));
     } else {
       for (const it of items) {
         out(`===== NEXT: ${it.member} (${it.role}) → subagent: ${it.subagent} =====`);
@@ -283,6 +297,23 @@ export async function main(
       w.answer(id, given);
       store.save(w);
       out("ok");
+      if (w.state.status === "done") out(formatAnswerAfterDone(sessionFlag(w.state.name)));
+      return;
+    }
+
+    case "continue": {
+      const iterations = wholeNumber(flags.iterations, "--iterations", 1) ?? 1;
+      // like `say`, the words may be arguments; a command that cannot be undone must not drop them
+      if (pos.length && flags.say !== undefined) throw new Error("give the message for the team either as arguments or with --say, not both");
+      const w = load();
+      w.continueSession(iterations, pos.length ? pos.join(" ") : flags.say);
+      store.save(w);
+      if (!hasFiles(path.resolve(root, w.state.workspace))) warn(formatEmptyWorkspace(w.state.workspace));
+      // With --json, answer like `next --json` so an orchestrator can start the first turn without another call.
+      if (flags.json) return next(w);
+      const ids = w.next();
+      store.save(w);
+      out(formatContinued(w.state, ids, sessionFlag(w.state.name)));
       return;
     }
 
@@ -311,7 +342,7 @@ export async function main(
       const ids = w.next();
       store.save(w);
       out(`recorded ${actions.length} action(s) from ${id}: ${actions.map((a) => a.type).join(", ") || "-"}`);
-      out(w.state.status === "done" ? "session is done." : `next: ${ids.join(", ")} (phase ${w.phase.id}, round ${w.state.round})`);
+      out(w.state.status === "done" ? withContinueHint("session is done.", sessionFlag(w.state.name)) : `next: ${ids.join(", ")} (phase ${w.phase.id}, round ${w.state.round})`);
       return;
     }
 
@@ -364,7 +395,7 @@ export async function main(
         if (giveUp) throw new Error(formatSkipStop(skippedInARow, failures[failures.length - 1].reason));
         turns += ids.length;
       }
-      out(w.state.status === "done" ? "session is done." : `stopped after ${turns} turn(s); run again to continue.`);
+      out(w.state.status === "done" ? withContinueHint("session is done.", sessionFlag(w.state.name)) : `stopped after ${turns} turn(s); run again to continue.`);
       return;
     }
 
@@ -383,10 +414,10 @@ export async function main(
   }
 }
 
-/** Parses a count given on the command line, rejecting anything that is not a whole number of at least zero. */
-function wholeNumber(value: string | undefined, flag: string): number | undefined {
+/** Parses a count given on the command line, rejecting anything that is not a whole number of at least `min`. */
+function wholeNumber(value: string | undefined, flag: string, min = 0): number | undefined {
   if (value === undefined) return undefined;
-  if (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value))) throw new Error(`${flag} must be a whole number of 0 or more, got "${value}"`);
+  if (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value)) || Number(value) < min) throw new Error(`${flag} must be a whole number of ${min} or more, got "${value}"`);
   return Number(value);
 }
 

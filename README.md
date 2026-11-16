@@ -39,7 +39,7 @@ Key properties:
 | acceptance | users, PM | First the engine itself runs the `[VERIFY]` command and keeps its real output and files (screenshots etc.) as a **trial run**. Users start from that trial run and the demos, read the result and give `[VERDICT accept/reject]`; the PM sums up |
 | wrapup | engineers, PM | Only when the session is about to finish with open tasks, or with decisions made in review / acceptance that nobody has applied yet. Engineers apply them; tasks added in acceptance are handed over, not built, and the PM lists what is left for the real human |
 
-If any user rejects, or the PM turns users' conditions into new tasks in acceptance, and the iteration limit (`maxIterations`) has not been reached, the team goes back to planning so users see the result. Each phase ends after its maximum number of rounds, or earlier when the PM sends `[ADVANCE]`. When the session finishes, the last log line names any task that is still open, waiting on a person, or built but needing a person's check.
+If any user rejects, or the PM turns users' conditions into new tasks in acceptance, and the iteration limit (`maxIterations`) has not been reached, the team goes back to planning so users see the result. Each phase ends after its maximum number of rounds, or earlier when the PM sends `[ADVANCE]`. When the session finishes, the last log line names any task that is still open, waiting on a person, or built but needing a person's check. A finished session can be given another iteration with `team continue` (see [Usage](#usage)).
 
 ### Conversation protocol
 
@@ -77,7 +77,7 @@ Open this repository in Claude Code and run:
 /team-dev A tool that lets freelancers create an invoice from the terminal in under a minute
 ```
 
-Claude Code then repeats `team next` → subagent → `team record`. Anything you say mid-session that is meant for the team ("tell them the budget is small") is shared with every member through `team say`. When a member asks you something with `[ASK_HUMAN]`, the team goes ahead on the default it stated; the question shows up with an id (`Q1`, `Q2`, ...) in `team status`, and `team answer Q2 "..."` answers that one question (the answer overrides the default in every later prompt). You can also set a stopping point, such as "just discovery" or "up to the next phase".
+Claude Code then repeats `team next` → subagent → `team record`. Anything you say mid-session that is meant for the team ("tell them the budget is small") is shared with every member through `team say`. When a member asks you something with `[ASK_HUMAN]`, the team goes ahead on the default it stated; the question shows up with an id (`Q1`, `Q2`, ...) in `team status`, and `team answer Q2 "..."` answers that one question (the answer overrides the default in every later prompt). You can also set a stopping point, such as "just discovery" or "up to the next phase". When the session has finished, ask for another round ("one more iteration, and add CSV export"): Claude Code checks with you first, because an iteration costs about as many tokens as the first one did, and then runs `team continue "..."`.
 
 - Full conversation, including each member's private thoughts: `.team/sessions/<name>/transcript.md`, or `transcript.html` to read it in a browser (grouped by phase, filter by member, private memos hidden by default; `team log --html` prints its path and renders it for older sessions)
 - Trial runs and evidence files: `.team/sessions/<name>/artifacts/`
@@ -89,7 +89,7 @@ Claude Code then repeats `team next` → subagent → `team record`. Anything yo
 It works the same in cloud sessions. A few things differ because the container is temporary:
 
 - `.claude/hooks/session-start.sh` installs pnpm and the dev dependencies in the background when a cloud session starts, so the session does not wait for it (the engine itself needs only Node).
-- The session state and the product are saved by committing and pushing `.team/sessions/<name>/` and `workspace/<name>/`; the `team-dev` skill does this after each phase. Another thread or a later session resumes with "continue the <name> session".
+- The session state and the product are saved by committing and pushing `.team/sessions/<name>/` and `workspace/<name>/`; the `team-dev` skill does this after each phase. Another thread or a later session resumes a running session with "continue the <name> session" (`team next`); a session that has already finished is given another iteration with `team continue`, which the skill runs only after you agree.
 - In a Claude Project, run one simulation per thread. Sessions build in separate folders, so threads never edit the same files.
 
 ### From the command line
@@ -104,9 +104,19 @@ node src/main.ts log --tail 20 --no-thoughts                     # transcript
 node src/main.ts stats                                           # real tokens and cost per phase and role (--json for scripts)
 node src/main.ts say "Let's focus on sole proprietors"           # speak to the team as the human
 node src/main.ts answer Q2 "Yes, publish it"                     # answer one of the team's questions (ids are in status)
+node src/main.ts continue "Also export CSV"                      # a finished session: one more iteration (--iterations N for N more)
 ```
 
 Session names are ASCII letters, digits, `_` and `-`, which may be joined by single dots (`villa-57`, `v1.2`). `init` refuses a name that is already taken: pass another `--name`, continue it with `team use <name>`, or start it over with `--force`. `--force` deletes everything saved for that session (`.team/sessions/<name>/`) but not the files in `workspace/<name>/`; if some are left it warns, because the new team will see them. It also warns when a phase's `speakers` lists a role that no member has. Warnings go to stderr, so `--json` output stays parseable.
+
+`team continue [<text> | --say <text>] [--iterations N] [--json]` gives a session that is `done` another iteration. A running session is refused (exit 1, it points to `team next` / `team run`).
+
+- The session goes back to running and the next iteration starts at the phase marked `iterationStart` (the first phase that is not a wrap-up if none is marked). Tasks, decisions and notes are kept.
+- The limit is the iteration the session ended in plus N (a whole number of 1 or more, default 1). A session that stopped at iteration 1 of 5 is not given the four it never used.
+- The phases saved with the session are used as they are: later edits to `team.config.json` or `DEFAULT_PHASES` do not apply.
+- The text is logged as a message from the human, like `team say`: give it as arguments or with `--say`, not both (blank is refused). Without it, the log tells the PM that the human did not say what to change, and the PM picks the next improvement from the users' verdicts, the open tasks and the checks waiting for a person. The message is in the prompts only while it is among the last `historyWindow` entries, so ask the PM to record anything lasting as a `[DECISION]`.
+- The product files are not part of the session. If `workspace/<name>/` is missing or empty, `continue` warns on stderr (the team will not see what it built before, and the trial run before acceptance fails too) and goes on.
+- `--json` prints the same as `next --json`. `say` is refused on a finished session (nobody would read it); `answer` still works, and the team acts on the answer once the session is continued. `run`, `record` and `next` point to `continue` when they report a finished session.
 
 `.team` is looked for in the current folder (or `--root`) only, not in parent folders. `--turns`, `--tail`, `--tokens` and `--duration-ms` take a whole number of 0 or more. `say` and `record` refuse empty input (exit 1, nothing recorded); to record that a member could not answer, use `[SAY to=all] (could not attend this turn)`.
 
@@ -153,7 +163,7 @@ A `claude-cli` turn that runs longer than `TEAM_TURN_TIMEOUT` seconds (default 1
 - **Phases**: a `phases` array in `team.config.json` replaces `DEFAULT_PHASES` (`src/sop.ts`). Each phase has `id`, `goal`, `speakers`, `mode` (`round-robin` or `parallel`) and `maxRounds`. Optional fields:
   - `untilTasksDone`: end early once every task is done
   - `editors`: roles allowed to edit `workspace/` in this phase
-  - `iterationStart`: where the next iteration restarts after a rejection
+  - `iterationStart`: where the next iteration restarts after a rejection or `team continue`
   - `finale`: a wrap-up phase, skipped in the normal order and run once before finishing when work is left
 - **Language**: `language` (default `ja`) is the language the agents speak.
 - **Memory length**: `historyWindow` is the number of recent transcript entries included in each prompt. In the prompt, an entry whose full text the same prompt already shows in the Backlog, Decisions or Demos section (a task, a task update, a decision, a demo) appears as a one-line reference; `transcript.md` and `team log` keep the full text.

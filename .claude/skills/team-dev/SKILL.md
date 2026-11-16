@@ -23,7 +23,14 @@ All commands run from the repository root. `team` below means `node src/main.ts`
   personas that fit that product (`--config`). After each session, run `team overlaps` and tell the user about any
   file or migration-number clash with other sessions on the same repository.
 - **"Continue" / no idea** → `team next --json` resumes the current session (`team sessions` / `team use <name>`
-  to switch). Only if there is no session, or it is `done`, ask for one sentence about the product and who it is for.
+  to switch). If there is no session, ask for one sentence about the product and who it is for.
+  If the session is `done` (`status` is `"done"` in that output), it is finished and `team next` will not move it. Another
+  iteration costs about as many tokens as the first one did, so do not start it on your own: say that the session is
+  finished, and ask whether to give it one more iteration (`team continue`, optionally with what they want changed or
+  added, e.g. `team continue "<their words>"`; `--iterations N` for more than one) or to start a new product.
+  Run `team continue ... --json` only after they agree: its output is the same as `team next --json`, so go straight to
+  step 2.2. It warns on stderr when `workspace/<name>/` is missing or empty (the team then cannot see what it built
+  before); tell the user. `team continue` refuses a session that is still running.
 
 Do not run `team status` or read other files before the first turn. In the same message that launches the first
 subagent, tell the user in one line the session name and that they can interject at any time.
@@ -78,7 +85,10 @@ Repeat until the session is `done`, or until the stopping point the user asked f
   `.team/sessions/<name>/transcript.html` (the full conversation to read in a browser; `transcript.md` is the same in
   Markdown) and `workspace/<name>/`. Trial runs and screenshots are in `.team/sessions/<name>/artifacts/`.
 - Suggest next steps: another iteration (if users rejected and iterations remain the engine already looped back to
-  `planning` — just continue the loop), new personas, or committing the result.
+  `planning` — just continue the loop), new personas, or committing the result. To push a finished session further, offer
+  `team continue "<what they want added or changed>"` (one more iteration planned by the PM from those words; it
+  costs a full iteration of tokens, so run it only when they say yes). The words stay in the prompts only while they are
+  among the last `historyWindow` entries, so for a lasting requirement tell the PM to record it as a `[DECISION]`.
 
 ## Cloud sessions (Claude Code on the web, Claude Projects)
 
@@ -98,7 +108,9 @@ their own fresh clone. So:
 ## Human in the loop
 
 - If the user says something meant for the team ("tell them the budget is small", "I want a web UI"), inject it:
-  `team say "<their words>"` — every member sees it as a message from `human`.
+  `team say "<their words>"` — every member sees it as a message from `human`. A finished session refuses `team say`
+  (nobody would read it); to tell it to the team, continue the session with `team continue "<their words>"`
+  once the user agreed to another iteration (step 1).
 - Members never wait on the user. When a reply has `[ASK_HUMAN]`, the question appears in `openQuestions` with its id
   (`Q1`, `Q2`, ...). Put it, with the default the team went ahead with, in your next update to the user and keep the
   loop running. Relay the user's answer to a specific question with `team answer Qn "<their words>"`; it overrides the
@@ -106,7 +118,8 @@ their own fresh clone. So:
   id again replaces the answer. When members asked the same thing (say two parallel engineers as Q3 and Q4), answer
   each id: a duplicate you leave open stays open and the team keeps going on its own default. On a finished session
   `team answer` only records the answer (nobody acts on it any more), so tell the user that instead of promising a
-  change. Keep `team say` for everything else.
+  change; the team acts on it only if the session is continued with `team continue` (step 1: ask the user first).
+  Keep `team say` for everything else.
 - If the user wants to *be* a member for a turn, record their words with `team record --as <member> --force`.
 - To change who is on the team, edit `team.config.json` / `personas/*.json` and start a new session.
 
