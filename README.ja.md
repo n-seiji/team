@@ -10,6 +10,57 @@
 
 が **会話しながら** プロダクトを作っていく仕組みです。
 
+## クイックスタート
+
+Node.js ≥ 22.18 が必要です（`node --version` で確認）。インストールするものはありません（実行時の依存がないため）。コマンドはすべてリポジトリのルートで実行します。
+
+**まず無料で流れを見る。** `mock` バックエンドは LLM を呼ばず、数秒で終わります。会話の流れだけを決まった文言で再現し（brief が何でも文言は同じで、下の backlog と verdict も固定です）、ファイルは書きません。`workspace/demo/` は空のままです。
+
+```bash
+node src/main.ts init "フリーランス向けの、ターミナルから数十秒で請求書を作れるツール" --name demo
+node src/main.ts run --backend mock
+node src/main.ts status
+node src/main.ts log --html      # ブラウザで読む transcript のパスを表示する
+```
+
+セッションが終わったあとの `status` はこうなります。
+
+```
+session: demo  status: done  iteration: 1/2
+phase: wrapup (round 0/1, round-robin)
+brief: フリーランス向けの、ターミナルから数十秒で請求書を作れるツール
+backlog:
+- T1 [done] owner=eng-backend 機能1を実装する
+- T2 [done] owner=eng-frontend 機能2を実装する
+verdicts (iteration 1):
+- 山田 恵子 (user-yamada): accept — 手作業が減りそうなので使ってみたいです。
+- Daniel García (user-garcia): accept — 手作業が減りそうなので使ってみたいです。
+Next: team continue "<what to add or change>" for another iteration, or read the conversation: team log --html
+```
+
+もう一度試すときは `init` の行に `--force` を足します（`demo` を作り直します）。片付けは `rm -rf .team/sessions/demo workspace/demo` と `git restore .team/current` です（`.team/current` は current のセッション名を持ち、git 管理下にあります）。
+
+**本番。** このリポジトリを Claude Code で開いて、次のコマンドを実行します。API キーは不要です。
+
+```text
+/team-dev フリーランス向けの、ターミナルから数十秒で請求書を作れるツール
+```
+
+時間がかかります。このリポジトリに残っているセッションでは（時間は transcript の最初のエントリから最後のエントリまで）、新しいプロダクトを作る 6 セッションが 14〜82 分・22〜40 ターンで、6 件中 5 件が 71〜82 分でした。既存リポジトリの issue に取り組んだ 6 セッション（`villa-*`）は 6〜27 分・17〜35 ターンでした。実行中は `.team/sessions/<セッション名>/transcript.html` をブラウザで開くと会話を読めます（返答を記録するたびに書き直されます）。チームに伝えたいことは、そのまま Claude Code に話しかけてください。
+
+**あとで戻ってきたとき。** `sessions` でセッションを一覧し、`status` で current セッションの状況と次の一手を見ます。
+
+```bash
+node src/main.ts sessions                           # セッションごとに 1 行。* が current
+node src/main.ts status                             # current セッションの状況と次の一手
+```
+
+別のセッションに切り替えるには `node src/main.ts use <name>` を使います。本番のセッションが終わって続きが欲しいときは、`node src/main.ts continue "CSV 出力も欲しい"` で要望を伝えて、もう 1 イテレーション回せます（最初の 1 周と同じくらいトークンを使います）。
+
+**成果物の場所。** 作られたプロダクトは `workspace/<セッション名>/`、会話は `.team/sessions/<セッション名>/transcript.html` です。
+
+主な特徴:
+
 - **どこでも動く**: TypeScript ですが Node.js ≥ 22.18 が `.ts` を直接実行するので、ビルドも実行時依存もありません。Linux / macOS / Windows、ローカル / クラウドで同じように動きます（CI で3 OS をテスト）。
 - **Claude Code (Web) でそのまま動く**: API キーは不要です。Claude Code がオーケストレーターになり、メンバーの1ターンずつをロール別のサブエージェントに演じさせます（host モード）。
 - **API / CLI で自動実行もできる**: `team run --backend anthropic | claude-cli | mock`（auto モード）。
@@ -69,13 +120,7 @@ reject が1件でもあり、イテレーション上限 (`maxIterations`) に�
 
 ### Claude Code (Web / CLI / Desktop) で使う — おすすめ
 
-このリポジトリを開いた Claude Code で:
-
-```
-/team-dev フリーランス向けの、ターミナルから数十秒で請求書を作れるツール
-```
-
-あとは Claude Code が `team next` → サブエージェント → `team record` を繰り返します。途中で「予算は月1万円までと伝えて」などと話しかければ、`team say` でチーム全員に共有されます。メンバーが `[ASK_HUMAN]` で質問したときは、チームは自分たちの既定の案で先へ進みます。質問には `team status` で id (`Q1`, `Q2`, ...) が付いて見えるので、`team answer Q2 "..."` でその質問に答えます（以降のプロンプトでは答えが既定の案より優先されます）。「discovery だけやって」「次のフェーズまで」のように区切りも指定できます。セッションが終わったあとに「もう1周して、CSV 出力も足して」と頼むこともできます。1イテレーションは最初の1周と同じくらいトークンを使うので、Claude Code は先に確認してから `team continue "..."` を実行します。
+このリポジトリを開いた Claude Code で `/team-dev <作りたいもの>` を実行します（[クイックスタート](#クイックスタート)）。あとは Claude Code が `team next` → サブエージェント → `team record` を繰り返します。途中で「予算は月1万円までと伝えて」などと話しかければ、`team say` でチーム全員に共有されます。メンバーが `[ASK_HUMAN]` で質問したときは、チームは自分たちの既定の案で先へ進みます。質問には `team status` で id (`Q1`, `Q2`, ...) が付いて見えるので、`team answer Q2 "..."` でその質問に答えます（以降のプロンプトでは答えが既定の案より優先されます）。「discovery だけやって」「次のフェーズまで」のように区切りも指定できます。セッションが終わったあとに「もう1周して、CSV 出力も足して」と頼むこともできます。1イテレーションは最初の1周と同じくらいトークンを使うので、Claude Code は先に確認してから `team continue "..."` を実行します。
 
 - 会話の全文（各メンバーの思考を含む）: `.team/sessions/<name>/transcript.md`。ブラウザで読むなら `transcript.html`（フェーズごとにまとまり、人で絞り込める。本人だけのメモは既定で隠す。`team log --html` でパスを表示し、古いセッションの分も作る）
 - 試用ログと証拠のファイル: `.team/sessions/<name>/artifacts/`
@@ -92,19 +137,24 @@ reject が1件でもあり、イテレーション上限 (`maxIterations`) に�
 
 ### コマンドラインで使う
 
+[クイックスタート](#クイックスタート)にある `init`・`run --backend mock`・`status`・`log --html`・`sessions`・`use`・`continue` は繰り返しません。残りを、使う順に並べます。
+
 ```bash
-node src/main.ts init --brief "作りたいもの" --name my-session   # セッション作成
-node src/main.ts status                                          # 要約: task・人の作業・verdict・質問・次の一手 (--full で全文)
-node src/main.ts sessions                                        # セッション 1 つにつき 1 行: 状態・結果・最終更新・brief (* が current)
-node src/main.ts use my-session                                  # 別のセッションを current にする
-node src/main.ts run --backend claude-cli                        # 自動実行 (claude -p で各ターンを実行)
-ANTHROPIC_API_KEY=... node src/main.ts run --backend anthropic   # 自動実行 (Messages API を直接呼ぶ)
-node src/main.ts run --backend mock                              # LLM なしで流れだけ確認
-node src/main.ts log --tail 20 --no-thoughts                     # 会話ログ
+# 名前を付けてセッションを作る (--brief-file <f> で brief をファイルから読める)
+node src/main.ts init --brief "作りたいもの" --name my-session
+
+# 実行する (auto モード)
+node src/main.ts run --backend claude-cli                        # claude -p で各ターンを実行
+ANTHROPIC_API_KEY=... node src/main.ts run --backend anthropic   # Messages API を直接呼ぶ
+
+# 見る
+node src/main.ts status --full                                   # 全文: フェーズの goal と、各 task の acceptance / result まで
+node src/main.ts log --tail 20 --no-thoughts                     # 会話ログの末尾 20 件
 node src/main.ts stats                                           # フェーズ別・ロール別の実トークン数とコスト (--json でスクリプト向け)
-node src/main.ts say "ターゲットは個人事業主に絞りたい"           # 人間として発言を差し込む
+
+# 人間として口を出す
+node src/main.ts say "ターゲットは個人事業主に絞りたい"           # チーム全員に伝える
 node src/main.ts answer Q2 "公開してよいです"                     # チームの質問 Q2 に答える (id は status に出る)
-node src/main.ts continue "CSV 出力も欲しい"                      # 終了したセッションをもう1イテレーション (--iterations N で N 個)
 ```
 
 `pnpm team <command>` や、`pnpm link --global` して `team <command>` でも同じです。
@@ -128,6 +178,18 @@ node src/main.ts continue "CSV 出力も欲しい"                      # 終了
 
 `.team` はカレントディレクトリ（か `--root`）だけを見ます。親ディレクトリは探しません。`--turns`・`--tail`・`--tokens`・`--duration-ms` は 0 以上の整数だけを受け付けます。`say` と `record` は空の入力を受け付けず、exit 1 で止まって何も記録しません。返答できなかったメンバーには `[SAY to=all] (could not attend this turn)` を記録してください。
 
+#### 既存のリポジトリで使う
+
+別のコードベース（たとえば GitHub の issue）をチームに触らせるには、git worktree としてチェックアウトし、それを workspace に指定します。
+
+```bash
+git -C ../app worktree add "$PWD/workspace/app-77" -b team/app-77   # issue ごとに 1 つの worktree
+node src/main.ts init --name app-77 --workspace workspace/app-77 --brief-file brief-77.md --config configs/app.json
+node src/main.ts overlaps                                            # 他のセッションも変更したファイル・マイグレーション番号
+```
+
+`--workspace` を付けると、そのフォルダをそのまま使います（`workspace/<セッション名>/` は作りません）。プロンプトには、これまでに変更したファイル（git status と、既定ブランチの上に載ったコミット）だけを載せます。エンジニアには、そのコードベース自身の CLAUDE.md とルールに従うよう伝えます。`claude-cli` のターンは workspace の中で動くので、その CLAUDE.md とフックが効きます。同じリポジトリを触る他のセッションが何を変えたかも、エンジニアに見えます。2 つのセッションが同じファイルを触る、または同じ番号のファイル（`migrations/0021_*.sql` など）を作ると、`team status` が警告します。プロダクトに合うペルソナは別の config（`--config`）に置いてください。
+
 host モードを自分で回す場合（他のエージェント基盤から使う場合など）:
 
 ```bash
@@ -135,6 +197,8 @@ node src/main.ts next --json          # → pending: [{ member, role, subagent, 
 # promptFile を LLM に渡して返答を得る
 node src/main.ts record --as pm --file reply.txt [--tokens N] [--duration-ms N]   # 任意: オーケストレーターが報告したトークン数と所要時間 (team stats 用)
 ```
+
+`record --json` は `next --json` と同じ JSON に `recorded: { member, actions }` を足して出します。いま記録したメンバーと、その返答に含まれていたアクションの種類（`["SAY", "TASK"]` など）です。ロールに許可されず無視されたアクションも含むので、返答に何が書かれていたかは分かりますが、何が反映されたかは分かりません。
 
 | backend | 必要なもの | 特徴 |
 |---|---|---|

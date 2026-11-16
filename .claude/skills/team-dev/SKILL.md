@@ -9,7 +9,9 @@ You are the **facilitator / runtime**. The `team` engine (`node src/main.ts`, ze
 who speaks next, the transcript, backlog, decisions and verdicts. You never invent turns yourself — each member's turn
 is played by a dedicated subagent, and you just move messages between the engine and the subagents.
 
-All commands run from the repository root. `team` below means `node src/main.ts`.
+All commands run from the repository root. `team` below means `node src/main.ts`: always type the full
+`node src/main.ts ...` at the start of the command (no `cd`, no env prefix, no pipe), so the user can see at a
+glance what runs and add a permission rule for it if they want one.
 
 ## 1. Start or resume (one command, no checks first)
 
@@ -38,7 +40,12 @@ All commands run from the repository root. `team` below means `node src/main.ts`
   before); tell the user. `team continue` refuses a session that is still running.
 
 Do not run `team status` or read other files before the first turn. In the same message that launches the first
-subagent, tell the user in one line the session name and that they can interject at any time.
+subagent, tell the user, in a few lines:
+
+- the session name;
+- that the conversation so far can be read by opening `.team/sessions/<name>/transcript.html` in a browser (the file
+  is rewritten each time a reply is recorded, so reload it);
+- that they can interject at any time (the team hears it through `team say`).
 
 ## 2. The loop
 
@@ -47,6 +54,13 @@ Repeat until the session is `done`, or until the stopping point the user asked f
 
 1. `team next --json` → `{ status, phase, round, openQuestions: [{ id, by, text }], pending: [{ member, name, role, subagent, promptFile }] }`.
    If `status` is `"done"`, go to step 3.
+   Every result of this shape (from `next`, and from `init`, `continue` and `record` with `--json`) can carry new
+   questions for the human (`[ASK_HUMAN]`). Ids only grow (`Q1`, `Q2`, ...), so an `openQuestions` entry is new exactly
+   when its number is greater than the highest one you have already told the user about in this conversation (none yet
+   on a resumed session). Tell the user about every new one at once, in the same message that launches the next
+   subagents, without waiting for a phase change or the ~6-turn update: the id, the question with the default the team
+   went ahead with (it is in the text), and how to answer, `team answer <id> "<answer>"`, which you run for them from
+   their words. Say that the team keeps going on its default until they answer.
 2. For **every** entry in `pending`, launch the Agent tool with `subagent_type: <subagent>` and a prompt like:
    > Read `<promptFile>` and play the turn of `<name>` (`<member>`) exactly as it instructs. Your final message must be only the action tags. Do not message the user or call any chat/messaging tools.
 
@@ -65,7 +79,10 @@ Repeat until the session is `done`, or until the stopping point the user asked f
    <eng-frontend's final message, verbatim>
    TEAM_REPLY_END
    ```
-   The `--json` output is the next step 1 result, so go straight to step 2 (no separate `team next`).
+   The `--json` output is the next step 1 result, so go straight to step 2 (no separate `team next`). It also has
+   `recorded: { member, actions }`: the kinds of action found in the last reply (for example `["SAY", "TASK"]`),
+   including any the role may not use, which the engine ignores. Use it only as material for the user update, not to
+   judge whether the reply took effect.
    When the Agent result reports a token total for the subagent (shown as `subagent_tokens` in Claude Code), pass
    it to that member's `record` as `--tokens <n>` (and `--duration-ms <n>` if a duration is reported). The number is
    recorded as reported and `team stats` keeps it apart from the tokens the engine measures itself, so do not adjust,
@@ -78,9 +95,7 @@ Repeat until the session is `done`, or until the stopping point the user asked f
    10 minutes), so give the Bash call recording the last `review` reply a long timeout (600000 ms).
 4. When `phase` in that output changed (or every ~6 turns), give the user a 2–4 line update:
    what happened, key decisions/tasks, what's next. Use `team log --tail 15 --no-thoughts` if you need a recap.
-   Add the questions for the human (`[ASK_HUMAN]`) that are new in `openQuestions` since your last update, with their ids
-   (`Q1`, `Q2`, ...) and the default the team went ahead with, so the user can answer by id. The list always holds every
-   question still open, so do not repeat ones you already told the user about.
+   Questions for the human are not part of this update: step 1 reports them as soon as they appear.
 
 ## 3. Finish
 
@@ -110,7 +125,7 @@ their own fresh clone. So:
 - **One simulation per thread.** Every session builds in its own `workspace/<name>/`, so threads running different
   sessions never touch the same files. Do not run the same session from two threads at once.
 - **Talk to the user through the host.** Your plain text may not reach the user (in Projects only the thread's reply
-  and status tools do). Send the loop's step 4 updates there and keep the status checklist on the current phase. Subagents never
+  and status tools do). Send the loop's step 1 question reports and step 4 updates there and keep the status checklist on the current phase. Subagents never
   message the user themselves.
 - `pnpm` and the dev dependencies are installed by `.claude/hooks/session-start.sh`; the engine itself needs only Node.
 
@@ -121,9 +136,8 @@ their own fresh clone. So:
   (nobody would read it); to tell it to the team, continue the session with `team continue "<their words>"`
   once the user agreed to another iteration (step 1).
 - Members never wait on the user. When a reply has `[ASK_HUMAN]`, the question appears in `openQuestions` with its id
-  (`Q1`, `Q2`, ...). Put it, with the default the team went ahead with, in your next update to the user and keep the
-  loop running. Relay the user's answer to a specific question with `team answer Qn "<their words>"`; it overrides the
-  default for the whole team from the next prompt on, the question then leaves `openQuestions`, and answering the same
+  (`Q1`, `Q2`, ...). Report it as loop step 1 says, and keep the loop running. Relay the user's answer to a specific
+  question with `team answer Qn "<their words>"`; it overrides the default for the whole team from the next prompt on, the question then leaves `openQuestions`, and answering the same
   id again replaces the answer. When members asked the same thing (say two parallel engineers as Q3 and Q4), answer
   each id: a duplicate you leave open stays open and the team keeps going on its own default. On a finished session
   `team answer` only records the answer (nobody acts on it any more), so tell the user that instead of promising a

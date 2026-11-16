@@ -105,6 +105,20 @@ test("record --json returns the next turn in the same call", async () => {
   assert.match(fs.readFileSync(path.join(dir, after.pending[0].promptFile), "utf8"), /最近いつ家計簿をつけましたか/);
 });
 
+test("record --json says what was recorded, and leaves the keys of next --json as they are", async () => {
+  const dir = sandbox();
+  await run(dir, "init", "x", "--name", "r2");
+  const reply = path.join(dir, "reply.txt");
+  fs.writeFileSync(reply, "[SAY to=user-garcia] 最近いつ家計簿をつけましたか？\n[NOTE] 家計簿の話");
+  const before = JSON.parse(await run(dir, "next", "--json"));
+  const after = JSON.parse(await run(dir, "record", "--as", "pm", "--file", reply, "--json"));
+  assert.deepEqual(after.recorded, { member: "pm", actions: ["SAY", "NOTE"] });
+  const { recorded, ...rest } = after;
+  assert.deepEqual(Object.keys(rest), Object.keys(before), "only `recorded` is new");
+  assert.equal(rest.pending[0].member, "user-garcia");
+  assert.equal(JSON.parse(await run(dir, "next", "--json")).recorded, undefined, "next --json has no such key");
+});
+
 function git(dir: string, ...args: string[]) {
   execFileSync("git", ["-C", dir, "-c", "commit.gpgsign=false", ...args], { stdio: "ignore" });
 }
